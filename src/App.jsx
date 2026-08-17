@@ -1,6 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import * as XLSX from "xlsx";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { supabase } from "./supabaseClient";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 // Supabase Edge Functions live at the same project ref, under /functions/v1
 const SUPABASE_FUNCTIONS_URL = "https://mcxmtnlhqubaljvnwmzc.supabase.co/functions/v1";
@@ -130,6 +134,77 @@ function xlsxBufferToRows(arrayBuffer) {
     .map((row) => row.map((cell) => String(cell ?? "").trim()))
     .filter((row) => row.some((cell) => cell !== ""));
 }
+
+// Reads a PDF's text into row/column form by clustering text fragments by
+// vertical position (rows) then horizontal gaps (columns). Works reasonably
+// on digitally-created PDFs (exported from Excel, Word, a QS tool) with
+// visible spacing between columns. It cannot read scanned or photographed
+// pages — those have no extractable text at all, only an image.
+async function pdfBufferToRows(arrayBuffer) {
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const allRows = [];
+
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const textContent = await page.getTextContent();
+    const fragments = textContent.items
+      .filter((it) => it.str && it.str.trim() !== "")
+      .map((it) => ({ text: it.str, x: it.transform[4], y: it.transform[5], width: it.width || 0 }));
+
+    if (fragments.length === 0) continue;
+
+    // Group fragments into lines by rounded Y position (small tolerance for jitter).
+    const lineMap = new Map();
+    fragments.forEach((f) => {
+      const key = Math.round(f.y / 3) * 3;
+      if (!lineMap.has(key)) lineMap.set(key, []);
+      lineMap.get(key).push(f);
+    });
+
+    // PDF Y increases upward, so sort descending to read top-to-bottom.
+    const orderedKeys = Array.from(lineMap.keys()).sort((a, b) => b - a);
+
+    orderedKeys.forEach((key) => {
+      const lineFragments = lineMap.get(key).sort((a, b) => a.x - b.x);
+      const cells = [];
+      let currentCell = "";
+      let lastEndX = null;
+      lineFragments.forEach((f) => {
+        const gap = lastEndX == null ? 0 : f.x - lastEndX;
+        if (lastEndX != null && gap > 8) {
+          cells.push(currentCell.trim());
+          currentCell = f.text;
+        } else {
+          currentCell += f.text;
+        }
+        lastEndX = f.x + f.width;
+      });
+      if (currentCell.trim()) cells.push(currentCell.trim());
+      if (cells.length > 0) allRows.push(cells);
+    });
+  }
+  return allRows;
+}
+
+// PDFs often have a title, company letterhead, or notes before the actual
+// table starts. Scan for the row most likely to be real column headers
+// rather than assuming row 0 is it, the way a clean CSV export would be.
+function findHeaderRowIndex(rows) {
+  const keywords = ["description", "amount", "budget", "quantity", "qty", "rate", "item", "particulars", "total"];
+  for (let i = 0; i < Math.min(rows.length, 40); i++) {
+    const rowText = rows[i].join(" ").toLowerCase();
+    const matches = keywords.filter((k) => rowText.includes(k)).length;
+    if (matches >= 2) return i;
+  }
+  return 0;
+}
+
+function pdfRowsToItems(rows) {
+  const headerIdx = findHeaderRowIndex(rows);
+  const trimmed = rows.slice(headerIdx);
+  return rowsToItems(trimmed);
+}
+
 
 const CATEGORY_KEYWORDS = {
   Labour: ["labour", "labor", "wages", "preliminaries", "prelim"],
@@ -1164,6 +1239,7 @@ function ProjectView({ projectId, onBack }) {
   const [expandedRow, setExpandedRow] = useState(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [importMessage, setImportMessage] = useState(null);
+  const [importPreviewItems, setImportPreviewItems] = useState(null); // null = no modal open
   const [coDesc, setCoDesc] = useState("");
   const [coAmount, setCoAmount] = useState("");
   const fileInputRef = useRef(null);
@@ -1272,20 +1348,15 @@ function ProjectView({ projectId, onBack }) {
     const file = e.target.files?.[0];
     if (!file) return;
     const isExcel = /\.xlsx$/i.test(file.name);
+    const isPdf = /\.pdf$/i.test(file.name);
 
-    async function finishImport(parsed, error) {
+    function openPreview(parsed, error) {
       if (error) {
         setImportMessage({ type: "error", text: error });
+        setTimeout(() => setImportMessage(null), 6000);
       } else {
-        const rows = parsed.map((p) => ({ ...p, project_id: projectId }));
-        const { data, error: insertErr } = await supabase.from("line_items").insert(rows).select();
-        if (insertErr) setImportMessage({ type: "error", text: "Import failed — please try again." });
-        else {
-          setItems((prev) => [...prev, ...data]);
-          setImportMessage({ type: "success", text: `Imported ${data.length} line item${data.length > 1 ? "s" : ""}.` });
-        }
+        setImportPreviewItems(parsed.map((p) => ({ ...p, _include: true })));
       }
-      setTimeout(() => setImportMessage(null), 6000);
     }
 
     const reader = new FileReader();
@@ -1294,21 +1365,54 @@ function ProjectView({ projectId, onBack }) {
         if (isExcel) {
           const rows = xlsxBufferToRows(evt.target.result);
           const { items: parsed, error } = rowsToItems(rows);
-          await finishImport(parsed, error);
+          openPreview(parsed, error);
+        } else if (isPdf) {
+          const rows = await pdfBufferToRows(evt.target.result);
+          const { items: parsed, error } = pdfRowsToItems(rows);
+          openPreview(
+            parsed,
+            error ||
+              (rows.length === 0
+                ? "No readable text found in that PDF. If it's a scanned or photographed document, this won't work — only digitally created PDFs can be read this way."
+                : null)
+          );
         } else {
           const { items: parsed, error } = parseCsvToItems(evt.target.result);
-          await finishImport(parsed, error);
+          openPreview(parsed, error);
         }
       } catch (err) {
         console.error("Import failed", err);
-        setImportMessage({ type: "error", text: "Couldn't read that file — make sure it's a valid CSV or .xlsx export." });
+        setImportMessage({ type: "error", text: "Couldn't read that file — make sure it's a valid CSV, .xlsx, or PDF." });
         setTimeout(() => setImportMessage(null), 6000);
       }
     };
-    if (isExcel) reader.readAsArrayBuffer(file);
+    if (isExcel || isPdf) reader.readAsArrayBuffer(file);
     else reader.readAsText(file);
     e.target.value = "";
   }
+
+  async function confirmImportPreview() {
+    const toImport = importPreviewItems.filter((i) => i._include && i.name?.trim());
+    if (toImport.length === 0) {
+      setImportPreviewItems(null);
+      return;
+    }
+    const rows = toImport.map(({ _include, ...rest }) => ({ ...rest, project_id: projectId }));
+    const { data, error } = await supabase.from("line_items").insert(rows).select();
+    setImportPreviewItems(null);
+    if (error) {
+      setImportMessage({ type: "error", text: "Import failed — please try again." });
+    } else {
+      setItems((prev) => [...prev, ...data]);
+      setImportMessage({ type: "success", text: `Imported ${data.length} line item${data.length > 1 ? "s" : ""}.` });
+    }
+    setTimeout(() => setImportMessage(null), 6000);
+  }
+
+  function updatePreviewItem(index, patch) {
+    setImportPreviewItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  }
+
 
   function downloadTemplate() {
     const csv = [
@@ -1428,7 +1532,7 @@ function ProjectView({ projectId, onBack }) {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <input ref={fileInputRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleImportFile} style={{ display: "none" }} />
+      <input ref={fileInputRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.pdf,application/pdf" onChange={handleImportFile} style={{ display: "none" }} />
       <input ref={attachInputRef} type="file" onChange={handleAttachFile} style={{ display: "none" }} />
 
       <div className="no-print" style={styles.backRow}>
@@ -1514,7 +1618,7 @@ function ProjectView({ projectId, onBack }) {
       </div>
 
       <div className="no-print" style={styles.importRow}>
-        <button style={styles.importBtn} onClick={() => fileInputRef.current?.click()}>Import BOQ or CSV</button>
+        <button style={styles.importBtn} onClick={() => fileInputRef.current?.click()}>Import BOQ, CSV, or PDF</button>
         <select style={{ ...styles.addInput, maxWidth: 220 }} defaultValue="" onChange={(e) => { applyTemplate(e.target.value); e.target.value = ""; }}>
           <option value="">Apply a template…</option>
           {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -1878,6 +1982,77 @@ function ProjectView({ projectId, onBack }) {
       <div className="no-print" style={styles.footer}>
         Click Actual to log spend, or "Details" on any line to set the subcontractor, dates, quality rating, notes and files.
       </div>
+
+      {importPreviewItems && (
+        <div className="no-print" style={styles.modalOverlay} onClick={() => setImportPreviewItems(null)}>
+          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <div>
+                <div style={styles.modalTitle}>Review before importing</div>
+                <div style={styles.modalSub}>
+                  {importPreviewItems.length} row{importPreviewItems.length === 1 ? "" : "s"} found. Check the numbers,
+                  uncheck anything wrong, edit inline if needed, then import.
+                </div>
+              </div>
+              <button style={styles.removeBtn} onClick={() => setImportPreviewItems(null)}>✕</button>
+            </div>
+
+            <div style={styles.modalBody}>
+              <div style={styles.previewHeaderRow}>
+                <span style={{ flex: 0.4 }}></span>
+                <span style={{ flex: 2.4 }}>Description</span>
+                <span style={{ flex: 1.2 }}>Category</span>
+                <span style={{ flex: 1.2, textAlign: "right" }}>Budget</span>
+              </div>
+              {importPreviewItems.map((item, idx) => (
+                <div key={idx} style={{ ...styles.previewRow, opacity: item._include ? 1 : 0.4 }}>
+                  <span style={{ flex: 0.4 }}>
+                    <input
+                      type="checkbox"
+                      checked={item._include}
+                      onChange={(e) => updatePreviewItem(idx, { _include: e.target.checked })}
+                    />
+                  </span>
+                  <span style={{ flex: 2.4 }}>
+                    <input
+                      style={styles.previewInput}
+                      value={item.name}
+                      onChange={(e) => updatePreviewItem(idx, { name: e.target.value })}
+                    />
+                    {item.notes && <div style={styles.previewNote}>{item.notes}</div>}
+                  </span>
+                  <span style={{ flex: 1.2 }}>
+                    <select
+                      style={styles.previewInput}
+                      value={item.category}
+                      onChange={(e) => updatePreviewItem(idx, { category: e.target.value })}
+                    >
+                      {CATEGORIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </span>
+                  <span style={{ flex: 1.2 }}>
+                    <input
+                      style={{ ...styles.previewInput, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}
+                      type="number"
+                      value={item.budget}
+                      onChange={(e) => updatePreviewItem(idx, { budget: Number(e.target.value) || 0 })}
+                    />
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div style={styles.modalFooter}>
+              <button style={styles.templateLink} onClick={() => setImportPreviewItems(null)}>Cancel</button>
+              <button style={styles.addBtn} onClick={confirmImportPreview}>
+                Import {importPreviewItems.filter((i) => i._include).length} item{importPreviewItems.filter((i) => i._include).length === 1 ? "" : "s"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2007,4 +2182,16 @@ const styles = {
   chartSub: { fontSize: 12, color: "#8A8072", marginBottom: 16 },
 
   trendRow: { display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #EFE9D9" },
+
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(28,23,18,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 },
+  modalCard: { background: "#FFFFFF", borderRadius: 8, maxWidth: 760, width: "100%", maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 50px rgba(28,23,18,0.25)" },
+  modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "20px 24px", borderBottom: "1px solid #E4DCC8" },
+  modalTitle: { fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 600, color: "#1C1712" },
+  modalSub: { fontSize: 12.5, color: "#6B6258", marginTop: 4, maxWidth: 480 },
+  modalBody: { padding: "12px 24px", overflowY: "auto", flex: 1 },
+  modalFooter: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderTop: "1px solid #E4DCC8" },
+  previewHeaderRow: { display: "flex", gap: 10, fontSize: 11, letterSpacing: "0.06em", color: "#8A8072", textTransform: "uppercase", padding: "8px 0", borderBottom: "1px solid #E4DCC8" },
+  previewRow: { display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 0", borderBottom: "1px solid #EFE9D9" },
+  previewInput: { width: "100%", background: "#FAF6EC", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontSize: 13, padding: "6px 8px" },
+  previewNote: { fontSize: 10.5, color: "#8A8072", marginTop: 3 },
 };
