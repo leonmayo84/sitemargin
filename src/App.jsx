@@ -641,7 +641,11 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
   async function createProject() {
     if (!newName.trim() || creating) return;
     setCreating(true);
-    const { data, error } = await supabase.from("projects_v2").insert({ name: newName.trim() }).select().single();
+    const { data, error } = await supabase
+      .from("projects_v2")
+      .insert({ name: newName.trim(), owner_email: userEmail })
+      .select()
+      .single();
     setCreating(false);
     if (!error && data) { setNewName(""); onOpen(data.id); }
   }
@@ -764,7 +768,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut }) {
     if (!newName.trim()) return;
     const { data, error } = await supabase
       .from("subcontractors")
-      .insert({ name: newName.trim(), trade: newTrade.trim(), contact: newContact.trim() })
+      .insert({ name: newName.trim(), trade: newTrade.trim(), contact: newContact.trim(), owner_email: userEmail })
       .select().single();
     if (!error && data) {
       setSubs((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
@@ -928,7 +932,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut }) {
   async function createTemplate() {
     if (!newName.trim()) return;
     const { data, error } = await supabase
-      .from("templates").insert({ name: newName.trim(), description: newDesc.trim() }).select().single();
+      .from("templates").insert({ name: newName.trim(), description: newDesc.trim(), owner_email: userEmail }).select().single();
     if (!error && data) {
       setTemplates((prev) => [data, ...prev]);
       setNewName(""); setNewDesc("");
