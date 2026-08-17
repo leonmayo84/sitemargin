@@ -14,13 +14,13 @@ const fmtShort = (n) => {
 };
 
 const STATUS = {
-  ok: { label: "ON TRACK", color: "#4C8C6B", bg: "rgba(76,140,107,0.12)" },
-  watch: { label: "WATCH", color: "#D9A441", bg: "rgba(217,164,65,0.12)" },
-  over: { label: "OVER", color: "#E8622C", bg: "rgba(232,98,44,0.14)" },
+  ok: { label: "ON TRACK", color: "#4C7A5C", bg: "rgba(76,122,92,0.12)" },
+  watch: { label: "WATCH", color: "#B8862F", bg: "rgba(184,134,47,0.12)" },
+  over: { label: "OVER", color: "#C1462B", bg: "rgba(193,70,43,0.12)" },
 };
 
 const CATEGORIES = ["Labour", "Materials", "Subcontractors", "Other"];
-const CATEGORY_COLOR = { Labour: "#7BA6D9", Materials: "#D9A441", Subcontractors: "#C186D9", Other: "#7C93A6" };
+const CATEGORY_COLOR = { Labour: "#3D6FA6", Materials: "#B8862F", Subcontractors: "#8B5FA3", Other: "#8A8072" };
 
 function statusFor(budget, actual) {
   if (budget <= 0) return "ok";
@@ -86,10 +86,10 @@ function scoreSubcontractor(items) {
 }
 
 function scoreColor(score) {
-  if (score == null) return "#7C93A6";
-  if (score >= 75) return "#4C8C6B";
-  if (score >= 50) return "#D9A441";
-  return "#E8622C";
+  if (score == null) return "#8A8072";
+  if (score >= 75) return "#4C7A5C";
+  if (score >= 50) return "#B8862F";
+  return "#C1462B";
 }
 
 function parseCsvToItems(text) {
@@ -169,22 +169,22 @@ function BarChartBudgetVsActual({ items }) {
         return (
           <div key={item.id}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-              <span style={{ fontSize: 12.5, color: "#C7D2DC" }}>{item.name}</span>
-              <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: over ? "#E8622C" : "#4C8C6B" }}>
+              <span style={{ fontSize: 12.5, color: "#4A443B" }}>{item.name}</span>
+              <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: over ? "#C1462B" : "#4C7A5C" }}>
                 {fmtShort(item.actual)} / {fmtShort(item.budget)}
               </span>
             </div>
             <div style={{ position: "relative", height: 16 }}>
-              <div style={{ position: "absolute", top: 0, left: 0, width: `${bPct}%`, height: 7, background: "#3D5468", borderRadius: 3 }} />
-              <div style={{ position: "absolute", top: 9, left: 0, width: `${aPct}%`, height: 7, background: over ? "#E8622C" : "#4C8C6B", borderRadius: 3 }} />
+              <div style={{ position: "absolute", top: 0, left: 0, width: `${bPct}%`, height: 7, background: "#C9BFA6", borderRadius: 3 }} />
+              <div style={{ position: "absolute", top: 9, left: 0, width: `${aPct}%`, height: 7, background: over ? "#C1462B" : "#4C7A5C", borderRadius: 3 }} />
             </div>
           </div>
         );
       })}
       <div style={{ display: "flex", gap: 16, marginTop: 4, flexWrap: "wrap" }}>
-        <LegendDot color="#3D5468" label="Budget" />
-        <LegendDot color="#4C8C6B" label="Actual (within)" />
-        <LegendDot color="#E8622C" label="Actual (over)" />
+        <LegendDot color="#C9BFA6" label="Budget" />
+        <LegendDot color="#4C7A5C" label="Actual (within)" />
+        <LegendDot color="#C1462B" label="Actual (over)" />
       </div>
     </div>
   );
@@ -214,8 +214,8 @@ function DonutCategorySplit({ rollup }) {
             return el;
           })}
         </g>
-        <text x="70" y="66" textAnchor="middle" fill="#8FA2B3" fontSize="10" fontFamily="'IBM Plex Mono', monospace">SPENT</text>
-        <text x="70" y="82" textAnchor="middle" fill="#F2EDE4" fontSize="14" fontWeight="600" fontFamily="'IBM Plex Mono', monospace">
+        <text x="70" y="66" textAnchor="middle" fill="#8A8072" fontSize="10" fontFamily="'IBM Plex Mono', monospace">SPENT</text>
+        <text x="70" y="82" textAnchor="middle" fill="#1C1712" fontSize="14" fontWeight="600" fontFamily="'IBM Plex Mono', monospace">
           {fmtShort(total)}
         </text>
       </svg>
@@ -223,8 +223,8 @@ function DonutCategorySplit({ rollup }) {
         {rollup.map((c) => (
           <div key={c.category} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
             <span style={{ width: 9, height: 9, borderRadius: "50%", background: CATEGORY_COLOR[c.category] }} />
-            <span style={{ color: "#C7D2DC" }}>{c.category}</span>
-            <span style={{ marginLeft: "auto", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#8FA2B3" }}>
+            <span style={{ color: "#4A443B" }}>{c.category}</span>
+            <span style={{ marginLeft: "auto", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#6B6258" }}>
               {((c.actual / total) * 100).toFixed(0)}%
             </span>
           </div>
@@ -243,22 +243,22 @@ function ProgressScatter({ items }) {
   return (
     <div>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", maxWidth: 420, display: "block" }}>
-        <rect x={pad} y={10} width={W - pad - 10} height={H - pad - 10} fill="#101820" stroke="#2A3644" />
-        <line x1={pad} y1={H - pad} x2={W - 10} y2={10} stroke="#3D5468" strokeWidth="1" strokeDasharray="3,3" />
-        <text x={W - 14} y={22} textAnchor="end" fill="#5C7186" fontSize="8" fontFamily="'IBM Plex Mono', monospace">on parity</text>
+        <rect x={pad} y={10} width={W - pad - 10} height={H - pad - 10} fill="#FAF6EC" stroke="#E4DCC8" />
+        <line x1={pad} y1={H - pad} x2={W - 10} y2={10} stroke="#C9BFA6" strokeWidth="1" strokeDasharray="3,3" />
+        <text x={W - 14} y={22} textAnchor="end" fill="#A69C89" fontSize="8" fontFamily="'IBM Plex Mono', monospace">on parity</text>
         {plotted.map((item) => {
           const prog = Math.min(Number(item.percent_complete), 100);
           const spent = Math.min((Number(item.actual) / Number(item.budget)) * 100, 130);
           const x = pad + (prog / 100) * (W - pad - 10);
           const y = H - pad - (spent / 130) * (H - pad - 10);
           const gap = spent - prog;
-          const color = gap > 15 ? "#E8622C" : gap > 5 ? "#D9A441" : "#4C8C6B";
+          const color = gap > 15 ? "#C1462B" : gap > 5 ? "#B8862F" : "#4C7A5C";
           return <circle key={item.id} cx={x} cy={Math.max(y, 12)} r="4.5" fill={color} opacity="0.85" />;
         })}
-        <text x={pad} y={H - 12} fill="#7C93A6" fontSize="9" fontFamily="'IBM Plex Mono', monospace">0%</text>
-        <text x={W - 10} y={H - 12} textAnchor="end" fill="#7C93A6" fontSize="9" fontFamily="'IBM Plex Mono', monospace">100% complete →</text>
+        <text x={pad} y={H - 12} fill="#8A8072" fontSize="9" fontFamily="'IBM Plex Mono', monospace">0%</text>
+        <text x={W - 10} y={H - 12} textAnchor="end" fill="#8A8072" fontSize="9" fontFamily="'IBM Plex Mono', monospace">100% complete →</text>
       </svg>
-      <p style={{ fontSize: 12, color: "#7C93A6", marginTop: 10, maxWidth: 420 }}>
+      <p style={{ fontSize: 12, color: "#8A8072", marginTop: 10, maxWidth: 420 }}>
         Anything above the dashed line is spending faster than it's progressing. The further above, the more urgent.
       </p>
     </div>
@@ -280,15 +280,15 @@ function TrendChart({ snapshots }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 80, display: "block" }} preserveAspectRatio="none">
-      <line x1="0" y1={zeroY} x2={W} y2={zeroY} stroke="#3D5468" strokeWidth="0.5" strokeDasharray="1,1" />
-      <polyline points={points} fill="none" stroke="#E8622C" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+      <line x1="0" y1={zeroY} x2={W} y2={zeroY} stroke="#E4DCC8" strokeWidth="0.5" strokeDasharray="1,1" />
+      <polyline points={points} fill="none" stroke="#B85C2C" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }
 
 function LegendDot({ color, label }) {
   return (
-    <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#8FA2B3" }}>
+    <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#6B6258" }}>
       <span style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
       {label}
     </span>
@@ -296,7 +296,7 @@ function LegendDot({ color, label }) {
 }
 
 function EmptyChart({ label }) {
-  return <div style={{ fontSize: 13, color: "#7C93A6", padding: "24px 0" }}>{label}</div>;
+  return <div style={{ fontSize: 13, color: "#8A8072", padding: "24px 0" }}>{label}</div>;
 }
 
 function ScoreBar({ label, score, detail }) {
@@ -304,15 +304,15 @@ function ScoreBar({ label, score, detail }) {
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-        <span style={{ fontSize: 12, color: "#C7D2DC" }}>{label}</span>
+        <span style={{ fontSize: 12, color: "#4A443B" }}>{label}</span>
         <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", color }}>
           {score == null ? "—" : Math.round(score)}
         </span>
       </div>
-      <div style={{ height: 6, background: "#101820", borderRadius: 3, overflow: "hidden" }}>
+      <div style={{ height: 6, background: "#EFE9D9", borderRadius: 3, overflow: "hidden" }}>
         <div style={{ width: `${score ?? 0}%`, height: "100%", background: color, borderRadius: 3, transition: "width 0.3s ease" }} />
       </div>
-      {detail && <div style={{ fontSize: 10.5, color: "#7C93A6", marginTop: 3 }}>{detail}</div>}
+      {detail && <div style={{ fontSize: 10.5, color: "#8A8072", marginTop: 3 }}>{detail}</div>}
     </div>
   );
 }
@@ -321,7 +321,7 @@ function SummaryCard({ label, value, accent }) {
   return (
     <div style={styles.summaryCard}>
       <div style={styles.summaryLabel}>{label}</div>
-      <div style={{ ...styles.summaryValue, color: accent || "#F2EDE4" }}>{value}</div>
+      <div style={{ ...styles.summaryValue, color: accent || "#1C1712" }}>{value}</div>
     </div>
   );
 }
@@ -329,10 +329,10 @@ function SummaryCard({ label, value, accent }) {
 function GlobalStyles() {
   return (
     <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
       * { box-sizing: border-box; }
-      input:focus, select:focus, textarea:focus { outline: 2px solid #E8622C; outline-offset: 1px; }
-      button:focus-visible { outline: 2px solid #E8622C; outline-offset: 2px; }
+      input:focus, select:focus, textarea:focus { outline: 2px solid #B85C2C; outline-offset: 1px; }
+      button:focus-visible { outline: 2px solid #B85C2C; outline-offset: 2px; }
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
       @media print {
         .no-print { display: none !important; }
@@ -445,12 +445,12 @@ function Dashboard({ onOpen, onNavigate }) {
           <SummaryCard
             label="Net variance"
             value={`${portfolio.variance >= 0 ? "+" : ""}${fmt(portfolio.variance)}`}
-            accent={portfolio.variance > 0 ? "#E8622C" : "#4C8C6B"}
+            accent={portfolio.variance > 0 ? "#C1462B" : "#4C7A5C"}
           />
           <SummaryCard
             label="Projects over"
             value={`${portfolio.overCount} of ${projects.length}`}
-            accent={portfolio.overCount ? "#E8622C" : "#4C8C6B"}
+            accent={portfolio.overCount ? "#C1462B" : "#4C7A5C"}
           />
         </div>
       )}
@@ -476,7 +476,7 @@ function Dashboard({ onOpen, onNavigate }) {
         <div style={styles.projectGrid}>
           {projects.map((p) => {
             const pct = p.budget ? (p.variance / p.budget) * 100 : 0;
-            const color = p.variance > 0 ? "#E8622C" : "#4C8C6B";
+            const color = p.variance > 0 ? "#C1462B" : "#4C7A5C";
             const spentPct = p.budget ? Math.min((p.actual / p.budget) * 100, 100) : 0;
             return (
               <div key={p.id} style={styles.projectCard} onClick={() => onOpen(p.id)}>
@@ -484,7 +484,7 @@ function Dashboard({ onOpen, onNavigate }) {
                   <div style={styles.projectName}>{p.name}</div>
                   <button style={styles.deleteProjectBtn} onClick={(e) => { e.stopPropagation(); deleteProject(p.id, p.name); }}>✕</button>
                 </div>
-                <div style={{ height: 5, background: "#101820", borderRadius: 3, marginBottom: 10 }}>
+                <div style={{ height: 5, background: "#EFE9D9", borderRadius: 3, marginBottom: 10 }}>
                   <div style={{ width: `${spentPct}%`, height: "100%", background: color, borderRadius: 3 }} />
                 </div>
                 <div style={styles.projectNums}>
@@ -592,11 +592,11 @@ function SubcontractorsView({ onNavigate }) {
                 <div style={styles.projectCardTop}>
                   <div>
                     <div style={styles.projectName}>{sub.name}</div>
-                    {sub.trade && <div style={{ fontSize: 11.5, color: "#8FA2B3", marginTop: 2 }}>{sub.trade}</div>}
+                    {sub.trade && <div style={{ fontSize: 11.5, color: "#6B6258", marginTop: 2 }}>{sub.trade}</div>}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 10, color: "#7C93A6", letterSpacing: "0.08em" }}>OVERALL</div>
+                      <div style={{ fontSize: 10, color: "#8A8072", letterSpacing: "0.08em" }}>OVERALL</div>
                       <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 600, color: scoreColor(score.overall) }}>
                         {score.overall == null ? "—" : Math.round(score.overall)}
                       </div>
@@ -632,22 +632,22 @@ function SubcontractorsView({ onNavigate }) {
                 </button>
 
                 {isOpen && (
-                  <div style={{ marginTop: 10, borderTop: "1px solid #2A3644", paddingTop: 10 }}>
+                  <div style={{ marginTop: 10, borderTop: "1px solid #EFE9D9", paddingTop: 10 }}>
                     {(itemsBySub[sub.id] || []).length === 0 ? (
-                      <div style={{ fontSize: 12, color: "#7C93A6" }}>No line items assigned to this sub yet.</div>
+                      <div style={{ fontSize: 12, color: "#8A8072" }}>No line items assigned to this sub yet.</div>
                     ) : (
                       (itemsBySub[sub.id] || []).map((i) => {
                         const late = daysBetween(i.due_date, i.completed_date);
                         return (
                           <div key={i.id} style={styles.subItemRow}>
                             <span style={{ fontSize: 12.5, flex: 2 }}>{i.name}</span>
-                            <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: Number(i.actual) > Number(i.budget) ? "#E8622C" : "#4C8C6B", flex: 1, textAlign: "right" }}>
+                            <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: Number(i.actual) > Number(i.budget) ? "#C1462B" : "#4C7A5C", flex: 1, textAlign: "right" }}>
                               {fmtShort(i.actual)} / {fmtShort(i.budget)}
                             </span>
-                            <span style={{ fontSize: 11, color: "#8FA2B3", flex: 0.8, textAlign: "right" }}>
+                            <span style={{ fontSize: 11, color: "#6B6258", flex: 0.8, textAlign: "right" }}>
                               {late == null ? "—" : late > 0 ? `${late}d late` : `${Math.abs(late)}d early`}
                             </span>
-                            <span style={{ fontSize: 11, color: "#D9A441", flex: 0.5, textAlign: "right" }}>
+                            <span style={{ fontSize: 11, color: "#B8862F", flex: 0.5, textAlign: "right" }}>
                               {i.quality_rating ? `${i.quality_rating}/5` : "—"}
                             </span>
                           </div>
@@ -775,8 +775,8 @@ function TemplatesView({ onNavigate }) {
                 <div style={styles.projectCardTop}>
                   <div>
                     <div style={styles.projectName}>{t.name}</div>
-                    {t.description && <div style={{ fontSize: 12, color: "#8FA2B3", marginTop: 3 }}>{t.description}</div>}
-                    <div style={{ fontSize: 11.5, color: "#7C93A6", marginTop: 6, fontFamily: "'IBM Plex Mono', monospace" }}>
+                    {t.description && <div style={{ fontSize: 12, color: "#6B6258", marginTop: 3 }}>{t.description}</div>}
+                    <div style={{ fontSize: 11.5, color: "#8A8072", marginTop: 6, fontFamily: "'IBM Plex Mono', monospace" }}>
                       {tItems.length} line item{tItems.length === 1 ? "" : "s"} · {fmt(total)}
                     </div>
                   </div>
@@ -789,14 +789,14 @@ function TemplatesView({ onNavigate }) {
                 </div>
 
                 {isOpen && (
-                  <div style={{ marginTop: 12, borderTop: "1px solid #2A3644", paddingTop: 12 }}>
+                  <div style={{ marginTop: 12, borderTop: "1px solid #EFE9D9", paddingTop: 12 }}>
                     {tItems.map((i) => (
                       <div key={i.id} style={styles.subItemRow}>
                         <span style={{ display: "flex", alignItems: "center", gap: 6, flex: 2 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: CATEGORY_COLOR[i.category] || "#7C93A6" }} />
+                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: CATEGORY_COLOR[i.category] || "#8A8072" }} />
                           <span style={{ fontSize: 12.5 }}>{i.name}</span>
                         </span>
-                        <span style={{ fontSize: 11.5, color: "#8FA2B3", flex: 0.8 }}>{i.category}</span>
+                        <span style={{ fontSize: 11.5, color: "#6B6258", flex: 0.8 }}>{i.category}</span>
                         <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", flex: 0.8, textAlign: "right" }}>{fmt(i.budget)}</span>
                         <button style={{ ...styles.removeBtn, flex: 0.2, textAlign: "right" }} onClick={() => removeTemplateItem(t.id, i.id)}>✕</button>
                       </div>
@@ -1133,11 +1133,11 @@ function ProjectView({ projectId, onBack }) {
 
       <div style={styles.summaryStrip}>
         <SummaryCard label="Original budget" value={fmt(totals.budget)} />
-        {approvedCoTotal !== 0 && <SummaryCard label="Revised budget" value={fmt(totals.revisedBudget)} accent="#D9A441" />}
+        {approvedCoTotal !== 0 && <SummaryCard label="Revised budget" value={fmt(totals.revisedBudget)} accent="#B8862F" />}
         <SummaryCard label="Actual spend" value={fmt(totals.actual)} />
-        <SummaryCard label="Variance" value={`${totals.variance >= 0 ? "+" : ""}${fmt(totals.variance)}`} accent={totals.variance > 0 ? "#E8622C" : "#4C8C6B"} />
+        <SummaryCard label="Variance" value={`${totals.variance >= 0 ? "+" : ""}${fmt(totals.variance)}`} accent={totals.variance > 0 ? "#C1462B" : "#4C7A5C"} />
         <SummaryCard label="Retention held" value={fmt(totals.retentionHeld)} />
-        <SummaryCard label="Flagged lines" value={`${overCount} over · ${watchCount} watch`} accent={overCount ? "#E8622C" : watchCount ? "#D9A441" : "#4C8C6B"} />
+        <SummaryCard label="Flagged lines" value={`${overCount} over · ${watchCount} watch`} accent={overCount ? "#C1462B" : watchCount ? "#B8862F" : "#4C7A5C"} />
       </div>
 
       {totals.pct > 0 && (
@@ -1146,7 +1146,7 @@ function ProjectView({ projectId, onBack }) {
         </div>
       )}
       {aheadCount > 0 && (
-        <div style={{ ...styles.warningBanner, borderColor: "#D9A441", background: "rgba(217,164,65,0.1)", color: "#F2DDB0" }}>
+        <div style={{ ...styles.warningBanner, borderColor: "#B8862F", background: "rgba(184,134,47,0.1)", color: "#7A5A1E" }}>
           {aheadCount} line{aheadCount > 1 ? "s are" : " is"} spending ahead of physical progress. Check the Progress column below.
         </div>
       )}
@@ -1160,7 +1160,7 @@ function ProjectView({ projectId, onBack }) {
             </div>
             <div style={styles.categoryNums}>
               <span style={styles.categoryBudget}>{fmt(c.budget)}</span>
-              <span style={{ ...styles.categoryVariance, color: c.variance > 0 ? "#E8622C" : "#4C8C6B" }}>
+              <span style={{ ...styles.categoryVariance, color: c.variance > 0 ? "#C1462B" : "#4C7A5C" }}>
                 {c.variance >= 0 ? "+" : ""}{fmt(c.variance)}
               </span>
             </div>
@@ -1177,7 +1177,7 @@ function ProjectView({ projectId, onBack }) {
         <button style={styles.importBtn} onClick={saveAsTemplate}>Save as template</button>
         <button style={styles.templateLink} onClick={downloadTemplate}>Download CSV format</button>
         {importMessage && (
-          <span style={{ fontSize: 12.5, color: importMessage.type === "error" ? "#E8622C" : "#4C8C6B" }}>{importMessage.text}</span>
+          <span style={{ fontSize: 12.5, color: importMessage.type === "error" ? "#C1462B" : "#4C7A5C" }}>{importMessage.text}</span>
         )}
       </div>
 
@@ -1226,10 +1226,10 @@ function ProjectView({ projectId, onBack }) {
                     <div style={{ fontWeight: 500 }}>{item.name}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3, flexWrap: "wrap" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: CATEGORY_COLOR[item.category] || "#7C93A6" }} />
-                        <span style={{ fontSize: 11, color: "#8FA2B3" }}>{item.category || "Other"}</span>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: CATEGORY_COLOR[item.category] || "#8A8072" }} />
+                        <span style={{ fontSize: 11, color: "#6B6258" }}>{item.category || "Other"}</span>
                       </span>
-                      {subName && <span style={{ fontSize: 11, color: "#C186D9" }}>· {subName}</span>}
+                      {subName && <span style={{ fontSize: 11, color: "#8B5FA3" }}>· {subName}</span>}
                       <button className="no-print" style={styles.miniLink} onClick={() => { setExpandedRow(isOpen ? null : item.id); setNoteDraft(item.notes || ""); }}>
                         {isOpen ? "Close" : "Details"}
                       </button>
@@ -1255,19 +1255,19 @@ function ProjectView({ projectId, onBack }) {
                   </span>
                   <span style={{ ...styles.tdCell, flex: 1.4 }} className="no-print">
                     <div style={styles.dualBarTrack}>
-                      <div style={{ ...styles.dualBarFill, width: `${progPct}%`, background: "#4C8C6B", top: 0 }} />
-                      <div style={{ ...styles.dualBarFill, width: `${spentPct}%`, background: gapFlag ? "#E8622C" : "#7BA6D9", top: 8 }} />
+                      <div style={{ ...styles.dualBarFill, width: `${progPct}%`, background: "#4C7A5C", top: 0 }} />
+                      <div style={{ ...styles.dualBarFill, width: `${spentPct}%`, background: gapFlag ? "#C1462B" : "#3D6FA6", top: 8 }} />
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
-                      <span style={{ fontSize: 10, color: "#4C8C6B" }}>{progPct.toFixed(0)}% done</span>
-                      <span style={{ fontSize: 10, color: gapFlag ? "#E8622C" : "#7BA6D9" }}>{spentPct.toFixed(0)}% spent</span>
+                      <span style={{ fontSize: 10, color: "#4C7A5C" }}>{progPct.toFixed(0)}% done</span>
+                      <span style={{ fontSize: 10, color: gapFlag ? "#C1462B" : "#3D6FA6" }}>{spentPct.toFixed(0)}% spent</span>
                     </div>
                   </span>
                   <span style={{ ...styles.tdCell, flex: 0.9, textAlign: "center" }}>
                     <span style={{ ...styles.statusPill, color: s.color, background: s.bg }}>{s.label}</span>
                     {gapFlag && (
                       <div className="no-print" style={{ marginTop: 4 }}>
-                        <span style={{ ...styles.statusPill, color: "#E8622C", background: "rgba(232,98,44,0.14)", fontSize: 9 }}>SPEND AHEAD</span>
+                        <span style={{ ...styles.statusPill, color: "#C1462B", background: "rgba(193,70,43,0.12)", fontSize: 9 }}>SPEND AHEAD</span>
                       </div>
                     )}
                   </span>
@@ -1383,17 +1383,17 @@ function ProjectView({ projectId, onBack }) {
                   return (
                     <div key={c.category}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                        <span style={{ fontSize: 12.5, color: "#C7D2DC" }}>{c.category}</span>
-                        <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: over ? "#E8622C" : "#4C8C6B" }}>
+                        <span style={{ fontSize: 12.5, color: "#4A443B" }}>{c.category}</span>
+                        <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: over ? "#C1462B" : "#4C7A5C" }}>
                           {over ? "+" : ""}{fmtShort(c.variance)}
                         </span>
                       </div>
-                      <div style={{ position: "relative", height: 8, background: "#101820", borderRadius: 3 }}>
-                        <div style={{ position: "absolute", left: "50%", top: -2, width: 1, height: 12, background: "#3D5468" }} />
+                      <div style={{ position: "relative", height: 8, background: "#EFE9D9", borderRadius: 3 }}>
+                        <div style={{ position: "absolute", left: "50%", top: -2, width: 1, height: 12, background: "#C9BFA6" }} />
                         <div style={{
                           position: "absolute", top: 0, height: "100%", borderRadius: 3,
                           left: over ? "50%" : `${50 - w}%`, width: `${w}%`,
-                          background: over ? "#E8622C" : "#4C8C6B",
+                          background: over ? "#C1462B" : "#4C7A5C",
                         }} />
                       </div>
                     </div>
@@ -1443,19 +1443,19 @@ function ProjectView({ projectId, onBack }) {
                     <button style={styles.actualButton} onClick={() => startEdit(item.id, "certified", item.certified)}>{fmt(certified)}</button>
                   )}
                 </span>
-                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#D9A441" }}>{fmt(retentionHeld)}</span>
-                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#4C8C6B" }}>{fmt(certified - retentionHeld)}</span>
-                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: uncertified > 0 ? "#E8622C" : "#7C93A6" }}>{fmt(uncertified)}</span>
+                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#B8862F" }}>{fmt(retentionHeld)}</span>
+                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#4C7A5C" }}>{fmt(certified - retentionHeld)}</span>
+                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: uncertified > 0 ? "#C1462B" : "#8A8072" }}>{fmt(uncertified)}</span>
               </div>
             );
           })}
-          <div style={{ ...styles.row, background: "#1A222C", fontWeight: 600 }}>
+          <div style={{ ...styles.row, background: "#FAF6EC", fontWeight: 600 }}>
             <span style={{ ...styles.tdCell, flex: 2.4 }}>Totals</span>
             <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.claimed)}</span>
             <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.certified)}</span>
-            <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#D9A441" }}>{fmt(totals.retentionHeld)}</span>
-            <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#4C8C6B" }}>{fmt(totals.paidToDate)}</span>
-            <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: totals.uncertified > 0 ? "#E8622C" : "#7C93A6" }}>{fmt(totals.uncertified)}</span>
+            <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#B8862F" }}>{fmt(totals.retentionHeld)}</span>
+            <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#4C7A5C" }}>{fmt(totals.paidToDate)}</span>
+            <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: totals.uncertified > 0 ? "#C1462B" : "#8A8072" }}>{fmt(totals.uncertified)}</span>
           </div>
         </div>
       )}
@@ -1474,7 +1474,7 @@ function ProjectView({ projectId, onBack }) {
               <span style={{ ...styles.tdCell, flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(co.amount)}</span>
               <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "center" }}>
                 <select value={co.status} onChange={(e) => setCoStatus(co.id, e.target.value)}
-                  style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: co.status === "approved" ? "#4C8C6B" : co.status === "rejected" ? "#E8622C" : "#D9A441" }}>
+                  style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: co.status === "approved" ? "#4C7A5C" : co.status === "rejected" ? "#C1462B" : "#B8862F" }}>
                   <option value="pending">Pending</option>
                   <option value="approved">Approved</option>
                   <option value="rejected">Rejected</option>
@@ -1486,7 +1486,7 @@ function ProjectView({ projectId, onBack }) {
             </div>
           ))}
           {changeOrders.length === 0 && (
-            <div style={{ padding: 20, fontSize: 13, color: "#7C93A6" }}>
+            <div style={{ padding: 20, fontSize: 13, color: "#8A8072" }}>
               No change orders yet. Add one below when a client approves a variation to the original budget.
             </div>
           )}
@@ -1502,24 +1502,24 @@ function ProjectView({ projectId, onBack }) {
         <div className="no-print" style={styles.ledger}>
           <div style={{ padding: 20 }}>
             <button style={styles.addBtn} onClick={logSnapshot}>+ Log snapshot now</button>
-            <p style={{ fontSize: 12.5, color: "#7C93A6", marginTop: 10 }}>
+            <p style={{ fontSize: 12.5, color: "#8A8072", marginTop: 10 }}>
               Click this weekly (or before each client meeting) to record where budget vs actual stand right now.
               Over time this builds a trend you can point to instead of a single snapshot.
             </p>
           </div>
           {snapshots.length === 0 ? (
-            <div style={{ padding: "0 20px 20px", fontSize: 13, color: "#7C93A6" }}>No snapshots logged yet.</div>
+            <div style={{ padding: "0 20px 20px", fontSize: 13, color: "#8A8072" }}>No snapshots logged yet.</div>
           ) : (
             <div style={{ padding: "0 20px 20px" }}>
               <TrendChart snapshots={snapshots} />
               <div style={{ marginTop: 16 }}>
                 {[...snapshots].reverse().map((s) => (
                   <div key={s.id} style={styles.trendRow}>
-                    <span style={{ fontSize: 12, color: "#8FA2B3", fontFamily: "'IBM Plex Mono', monospace" }}>
+                    <span style={{ fontSize: 12, color: "#6B6258", fontFamily: "'IBM Plex Mono', monospace" }}>
                       {new Date(s.created_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })}
                     </span>
                     <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(s.actual)}</span>
-                    <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", color: Number(s.variance) > 0 ? "#E8622C" : "#4C8C6B", fontWeight: 600 }}>
+                    <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", color: Number(s.variance) > 0 ? "#C1462B" : "#4C7A5C", fontWeight: 600 }}>
                       {Number(s.variance) >= 0 ? "+" : ""}{fmt(s.variance)}
                     </span>
                   </div>
@@ -1542,107 +1542,107 @@ function ProjectView({ projectId, onBack }) {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#1C2530",
-    backgroundImage: "linear-gradient(rgba(61,84,104,0.16) 1px, transparent 1px), linear-gradient(90deg, rgba(61,84,104,0.16) 1px, transparent 1px)",
+    background: "#F5EFE2",
+    backgroundImage: "linear-gradient(rgba(184,164,124,0.20) 1px, transparent 1px), linear-gradient(90deg, rgba(184,164,124,0.20) 1px, transparent 1px)",
     backgroundSize: "28px 28px",
-    color: "#F2EDE4",
+    color: "#1C1712",
     fontFamily: "'Inter', sans-serif",
     padding: "20px 16px 48px",
   },
-  eyebrow: { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#E8622C", fontWeight: 600 },
+  eyebrow: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, textTransform: "uppercase" },
 
   dashHeader: { maxWidth: 1180, margin: "0 auto 16px" },
-  dashTitle: { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 34, fontWeight: 600, marginTop: 4 },
+  dashTitle: { fontFamily: "'Fraunces', serif", fontSize: 34, fontWeight: 500, marginTop: 4, letterSpacing: "-0.01em" },
 
-  topNav: { maxWidth: 1180, margin: "0 auto 20px", display: "flex", gap: 8, borderBottom: "1px solid #2A3644", paddingBottom: 12 },
-  topNavBtn: { background: "none", border: "none", color: "#8FA2B3", fontSize: 14, fontWeight: 500, padding: "6px 12px", cursor: "pointer", borderRadius: 3 },
-  topNavBtnActive: { background: "#232E3B", color: "#F2EDE4", fontWeight: 600 },
+  topNav: { maxWidth: 1180, margin: "0 auto 20px", display: "flex", gap: 8, borderBottom: "1px solid #EFE9D9", paddingBottom: 12 },
+  topNavBtn: { background: "none", border: "none", color: "#6B6258", fontSize: 14, fontWeight: 500, padding: "6px 12px", cursor: "pointer", borderRadius: 3 },
+  topNavBtnActive: { background: "#1C1712", color: "#F5EFE2", fontWeight: 600 },
 
-  explainer: { maxWidth: 1180, margin: "0 auto 18px", fontSize: 13, color: "#8FA2B3", lineHeight: 1.6, background: "#1E2733", border: "1px solid #2A3644", borderRadius: 4, padding: "12px 16px" },
+  explainer: { maxWidth: 1180, margin: "0 auto 18px", fontSize: 13, color: "#6B6258", lineHeight: 1.6, background: "#FAF6EC", border: "1px solid #EFE9D9", borderRadius: 4, padding: "12px 16px" },
 
   newProjectRow: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", gap: 10 },
   addRowStandalone: { maxWidth: 1180, margin: "0 auto 22px", display: "flex", gap: 10, flexWrap: "wrap" },
   projectGrid: { maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 },
-  projectCard: { background: "#232E3B", border: "1px solid #3D5468", borderRadius: 4, padding: "18px 20px", cursor: "pointer" },
-  scoreCard: { background: "#232E3B", border: "1px solid #3D5468", borderRadius: 4, padding: "18px 20px" },
-  templateCard: { background: "#232E3B", border: "1px solid #3D5468", borderRadius: 4, padding: "18px 20px", marginBottom: 12 },
+  projectCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "18px 20px", cursor: "pointer", boxShadow: "0 2px 8px rgba(28,23,18,0.04)" },
+  scoreCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 4, padding: "18px 20px" },
+  templateCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 4, padding: "18px 20px", marginBottom: 12 },
   projectCardTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 },
-  projectName: { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 20, fontWeight: 600 },
-  deleteProjectBtn: { background: "none", border: "none", color: "#7C93A6", cursor: "pointer", fontSize: 14 },
-  projectNums: { display: "flex", justifyContent: "space-between", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", color: "#C7D2DC" },
-  projectMeta: { fontSize: 12, color: "#7C93A6", marginTop: 8 },
-  subItemRow: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #2A3644" },
+  projectName: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 600 },
+  deleteProjectBtn: { background: "none", border: "none", color: "#8A8072", cursor: "pointer", fontSize: 14 },
+  projectNums: { display: "flex", justifyContent: "space-between", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", color: "#4A443B" },
+  projectMeta: { fontSize: 12, color: "#8A8072", marginTop: 8 },
+  subItemRow: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #EFE9D9" },
 
   backRow: { maxWidth: 1180, margin: "0 auto 12px", display: "flex", justifyContent: "space-between" },
-  backBtn: { background: "none", border: "none", color: "#8FA2B3", fontSize: 13, cursor: "pointer" },
-  exportBtn: { background: "#232E3B", border: "1px solid #3D5468", borderRadius: 3, color: "#F2EDE4", fontSize: 13, fontWeight: 500, padding: "8px 16px", cursor: "pointer" },
+  backBtn: { background: "none", border: "none", color: "#6B6258", fontSize: 13, cursor: "pointer" },
+  exportBtn: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontSize: 13, fontWeight: 500, padding: "8px 16px", cursor: "pointer" },
 
-  titleBlock: { display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-end", gap: 16, borderBottom: "2px solid #3D5468", paddingBottom: 14, maxWidth: 1180, margin: "0 auto 20px" },
+  titleBlock: { display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-end", gap: 16, borderBottom: "2px solid #E4DCC8", paddingBottom: 14, maxWidth: 1180, margin: "0 auto 20px" },
   titleBlockLeft: { display: "flex", flexDirection: "column", gap: 6, flex: 1, minWidth: 240 },
-  projectInput: { background: "transparent", border: "none", color: "#F2EDE4", fontFamily: "'Barlow Condensed', sans-serif", fontSize: 30, fontWeight: 600, padding: 0, width: "100%" },
+  projectInput: { background: "transparent", border: "none", color: "#1C1712", fontFamily: "'Fraunces', serif", fontSize: 30, fontWeight: 500, padding: 0, width: "100%", letterSpacing: "-0.01em" },
   titleBlockRight: { display: "flex", gap: 22 },
   tbCell: { display: "flex", flexDirection: "column", alignItems: "flex-end" },
-  tbLabel: { fontSize: 10, letterSpacing: "0.1em", color: "#7C93A6" },
-  tbValue: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, color: "#F2EDE4", display: "flex", alignItems: "center", gap: 2 },
-  retentionInput: { width: 34, background: "#101820", border: "1px solid #3D5468", borderRadius: 3, color: "#F2EDE4", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, padding: "1px 4px", textAlign: "right" },
+  tbLabel: { fontSize: 10, letterSpacing: "0.1em", color: "#8A8072" },
+  tbValue: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, color: "#1C1712", display: "flex", alignItems: "center", gap: 2 },
+  retentionInput: { width: 34, background: "#EFE9D9", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, padding: "1px 4px", textAlign: "right" },
 
   summaryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, maxWidth: 1180, margin: "0 auto 16px" },
-  summaryCard: { background: "#232E3B", border: "1px solid #3D5468", borderRadius: 4, padding: "14px 16px" },
-  summaryLabel: { fontSize: 11, letterSpacing: "0.08em", color: "#7C93A6", marginBottom: 6, textTransform: "uppercase" },
+  summaryCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "14px 16px", boxShadow: "0 2px 8px rgba(28,23,18,0.04)" },
+  summaryLabel: { fontSize: 11, letterSpacing: "0.08em", color: "#8A8072", marginBottom: 6, textTransform: "uppercase" },
   summaryValue: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 17, fontWeight: 600 },
 
-  warningBanner: { maxWidth: 1180, margin: "0 auto 12px", background: "rgba(232,98,44,0.1)", border: "1px solid #E8622C", borderRadius: 4, padding: "12px 16px", fontSize: 14, color: "#F2C6B0" },
+  warningBanner: { maxWidth: 1180, margin: "0 auto 12px", background: "rgba(193,70,43,0.08)", border: "1px solid #C1462B", borderRadius: 4, padding: "12px 16px", fontSize: 14, color: "#8A3D1E" },
 
   categoryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, maxWidth: 1180, margin: "0 auto 16px" },
-  categoryCard: { background: "#1E2733", border: "1px solid #2A3644", borderRadius: 4, padding: "10px 14px" },
+  categoryCard: { background: "#FAF6EC", border: "1px solid #EFE9D9", borderRadius: 4, padding: "10px 14px" },
   categoryHead: { display: "flex", alignItems: "center", gap: 6, marginBottom: 4 },
   categoryDot: { width: 8, height: 8, borderRadius: "50%" },
-  categoryName: { fontSize: 12, color: "#C7D2DC", fontWeight: 500 },
+  categoryName: { fontSize: 12, color: "#4A443B", fontWeight: 500 },
   categoryNums: { display: "flex", justifyContent: "space-between", fontFamily: "'IBM Plex Mono', monospace", fontSize: 13 },
-  categoryBudget: { color: "#8FA2B3" },
+  categoryBudget: { color: "#6B6258" },
   categoryVariance: { fontWeight: 600 },
 
   importRow: { maxWidth: 1180, margin: "0 auto 14px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" },
-  importBtn: { background: "#232E3B", border: "1px solid #3D5468", borderRadius: 3, color: "#F2EDE4", fontSize: 13, fontWeight: 500, padding: "8px 16px", cursor: "pointer" },
-  templateLink: { background: "none", border: "none", color: "#8FA2B3", fontSize: 12.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
+  importBtn: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontSize: 13, fontWeight: 500, padding: "8px 16px", cursor: "pointer" },
+  templateLink: { background: "none", border: "none", color: "#6B6258", fontSize: 12.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
 
   viewToggle: { maxWidth: 1180, margin: "0 auto 12px", display: "flex", gap: 8, flexWrap: "wrap" },
-  toggleBtn: { background: "#1A222C", border: "1px solid #3D5468", borderRadius: 3, color: "#8FA2B3", fontSize: 13, fontWeight: 500, padding: "8px 16px", cursor: "pointer" },
-  toggleBtnActive: { background: "#E8622C", borderColor: "#E8622C", color: "#1C2530", fontWeight: 600 },
+  toggleBtn: { background: "#FAF6EC", border: "1px solid #E4DCC8", borderRadius: 3, color: "#6B6258", fontSize: 13, fontWeight: 500, padding: "8px 16px", cursor: "pointer" },
+  toggleBtnActive: { background: "#1C1712", borderColor: "#1C1712", color: "#F5EFE2", fontWeight: 600 },
 
-  ledger: { maxWidth: 1180, margin: "0 auto", background: "#20293480", borderRadius: 4, overflow: "hidden" },
-  ledgerHeaderRow: { display: "flex", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid #3D5468", background: "#1A222C" },
-  thCell: { fontSize: 11, letterSpacing: "0.08em", color: "#7C93A6", textTransform: "uppercase" },
-  row: { display: "flex", alignItems: "center", padding: "12px 14px", borderBottom: "1px solid #2A3644" },
+  ledger: { maxWidth: 1180, margin: "0 auto", background: "#FFFFFF", borderRadius: 6, overflow: "hidden", border: "1px solid #E4DCC8", boxShadow: "0 4px 16px rgba(28,23,18,0.05)" },
+  ledgerHeaderRow: { display: "flex", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid #E4DCC8", background: "#FAF6EC" },
+  thCell: { fontSize: 11, letterSpacing: "0.08em", color: "#8A8072", textTransform: "uppercase" },
+  row: { display: "flex", alignItems: "center", padding: "12px 14px", borderBottom: "1px solid #EFE9D9" },
   tdCell: { fontSize: 14, paddingRight: 8 },
-  actualButton: { background: "none", border: "none", color: "#F2EDE4", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, cursor: "pointer", borderBottom: "1px dashed #7C93A6", padding: 0 },
-  inlineInput: { width: "100%", background: "#101820", border: "1px solid #E8622C", borderRadius: 3, color: "#F2EDE4", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, padding: "2px 6px", textAlign: "right" },
-  miniLink: { background: "none", border: "none", color: "#7C93A6", fontSize: 10.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
-  miniLinkBlock: { background: "none", border: "none", color: "#7BA6D9", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginTop: 4 },
-  gaugeTrack: { position: "relative", height: 6, background: "#101820", borderRadius: 3, overflow: "visible", marginBottom: 4 },
+  actualButton: { background: "none", border: "none", color: "#1C1712", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, cursor: "pointer", borderBottom: "1px dashed #8A8072", padding: 0 },
+  inlineInput: { width: "100%", background: "#EFE9D9", border: "1px solid #B85C2C", borderRadius: 3, color: "#1C1712", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, padding: "2px 6px", textAlign: "right" },
+  miniLink: { background: "none", border: "none", color: "#8A8072", fontSize: 10.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
+  miniLinkBlock: { background: "none", border: "none", color: "#3D6FA6", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginTop: 4 },
+  gaugeTrack: { position: "relative", height: 6, background: "#EFE9D9", borderRadius: 3, overflow: "visible", marginBottom: 4 },
   gaugeFill: { height: "100%", borderRadius: 3, transition: "width 0.3s ease" },
-  gaugeTolMark: { position: "absolute", left: "71.4%", top: -2, width: 1, height: 10, background: "#7C93A6" },
+  gaugeTolMark: { position: "absolute", left: "71.4%", top: -2, width: 1, height: 10, background: "#8A8072" },
   gaugeLabel: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 11 },
-  dualBarTrack: { position: "relative", height: 16, background: "#101820", borderRadius: 3 },
+  dualBarTrack: { position: "relative", height: 16, background: "#EFE9D9", borderRadius: 3 },
   dualBarFill: { position: "absolute", left: 0, height: 6, borderRadius: 3, transition: "width 0.3s ease" },
   statusPill: { display: "inline-block", fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", padding: "4px 8px", borderRadius: 3 },
-  removeBtn: { background: "none", border: "none", color: "#7C93A6", cursor: "pointer", fontSize: 13 },
-  addRow: { display: "flex", gap: 10, alignItems: "center", padding: "14px", background: "#1A222C", flexWrap: "wrap" },
-  addInput: { background: "#101820", border: "1px solid #3D5468", borderRadius: 3, color: "#F2EDE4", fontSize: 14, padding: "8px 10px" },
-  addBtn: { background: "#E8622C", border: "none", borderRadius: 3, color: "#1C2530", fontWeight: 600, fontSize: 13, padding: "9px 14px", cursor: "pointer", whiteSpace: "nowrap" },
-  footer: { maxWidth: 1180, margin: "16px auto 0", fontSize: 12, color: "#7C93A6" },
+  removeBtn: { background: "none", border: "none", color: "#8A8072", cursor: "pointer", fontSize: 13 },
+  addRow: { display: "flex", gap: 10, alignItems: "center", padding: "14px", background: "#FAF6EC", flexWrap: "wrap" },
+  addInput: { background: "#EFE9D9", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontSize: 14, padding: "8px 10px" },
+  addBtn: { background: "#B85C2C", border: "none", borderRadius: 3, color: "#FFFFFF", fontWeight: 600, fontSize: 13, padding: "9px 14px", cursor: "pointer", whiteSpace: "nowrap" },
+  footer: { maxWidth: 1180, margin: "16px auto 0", fontSize: 12, color: "#8A8072" },
 
-  detailPanel: { background: "#1A222C", padding: "16px 18px", borderBottom: "1px solid #2A3644" },
+  detailPanel: { background: "#FAF6EC", padding: "16px 18px", borderBottom: "1px solid #EFE9D9" },
   detailGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 },
   detailField: { display: "flex", flexDirection: "column", gap: 5 },
-  detailLabel: { fontSize: 10.5, letterSpacing: "0.08em", color: "#7C93A6", textTransform: "uppercase" },
-  notesTextarea: { width: "100%", minHeight: 60, background: "#101820", border: "1px solid #3D5468", borderRadius: 3, color: "#F2EDE4", fontSize: 13, padding: "8px 10px", fontFamily: "'Inter', sans-serif", resize: "vertical", marginTop: 5 },
-  attachmentLink: { fontSize: 12, color: "#7BA6D9", textDecoration: "none" },
+  detailLabel: { fontSize: 10.5, letterSpacing: "0.08em", color: "#8A8072", textTransform: "uppercase" },
+  notesTextarea: { width: "100%", minHeight: 60, background: "#EFE9D9", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontSize: 13, padding: "8px 10px", fontFamily: "'Inter', sans-serif", resize: "vertical", marginTop: 5 },
+  attachmentLink: { fontSize: 12, color: "#3D6FA6", textDecoration: "none" },
 
   chartGrid: { maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 14 },
-  chartCard: { background: "#232E3B", border: "1px solid #3D5468", borderRadius: 4, padding: "20px 22px" },
-  chartTitle: { fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 2 },
-  chartSub: { fontSize: 12, color: "#7C93A6", marginBottom: 16 },
+  chartCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 4, padding: "20px 22px" },
+  chartTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 2 },
+  chartSub: { fontSize: 12, color: "#8A8072", marginBottom: 16 },
 
-  trendRow: { display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #2A3644" },
+  trendRow: { display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #EFE9D9" },
 };
