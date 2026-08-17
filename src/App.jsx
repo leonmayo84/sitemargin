@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import * as XLSX from "xlsx";
 import { supabase } from "./supabaseClient";
 
 // Supabase Edge Functions live at the same project ref, under /functions/v1
@@ -96,9 +97,13 @@ function scoreColor(score) {
 }
 
 function parseCsvToItems(text) {
-  const lines = text.split(/\r\n|\n|\r/).filter((l) => l.trim().length > 0);
-  if (lines.length < 2) return { items: [], error: "That file doesn't look like it has any data rows." };
+  const rows = csvTextToRows(text);
+  return rowsToItems(rows);
+}
 
+// Splits raw CSV text into an array of row-arrays, respecting quoted commas.
+function csvTextToRows(text) {
+  const lines = text.split(/\r\n|\n|\r/).filter((l) => l.trim().length > 0);
   const splitRow = (row) => {
     const cells = [];
     let cur = "";
@@ -112,46 +117,132 @@ function parseCsvToItems(text) {
     cells.push(cur.trim());
     return cells;
   };
+  return lines.map(splitRow);
+}
 
-  const header = splitRow(lines[0]).map((h) => h.toLowerCase().replace(/[^a-z%]/g, ""));
+// Reads an .xlsx file's first sheet into the same row-array shape as CSV parsing.
+function xlsxBufferToRows(arrayBuffer) {
+  const workbook = XLSX.read(arrayBuffer, { type: "array" });
+  const firstSheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[firstSheetName];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
+  return rows
+    .map((row) => row.map((cell) => String(cell ?? "").trim()))
+    .filter((row) => row.some((cell) => cell !== ""));
+}
+
+const CATEGORY_KEYWORDS = {
+  Labour: ["labour", "labor", "wages", "preliminaries", "prelim"],
+  Materials: ["material", "concrete", "steel", "earthwork", "excavation", "masonry", "roofing", "brickwork", "supply"],
+  Subcontractors: ["subcontract", "sub-contract", "nominated", "specialist"],
+};
+
+function inferCategoryFromText(text) {
+  const lower = (text || "").toLowerCase();
+  for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    if (keywords.some((kw) => lower.includes(kw))) return cat;
+  }
+  return null;
+}
+
+// Shared logic for both plain budget CSVs and full BOQ exports (CSV or Excel).
+// Recognizes either a simple Budget column, or BOQ-style Quantity/Rate/Amount
+// columns, and treats description-only rows with no numbers as section headers
+// used to infer category for the items that follow.
+function rowsToItems(rows) {
+  if (rows.length < 2) return { items: [], error: "That file doesn't look like it has any data rows." };
+
+  const header = rows[0].map((h) => h.toLowerCase().replace(/[^a-z0-9%]/g, ""));
   const findCol = (...aliases) => {
-    for (const a of aliases) { const idx = header.indexOf(a); if (idx !== -1) return idx; }
+    for (const a of aliases) {
+      const idx = header.indexOf(a);
+      if (idx !== -1) return idx;
+    }
     return -1;
   };
   const col = {
-    name: findCol("name", "lineitem", "description", "item"),
+    name: findCol("name", "lineitem", "description", "itemdescription", "particulars", "item"),
     category: findCol("category", "type"),
     budget: findCol("budget", "budgetamount", "budgeted"),
+    amount: findCol("amount", "total", "amountr", "totalr"),
+    quantity: findCol("quantity", "qty"),
+    rate: findCol("rate", "unitrate", "rater"),
+    unit: findCol("unit", "uom", "unitofmeasure"),
     actual: findCol("actual", "actualspend", "spent"),
     percentComplete: findCol("percentcomplete", "complete", "progress"),
     claimed: findCol("claimed"),
     certified: findCol("certified"),
   };
-  if (col.name === -1 || col.budget === -1) {
-    return { items: [], error: "Couldn't find Name and Budget columns. Check the template for the expected format." };
+
+  const hasBudgetSource = col.budget !== -1 || col.amount !== -1 || (col.quantity !== -1 && col.rate !== -1);
+  if (col.name === -1 || !hasBudgetSource) {
+    return {
+      items: [],
+      error: "Couldn't find a Description column plus a Budget, Amount, or Quantity+Rate column. Check the template or your BOQ's column headers.",
+    };
   }
+
   const toNum = (v) => {
-    if (v == null) return 0;
+    if (v == null || v === "") return null;
     const n = Number(String(v).replace(/[R$,\s]/g, ""));
-    return isNaN(n) ? 0 : n;
+    return isNaN(n) ? null : n;
   };
+
   const items = [];
-  for (let i = 1; i < lines.length; i++) {
-    const cells = splitRow(lines[i]);
+  let currentSection = null;
+
+  for (let i = 1; i < rows.length; i++) {
+    const cells = rows[i];
     const name = cells[col.name]?.trim();
     if (!name) continue;
+
+    const budgetVal = col.budget !== -1 ? toNum(cells[col.budget]) : null;
+    const amountVal = col.amount !== -1 ? toNum(cells[col.amount]) : null;
+    const qtyVal = col.quantity !== -1 ? toNum(cells[col.quantity]) : null;
+    const rateVal = col.rate !== -1 ? toNum(cells[col.rate]) : null;
+    const unitVal = col.unit !== -1 ? cells[col.unit]?.trim() : "";
+
+    const computedFromQtyRate = qtyVal != null && rateVal != null ? qtyVal * rateVal : null;
+    const resolvedBudget = budgetVal ?? amountVal ?? computedFromQtyRate;
+
+    // A row with a description but no budget/amount/quantity/rate anywhere is
+    // treated as a BOQ section header (e.g. "2.0 EARTHWORKS"), not a line item.
+    if (resolvedBudget == null) {
+      currentSection = name;
+      continue;
+    }
+
     const rawCategory = col.category !== -1 ? cells[col.category]?.trim() : "";
-    const category = CATEGORIES.find((c) => c.toLowerCase() === rawCategory?.toLowerCase()) || "Other";
+    const category =
+      CATEGORIES.find((c) => c.toLowerCase() === rawCategory?.toLowerCase()) ||
+      inferCategoryFromText(currentSection) ||
+      inferCategoryFromText(name) ||
+      "Other";
+
+    let notes = "";
+    if (qtyVal != null || rateVal != null || unitVal) {
+      const parts = [];
+      if (qtyVal != null) parts.push(`Qty: ${qtyVal}${unitVal ? ` ${unitVal}` : ""}`);
+      if (rateVal != null) parts.push(`Rate: ${fmt(rateVal)}`);
+      notes = parts.join(" · ");
+      if (currentSection) notes += ` (BOQ section: ${currentSection})`;
+    } else if (currentSection) {
+      notes = `BOQ section: ${currentSection}`;
+    }
+
     items.push({
-      name, category,
-      budget: toNum(cells[col.budget]),
-      actual: col.actual !== -1 ? toNum(cells[col.actual]) : 0,
-      percent_complete: col.percentComplete !== -1 ? toNum(cells[col.percentComplete]) : 0,
-      claimed: col.claimed !== -1 ? toNum(cells[col.claimed]) : 0,
-      certified: col.certified !== -1 ? toNum(cells[col.certified]) : 0,
+      name,
+      category,
+      budget: resolvedBudget,
+      actual: col.actual !== -1 ? toNum(cells[col.actual]) ?? 0 : 0,
+      percent_complete: col.percentComplete !== -1 ? toNum(cells[col.percentComplete]) ?? 0 : 0,
+      claimed: col.claimed !== -1 ? toNum(cells[col.claimed]) ?? 0 : 0,
+      certified: col.certified !== -1 ? toNum(cells[col.certified]) ?? 0 : 0,
+      notes,
     });
   }
-  if (items.length === 0) return { items: [], error: "No valid rows found — make sure each row has a name and a budget amount." };
+
+  if (items.length === 0) return { items: [], error: "No valid line items found — make sure each row has a description and a budget, amount, or quantity+rate." };
   return { items, error: null };
 }
 
@@ -1180,11 +1271,12 @@ function ProjectView({ projectId, onBack }) {
   function handleImportFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      const { items: parsed, error } = parseCsvToItems(evt.target.result);
-      if (error) setImportMessage({ type: "error", text: error });
-      else {
+    const isExcel = /\.xlsx$/i.test(file.name);
+
+    async function finishImport(parsed, error) {
+      if (error) {
+        setImportMessage({ type: "error", text: error });
+      } else {
         const rows = parsed.map((p) => ({ ...p, project_id: projectId }));
         const { data, error: insertErr } = await supabase.from("line_items").insert(rows).select();
         if (insertErr) setImportMessage({ type: "error", text: "Import failed — please try again." });
@@ -1194,8 +1286,27 @@ function ProjectView({ projectId, onBack }) {
         }
       }
       setTimeout(() => setImportMessage(null), 6000);
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        if (isExcel) {
+          const rows = xlsxBufferToRows(evt.target.result);
+          const { items: parsed, error } = rowsToItems(rows);
+          await finishImport(parsed, error);
+        } else {
+          const { items: parsed, error } = parseCsvToItems(evt.target.result);
+          await finishImport(parsed, error);
+        }
+      } catch (err) {
+        console.error("Import failed", err);
+        setImportMessage({ type: "error", text: "Couldn't read that file — make sure it's a valid CSV or .xlsx export." });
+        setTimeout(() => setImportMessage(null), 6000);
+      }
     };
-    reader.readAsText(file);
+    if (isExcel) reader.readAsArrayBuffer(file);
+    else reader.readAsText(file);
     e.target.value = "";
   }
 
@@ -1317,7 +1428,7 @@ function ProjectView({ projectId, onBack }) {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <input ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={handleImportFile} style={{ display: "none" }} />
+      <input ref={fileInputRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleImportFile} style={{ display: "none" }} />
       <input ref={attachInputRef} type="file" onChange={handleAttachFile} style={{ display: "none" }} />
 
       <div className="no-print" style={styles.backRow}>
@@ -1403,7 +1514,7 @@ function ProjectView({ projectId, onBack }) {
       </div>
 
       <div className="no-print" style={styles.importRow}>
-        <button style={styles.importBtn} onClick={() => fileInputRef.current?.click()}>Import budget CSV</button>
+        <button style={styles.importBtn} onClick={() => fileInputRef.current?.click()}>Import BOQ or CSV</button>
         <select style={{ ...styles.addInput, maxWidth: 220 }} defaultValue="" onChange={(e) => { applyTemplate(e.target.value); e.target.value = ""; }}>
           <option value="">Apply a template…</option>
           {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
