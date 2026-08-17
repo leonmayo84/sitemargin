@@ -1,6 +1,9 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
 
+// Supabase Edge Functions live at the same project ref, under /functions/v1
+const SUPABASE_FUNCTIONS_URL = "https://mcxmtnlhqubaljvnwmzc.supabase.co/functions/v1";
+
 /* ============================== HELPERS ============================== */
 
 const fmt = (n) =>
@@ -342,7 +345,7 @@ function GlobalStyles() {
   );
 }
 
-function TopNav({ current, onNavigate }) {
+function TopNav({ current, onNavigate, userEmail, onSignOut }) {
   const tabs = [
     ["dashboard", "Projects"],
     ["subcontractors", "Subcontractors"],
@@ -359,13 +362,19 @@ function TopNav({ current, onNavigate }) {
           {label}
         </button>
       ))}
+      {onSignOut && (
+        <div style={styles.topNavRight}>
+          {userEmail && <span style={styles.topNavEmail}>{userEmail}</span>}
+          <button style={styles.topNavSignOut} onClick={onSignOut}>Sign out</button>
+        </div>
+      )}
     </div>
   );
 }
 
-/* ============================== ROOT ============================== */
+/* ============================== APP SHELL (everything behind the gate) ============================== */
 
-export default function SiteMargin() {
+function AppShell({ userEmail, onSignOut }) {
   const [route, setRoute] = useState({ page: "dashboard", projectId: null });
 
   const navigate = (page) => setRoute({ page, projectId: null });
@@ -374,17 +383,238 @@ export default function SiteMargin() {
     return <ProjectView projectId={route.projectId} onBack={() => setRoute({ page: "dashboard", projectId: null })} />;
   }
   if (route.page === "subcontractors") {
-    return <SubcontractorsView onNavigate={navigate} />;
+    return <SubcontractorsView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} />;
   }
   if (route.page === "templates") {
-    return <TemplatesView onNavigate={navigate} />;
+    return <TemplatesView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} />;
   }
-  return <Dashboard onOpen={(id) => setRoute({ page: "project", projectId: id })} onNavigate={navigate} />;
+  return (
+    <Dashboard
+      onOpen={(id) => setRoute({ page: "project", projectId: id })}
+      onNavigate={navigate}
+      userEmail={userEmail}
+      onSignOut={onSignOut}
+    />
+  );
+}
+
+/* ============================== AUTH GATE ============================== */
+/* Access requires: (1) a magic-link email sign-in, and (2) that email being
+   marked access_granted in the signups table. Nobody sees the app itself
+   until both are true. */
+
+function AuthGate() {
+  const [status, setStatus] = useState("checking"); // checking | signedout | pending | denied | approved
+  const [session, setSession] = useState(null);
+  const [subscription, setSubscription] = useState(null);
+  const [email, setEmail] = useState("");
+  const [sendState, setSendState] = useState("idle"); // idle | sending | sent | error
+  const [errorMsg, setErrorMsg] = useState("");
+  const [checkoutTier, setCheckoutTier] = useState(null); // which plan button is loading
+
+  async function checkAccess(currentSession) {
+    if (!currentSession) {
+      setStatus("signedout");
+      return;
+    }
+    setSession(currentSession);
+    const userEmailAddr = currentSession.user.email;
+
+    const [{ data: signup, error: signupErr }, { data: sub }] = await Promise.all([
+      supabase.from("signups").select("access_granted").eq("email", userEmailAddr).maybeSingle(),
+      supabase.from("subscriptions").select("tier, status, current_period_end").eq("email", userEmailAddr).maybeSingle(),
+    ]);
+
+    if (signupErr) {
+      setStatus("denied");
+      return;
+    }
+
+    const hasActiveSub = sub?.status === "active";
+    setSubscription(sub || null);
+
+    if (signup?.access_granted || hasActiveSub) {
+      setStatus("approved");
+    } else {
+      setStatus("pending");
+    }
+  }
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => checkAccess(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      checkAccess(newSession);
+    });
+    return () => listener.subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function sendMagicLink(e) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setSendState("sending");
+    setErrorMsg("");
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: { emailRedirectTo: window.location.origin },
+    });
+    if (error) {
+      setSendState("error");
+      setErrorMsg(error.message);
+    } else {
+      setSendState("sent");
+    }
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    setStatus("signedout");
+    setSession(null);
+  }
+
+  async function startCheckout(tier) {
+    setCheckoutTier(tier);
+    setErrorMsg("");
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/create-checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionData.session?.access_token || ""}`,
+        },
+        body: JSON.stringify({ email: session.user.email, tier }),
+      });
+      const json = await res.json();
+      if (json.redirectUrl) {
+        window.location.href = json.redirectUrl;
+      } else {
+        setErrorMsg(json.error || "Couldn't start checkout — please try again.");
+        setCheckoutTier(null);
+      }
+    } catch (err) {
+      console.error("Checkout failed", err);
+      setErrorMsg("Couldn't start checkout — please try again.");
+      setCheckoutTier(null);
+    }
+  }
+
+  if (status === "checking") {
+    return (
+      <div style={styles.page}>
+        <GlobalStyles />
+        <div style={{ ...styles.footer, textAlign: "center", padding: 80 }}>Loading…</div>
+      </div>
+    );
+  }
+
+  if (status === "approved") {
+    return <AppShell userEmail={session?.user?.email} onSignOut={signOut} />;
+  }
+
+  // signed out, pending, or denied — all get the gate screen, with different messaging
+  return (
+    <div style={styles.page}>
+      <GlobalStyles />
+      <div style={styles.gateWrap}>
+        <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
+        <h1 style={{ ...styles.dashTitle, marginTop: 14, marginBottom: 10 }}>
+          {status === "pending" ? "Almost there" : status === "denied" ? "Something went wrong" : "Sign in to SiteMargin"}
+        </h1>
+
+        {status === "signedout" && (
+          <>
+            <p style={styles.gateText}>
+              SiteMargin is invite-only while we're in early testing. Enter the email you signed up with and
+              we'll send you a one-click sign-in link — no password needed.
+            </p>
+            {sendState === "sent" ? (
+              <div style={styles.gateNotice}>
+                Check your inbox at <b>{email}</b> for the sign-in link. You can close this tab.
+              </div>
+            ) : (
+              <form onSubmit={sendMagicLink} style={styles.gateForm}>
+                <input
+                  type="email"
+                  required
+                  placeholder="you@yourcompany.co.za"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={styles.addInput}
+                />
+                <button type="submit" style={styles.addBtn} disabled={sendState === "sending"}>
+                  {sendState === "sending" ? "Sending…" : "Send sign-in link"}
+                </button>
+              </form>
+            )}
+            {sendState === "error" && <div style={styles.gateError}>{errorMsg}</div>}
+            <p style={styles.gateFootnote}>
+              Not signed up yet?{" "}
+              <a href="https://sitemargin.co.za/contact.html" style={{ color: "#B85C2C" }}>
+                Request early access
+              </a>
+              .
+            </p>
+          </>
+        )}
+
+        {status === "pending" && (
+          <>
+            <p style={styles.gateText}>
+              You're signed in as <b>{session?.user?.email}</b>. Your account hasn't been approved for free access,
+              but you can subscribe directly below — payments go through PayFast, so Apple Pay, Google Pay, cards,
+              and EFT are all supported.
+            </p>
+            {subscription?.status === "cancelled" && (
+              <div style={{ ...styles.gateNotice, marginBottom: 16 }}>
+                Your previous subscription was cancelled. Choose a plan below to reactivate.
+              </div>
+            )}
+            <div style={styles.checkoutGrid}>
+              <div style={styles.checkoutCard}>
+                <div style={styles.checkoutTier}>Contractor</div>
+                <div style={styles.checkoutPrice}>
+                  R249<span style={styles.checkoutPriceUnit}>/month</span>
+                </div>
+                <div style={styles.checkoutDesc}>Unlimited projects, change orders, payments &amp; retention, PDF export.</div>
+                <button style={styles.addBtn} onClick={() => startCheckout("contractor")} disabled={checkoutTier !== null}>
+                  {checkoutTier === "contractor" ? "Redirecting…" : "Subscribe"}
+                </button>
+              </div>
+              <div style={styles.checkoutCard}>
+                <div style={styles.checkoutTier}>Firm</div>
+                <div style={styles.checkoutPrice}>
+                  R599<span style={styles.checkoutPriceUnit}>/month</span>
+                </div>
+                <div style={styles.checkoutDesc}>Everything in Contractor, plus unlimited attachments and priority support.</div>
+                <button style={styles.addBtn} onClick={() => startCheckout("firm")} disabled={checkoutTier !== null}>
+                  {checkoutTier === "firm" ? "Redirecting…" : "Subscribe"}
+                </button>
+              </div>
+            </div>
+            {errorMsg && <div style={styles.gateError}>{errorMsg}</div>}
+            <button style={{ ...styles.importBtn, marginTop: 20 }} onClick={signOut}>Sign out</button>
+          </>
+        )}
+
+        {status === "denied" && (
+          <>
+            <p style={styles.gateText}>Couldn't verify your access right now. Please try again in a moment.</p>
+            <button style={styles.importBtn} onClick={signOut}>Sign out and retry</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function SiteMargin() {
+  return <AuthGate />;
 }
 
 /* ============================== DASHBOARD ============================== */
 
-function Dashboard({ onOpen, onNavigate }) {
+function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
@@ -432,11 +662,11 @@ function Dashboard({ onOpen, onNavigate }) {
     <div style={styles.page}>
       <GlobalStyles />
       <div style={styles.dashHeader}>
-        <div style={styles.eyebrow}>SITEMARGIN</div>
+        <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
         <h1 style={styles.dashTitle}>Your projects</h1>
       </div>
 
-      <TopNav current="dashboard" onNavigate={onNavigate} />
+      <TopNav current="dashboard" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
       {projects.length > 0 && (
         <div style={styles.summaryStrip}>
@@ -505,7 +735,7 @@ function Dashboard({ onOpen, onNavigate }) {
 
 /* ============================== SUBCONTRACTORS ============================== */
 
-function SubcontractorsView({ onNavigate }) {
+function SubcontractorsView({ onNavigate, userEmail, onSignOut }) {
   const [subs, setSubs] = useState([]);
   const [itemsBySub, setItemsBySub] = useState({});
   const [loading, setLoading] = useState(true);
@@ -558,11 +788,11 @@ function SubcontractorsView({ onNavigate }) {
     <div style={styles.page}>
       <GlobalStyles />
       <div style={styles.dashHeader}>
-        <div style={styles.eyebrow}>SITEMARGIN</div>
+        <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
         <h1 style={styles.dashTitle}>Subcontractor scorecards</h1>
       </div>
 
-      <TopNav current="subcontractors" onNavigate={onNavigate} />
+      <TopNav current="subcontractors" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
       <div style={styles.explainer}>
         Scores build up automatically from the line items you assign to each sub. <b>Budget</b> comes from how close
@@ -667,7 +897,7 @@ function SubcontractorsView({ onNavigate }) {
 
 /* ============================== TEMPLATES ============================== */
 
-function TemplatesView({ onNavigate }) {
+function TemplatesView({ onNavigate, userEmail, onSignOut }) {
   const [templates, setTemplates] = useState([]);
   const [itemsByTemplate, setItemsByTemplate] = useState({});
   const [loading, setLoading] = useState(true);
@@ -740,11 +970,11 @@ function TemplatesView({ onNavigate }) {
     <div style={styles.page}>
       <GlobalStyles />
       <div style={styles.dashHeader}>
-        <div style={styles.eyebrow}>SITEMARGIN</div>
+        <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
         <h1 style={styles.dashTitle}>Budget templates</h1>
       </div>
 
-      <TopNav current="templates" onNavigate={onNavigate} />
+      <TopNav current="templates" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
       <div style={styles.explainer}>
         Build a standard line-item set once — a typical residential build, a shopfit, whatever you repeat — then apply it
@@ -1550,11 +1780,28 @@ const styles = {
     padding: "20px 16px 48px",
   },
   eyebrow: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, textTransform: "uppercase" },
+  eyebrowLink: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, textTransform: "uppercase", textDecoration: "none", display: "inline-block" },
 
   dashHeader: { maxWidth: 1180, margin: "0 auto 16px" },
   dashTitle: { fontFamily: "'Fraunces', serif", fontSize: 34, fontWeight: 500, marginTop: 4, letterSpacing: "-0.01em" },
 
-  topNav: { maxWidth: 1180, margin: "0 auto 20px", display: "flex", gap: 8, borderBottom: "1px solid #EFE9D9", paddingBottom: 12 },
+  topNav: { maxWidth: 1180, margin: "0 auto 20px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #EFE9D9", paddingBottom: 12 },
+  topNavRight: { marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 },
+  topNavEmail: { fontSize: 12, color: "#8A8072", fontFamily: "'IBM Plex Mono', monospace" },
+  topNavSignOut: { background: "none", border: "1px solid #E4DCC8", borderRadius: 3, color: "#6B6258", fontSize: 12, padding: "6px 12px", cursor: "pointer" },
+
+  gateWrap: { maxWidth: 640, margin: "80px auto", padding: "0 16px" },
+  checkoutGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginTop: 8 },
+  checkoutCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "20px 18px", boxShadow: "0 2px 8px rgba(28,23,18,0.04)" },
+  checkoutTier: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12.5, letterSpacing: "0.08em", color: "#8A8072", textTransform: "uppercase", fontWeight: 600, marginBottom: 10 },
+  checkoutPrice: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 26, fontWeight: 600, color: "#1C1712", marginBottom: 8 },
+  checkoutPriceUnit: { fontSize: 13, color: "#8A8072", fontWeight: 400 },
+  checkoutDesc: { fontSize: 13, color: "#6B6258", marginBottom: 16, lineHeight: 1.5 },
+  gateText: { fontSize: 15, color: "#5C544A", lineHeight: 1.6, marginBottom: 20 },
+  gateForm: { display: "flex", flexDirection: "column", gap: 10 },
+  gateNotice: { background: "#FBF1E7", border: "1px solid #B85C2C", borderRadius: 4, padding: "14px 16px", fontSize: 14, color: "#4A443B" },
+  gateError: { color: "#C1462B", fontSize: 13, marginTop: 10 },
+  gateFootnote: { fontSize: 13, color: "#8A8072", marginTop: 22 },
   topNavBtn: { background: "none", border: "none", color: "#6B6258", fontSize: 14, fontWeight: 500, padding: "6px 12px", cursor: "pointer", borderRadius: 3 },
   topNavBtnActive: { background: "#1C1712", color: "#F5EFE2", fontWeight: 600 },
 
