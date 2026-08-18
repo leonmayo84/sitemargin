@@ -848,10 +848,25 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
     if (!projs) { setProjects([]); setLoading(false); return; }
     const withTotals = await Promise.all(
       projs.map(async (p) => {
-        const { data: items } = await supabase.from("line_items").select("budget, actual").eq("project_id", p.id);
+        const [{ data: items }, { data: cos }] = await Promise.all([
+          supabase.from("line_items").select("budget, actual, certified").eq("project_id", p.id),
+          supabase.from("change_orders").select("amount, status").eq("project_id", p.id),
+        ]);
         const budget = (items || []).reduce((s, i) => s + Number(i.budget || 0), 0);
         const actual = (items || []).reduce((s, i) => s + Number(i.actual || 0), 0);
-        return { ...p, budget, actual, variance: actual - budget, lineCount: (items || []).length };
+        const certified = (items || []).reduce((s, i) => s + Number(i.certified || 0), 0);
+        const approvedCoTotal = (cos || []).filter((c) => c.status === "approved").reduce((s, c) => s + Number(c.amount || 0), 0);
+        const revisedBudget = budget + approvedCoTotal;
+        const retentionHeld = certified * ((p.retention_pct ?? 5) / 100);
+        return {
+          ...p,
+          budget,
+          revisedBudget,
+          actual,
+          retentionHeld,
+          variance: actual - revisedBudget,
+          lineCount: (items || []).length,
+        };
       })
     );
     setProjects(withTotals);
@@ -880,8 +895,20 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
 
   const portfolio = useMemo(() => {
     const budget = projects.reduce((s, p) => s + p.budget, 0);
+    const revisedBudget = projects.reduce((s, p) => s + p.revisedBudget, 0);
     const actual = projects.reduce((s, p) => s + p.actual, 0);
-    return { budget, actual, variance: actual - budget, overCount: projects.filter((p) => p.variance > 0).length };
+    const retentionHeld = projects.reduce((s, p) => s + p.retentionHeld, 0);
+    const lineCount = projects.reduce((s, p) => s + p.lineCount, 0);
+    return {
+      budget,
+      revisedBudget,
+      actual,
+      retentionHeld,
+      lineCount,
+      variance: actual - revisedBudget,
+      overCount: projects.filter((p) => p.variance > 0).length,
+      watchCount: projects.filter((p) => p.variance <= 0 && p.revisedBudget > 0 && p.actual / p.revisedBudget > 0.85).length,
+    };
   }, [projects]);
 
   return (
@@ -896,18 +923,23 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
 
       {projects.length > 0 && (
         <div style={styles.summaryStrip}>
-          <SummaryCard label="Portfolio budget" value={fmt(portfolio.budget)} />
+          <SummaryCard label="Original quote allocation" value={fmt(portfolio.budget)} />
+          {portfolio.revisedBudget !== portfolio.budget && (
+            <SummaryCard label="Revised allocation" value={fmt(portfolio.revisedBudget)} accent="#B8862F" />
+          )}
           <SummaryCard label="Actual spend" value={fmt(portfolio.actual)} />
           <SummaryCard
             label="Net variance"
             value={`${portfolio.variance >= 0 ? "+" : ""}${fmt(portfolio.variance)}`}
             accent={portfolio.variance > 0 ? "#C1462B" : "#4C7A5C"}
           />
+          <SummaryCard label="Retention held" value={fmt(portfolio.retentionHeld)} />
           <SummaryCard
-            label="Projects over"
-            value={`${portfolio.overCount} of ${projects.length}`}
-            accent={portfolio.overCount ? "#C1462B" : "#4C7A5C"}
+            label="Projects flagged"
+            value={`${portfolio.overCount} over · ${portfolio.watchCount} watch`}
+            accent={portfolio.overCount ? "#C1462B" : portfolio.watchCount ? "#B8862F" : "#4C7A5C"}
           />
+          <SummaryCard label="Total line items" value={String(portfolio.lineCount)} />
         </div>
       )}
 
