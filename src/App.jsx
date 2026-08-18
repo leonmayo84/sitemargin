@@ -548,14 +548,55 @@ function GlobalStyles() {
   );
 }
 
-function PageHeader({ title }) {
+function PageHeader({ title, current, onNavigate, userEmail, onSignOut }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const tabs = [
+    ["dashboard", "Projects"],
+    ["subcontractors", "Subcontractors"],
+    ["templates", "Templates"],
+  ];
+  const closeAnd = (fn) => () => { setMenuOpen(false); if (fn) fn(); };
   return (
     <div style={styles.dashHeader}>
       <div style={styles.dashNavBar}>
         <AppLogo />
-        <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
+        <div className="no-print" style={styles.dashNavRight}>
+          <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
+          <button
+            style={styles.menuBtn}
+            aria-expanded={menuOpen}
+            aria-controls="appMenuPanel"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            <span style={{ ...styles.menuBtnBar, ...(menuOpen ? styles.menuBtnBar1Open : {}) }} />
+            <span style={{ ...styles.menuBtnBar, ...(menuOpen ? styles.menuBtnBarMidOpen : {}) }} />
+            <span style={{ ...styles.menuBtnBar, ...(menuOpen ? styles.menuBtnBar3Open : {}) }} />
+          </button>
+        </div>
       </div>
       <h1 style={styles.dashTitle}>{title}</h1>
+
+      {menuOpen && (
+        <div id="appMenuPanel" className="no-print" style={styles.menuPanel}>
+          <div style={styles.menuPanelInner}>
+            {onNavigate && tabs.map(([key, label]) => (
+              <button
+                key={key}
+                style={{ ...styles.menuPanelLink, ...(current === key ? styles.menuPanelLinkActive : {}) }}
+                onClick={closeAnd(() => onNavigate(key))}
+              >
+                {label}
+              </button>
+            ))}
+            <div style={styles.menuPanelActions}>
+              <button style={styles.menuPanelGhost} onClick={closeAnd(() => window.print())}>Print</button>
+              {onSignOut && <button style={styles.menuPanelSolid} onClick={closeAnd(onSignOut)}>Sign out</button>}
+            </div>
+            {userEmail && <div style={styles.menuPanelEmail}>{userEmail}</div>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -962,7 +1003,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <PageHeader title="Your projects" />
+      <PageHeader title="Your projects" current="dashboard" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
       <TopNav current="dashboard" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
@@ -1090,7 +1131,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut }) {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <PageHeader title="Subcontractor scorecards" />
+      <PageHeader title="Subcontractor scorecards" current="subcontractors" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
       <TopNav current="subcontractors" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
@@ -1269,7 +1310,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut }) {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <PageHeader title="Templates" />
+      <PageHeader title="Templates" current="templates" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
       <TopNav current="templates" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
@@ -2267,9 +2308,25 @@ const styles = {
   appLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em", color: "#1C1712" },
   eyebrowLink: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, textTransform: "uppercase", textDecoration: "none", display: "inline-block" },
 
-  dashHeader: { maxWidth: 1180, margin: "0 auto 20px" },
+  dashHeader: { maxWidth: 1180, margin: "0 auto 20px", position: "relative" },
   dashNavBar: { display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #E4DCC8", paddingBottom: 16, marginBottom: 22, gap: 16, flexWrap: "wrap" },
-  dashTitle: { fontFamily: "'Fraunces', serif", fontSize: 34, fontWeight: 500, letterSpacing: "-0.01em" },
+  dashNavRight: { display: "flex", alignItems: "center", gap: 14 },
+  dashTitle: { fontFamily: "'Fraunces', serif", fontSize: "clamp(36px, 6vw, 58px)", fontWeight: 500, letterSpacing: "-0.01em" },
+
+  menuBtn: { width: 46, height: 46, border: "1px solid #D8CFB8", borderRadius: 6, background: "#FFFFFF", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, padding: 0, flexShrink: 0 },
+  menuBtnBar: { display: "block", width: 20, height: 2, background: "#1C1712", borderRadius: 2, transition: "transform 0.25s ease, opacity 0.2s ease" },
+  menuBtnBar1Open: { transform: "translateY(7px) rotate(45deg)" },
+  menuBtnBarMidOpen: { opacity: 0 },
+  menuBtnBar3Open: { transform: "translateY(-7px) rotate(-45deg)" },
+
+  menuPanel: { position: "fixed", inset: 0, background: "#F5EFE2", zIndex: 200, display: "flex", flexDirection: "column", padding: "24px 16px 40px", overflowY: "auto" },
+  menuPanelInner: { maxWidth: 1180, margin: "0 auto", width: "100%" },
+  menuPanelLink: { display: "block", width: "100%", textAlign: "left", background: "none", fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 600, color: "#1C1712", border: "none", borderBottom: "1px solid #E4DCC8", padding: "18px 0", cursor: "pointer" },
+  menuPanelLinkActive: { color: "#B85C2C" },
+  menuPanelActions: { marginTop: 24, display: "flex", flexWrap: "wrap", gap: 12 },
+  menuPanelGhost: { textAlign: "center", padding: "13px 22px", borderRadius: 4, fontWeight: 600, fontSize: 15, border: "1px solid #1C1712", color: "#1C1712", background: "none", cursor: "pointer" },
+  menuPanelSolid: { textAlign: "center", padding: "13px 22px", borderRadius: 4, fontWeight: 600, fontSize: 15, border: "none", color: "#F5EFE2", background: "#1C1712", cursor: "pointer" },
+  menuPanelEmail: { marginTop: 22, fontSize: 12, color: "#8A8072", fontFamily: "'IBM Plex Mono', monospace" },
 
   topNav: { maxWidth: 1180, margin: "0 auto 20px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #E4DCC8", paddingBottom: 12 },
   topNavRight: { marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 },
