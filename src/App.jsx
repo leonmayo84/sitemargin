@@ -774,8 +774,51 @@ function AuthGate() {
   );
 }
 
+/* ============================== ERROR BOUNDARY ============================== */
+/* Catches unexpected errors anywhere below it so a bug in one part of the app
+   shows a recoverable message instead of a blank white screen. */
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, info) {
+    console.error("SiteMargin crashed:", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={styles.page}>
+          <GlobalStyles />
+          <div style={styles.gateWrap}>
+            <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
+            <h1 style={{ ...styles.dashTitle, marginTop: 14, marginBottom: 10 }}>Something went wrong</h1>
+            <p style={styles.gateText}>
+              SiteMargin hit an unexpected error and couldn't continue. Your data hasn't been affected — try
+              reloading. If this keeps happening, let us know what you were doing when it happened.
+            </p>
+            <button style={styles.addBtn} onClick={() => window.location.reload()}>Reload SiteMargin</button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function SiteMargin() {
-  return <AuthGate />;
+  return (
+    <ErrorBoundary>
+      <AuthGate />
+    </ErrorBoundary>
+  );
 }
 
 /* ============================== DASHBOARD ============================== */
