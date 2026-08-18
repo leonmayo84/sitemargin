@@ -27,8 +27,8 @@ const STATUS = {
   over: { label: "OVER", color: "#C1462B", bg: "rgba(193,70,43,0.12)" },
 };
 
-const CATEGORIES = ["Labour", "Materials", "Subcontractors", "Other"];
-const CATEGORY_COLOR = { Labour: "#3D6FA6", Materials: "#B8862F", Subcontractors: "#8B5FA3", Other: "#8A8072" };
+const CATEGORIES = ["Labour", "Materials", "Labour & Materials", "Subcontractors", "Other"];
+const CATEGORY_COLOR = { Labour: "#3D6FA6", Materials: "#B8862F", "Labour & Materials": "#4FA8A0", Subcontractors: "#8B5FA3", Other: "#8A8072" };
 
 function statusFor(budget, actual) {
   if (budget <= 0) return "ok";
@@ -207,6 +207,7 @@ function pdfRowsToItems(rows) {
 
 
 const CATEGORY_KEYWORDS = {
+  "Labour & Materials": ["supply and install", "supply & install", "supply and fix", "supply & fix", "labour and materials", "labour & materials"],
   Labour: ["labour", "labor", "wages", "preliminaries", "prelim"],
   Materials: ["material", "concrete", "steel", "earthwork", "excavation", "masonry", "roofing", "brickwork", "supply"],
   Subcontractors: ["subcontract", "sub-contract", "nominated", "specialist"],
@@ -1165,7 +1166,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut }) {
   }
 
   async function addTemplateItem(templateId) {
-    if (!itemName.trim() || !itemBudget) return;
+    if (!itemName.trim()) return;
     const existing = itemsByTemplate[templateId] || [];
     const { data, error } = await supabase
       .from("template_items")
@@ -1173,7 +1174,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut }) {
         template_id: templateId,
         name: itemName.trim(),
         category: itemCategory,
-        budget: Number(itemBudget),
+        budget: itemBudget ? Number(itemBudget) : 0,
         sort_order: existing.length,
       })
       .select().single();
@@ -1258,7 +1259,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut }) {
                       <select style={{ ...styles.addInput, flex: 1 }} value={addingTo === t.id ? itemCategory : CATEGORIES[0]} onChange={(e) => { setAddingTo(t.id); setItemCategory(e.target.value); }}>
                         {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
-                      <input style={{ ...styles.addInput, flex: 0.9, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Budget" type="number" value={addingTo === t.id ? itemBudget : ""} onChange={(e) => { setAddingTo(t.id); setItemBudget(e.target.value); }} />
+                      <input style={{ ...styles.addInput, flex: 0.9, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Budget (optional)" type="number" value={addingTo === t.id ? itemBudget : ""} onChange={(e) => { setAddingTo(t.id); setItemBudget(e.target.value); }} />
                       <button style={styles.addBtn} onClick={() => addTemplateItem(t.id)}>+ Add</button>
                     </div>
                   </div>
@@ -1373,10 +1374,10 @@ function ProjectView({ projectId, onBack }) {
   }
 
   async function addItem() {
-    if (!newName.trim() || !newBudget) return;
+    if (!newName.trim()) return;
     const { data, error } = await supabase
       .from("line_items")
-      .insert({ project_id: projectId, name: newName.trim(), category: newCategory, budget: Number(newBudget) })
+      .insert({ project_id: projectId, name: newName.trim(), category: newCategory, budget: newBudget ? Number(newBudget) : 0 })
       .select().single();
     if (!error && data) { setItems((prev) => [...prev, data]); setNewName(""); setNewBudget(""); }
   }
@@ -1705,6 +1706,7 @@ function ProjectView({ projectId, onBack }) {
       <div className="no-print" style={styles.viewToggle}>
         {[
           ["ledger", "Cost & Progress"],
+          ["quote", "Quote"],
           ["charts", "Charts"],
           ["payments", "Payments & Retention"],
           ["changeorders", `Change Orders${changeOrders.length ? ` (${changeOrders.length})` : ""}`],
@@ -1867,7 +1869,7 @@ function ProjectView({ projectId, onBack }) {
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <input style={{ ...styles.addInput, flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}
-              placeholder="Budget" type="number" value={newBudget} onChange={(e) => setNewBudget(e.target.value)} />
+              placeholder="Budget (optional)" type="number" value={newBudget} onChange={(e) => setNewBudget(e.target.value)} />
             <button style={styles.addBtn} onClick={addItem}>+ Add line</button>
           </div>
         </div>
@@ -1923,6 +1925,51 @@ function ProjectView({ projectId, onBack }) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {view === "quote" && (
+        <div style={styles.quoteSheet}>
+          <div style={styles.quoteHead}>
+            <div>
+              <div style={styles.quoteEyebrow}>QUOTATION</div>
+              <div style={styles.quoteProjectName}>{project.name}</div>
+            </div>
+            <div style={styles.quoteMeta}>
+              <div>Date: {new Date().toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}</div>
+              <div>Valid for 30 days from date of issue</div>
+            </div>
+          </div>
+
+          {categoryRollup.map((cat) => {
+            const catItems = items.filter((i) => (i.category || "Other") === cat.category);
+            return (
+              <div key={cat.category} style={{ marginBottom: 24 }}>
+                <div style={styles.quoteCatHeading}>{cat.category}</div>
+                {catItems.map((item) => (
+                  <div key={item.id} style={styles.quoteRow}>
+                    <span style={{ flex: 3 }}>{item.name}</span>
+                    <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(item.budget)}</span>
+                  </div>
+                ))}
+                <div style={{ ...styles.quoteRow, borderTop: "1px solid #E4DCC8", fontWeight: 600 }}>
+                  <span style={{ flex: 3 }}>Subtotal — {cat.category}</span>
+                  <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(cat.budget)}</span>
+                </div>
+              </div>
+            );
+          })}
+
+          <div style={styles.quoteTotalRow}>
+            <span>Total</span>
+            <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.budget)}</span>
+          </div>
+
+          <p style={styles.quoteFootnote}>
+            This quotation covers the work described above at the prices listed. It does not include
+            variations, delays, or site conditions discovered after work begins — those will be raised
+            separately as change orders. Prices exclude VAT unless stated otherwise.
+          </p>
         </div>
       )}
 
@@ -2254,6 +2301,16 @@ const styles = {
   chartSub: { fontSize: 12, color: "#8A8072", marginBottom: 16 },
 
   trendRow: { display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #EFE9D9" },
+
+  quoteSheet: { maxWidth: 800, margin: "0 auto", background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "36px 40px", boxShadow: "0 4px 16px rgba(28,23,18,0.05)" },
+  quoteHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #1C1712", paddingBottom: 20, marginBottom: 28 },
+  quoteEyebrow: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, marginBottom: 6 },
+  quoteProjectName: { fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 500, color: "#1C1712" },
+  quoteMeta: { textAlign: "right", fontSize: 12.5, color: "#6B6258", lineHeight: 1.7 },
+  quoteCatHeading: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, letterSpacing: "0.06em", color: "#8A8072", textTransform: "uppercase", marginBottom: 8, paddingBottom: 6, borderBottom: "1px solid #EFE9D9" },
+  quoteRow: { display: "flex", padding: "6px 0", fontSize: 14, color: "#1C1712" },
+  quoteTotalRow: { display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 600, color: "#1C1712", borderTop: "2px solid #1C1712", paddingTop: 14, marginTop: 10 },
+  quoteFootnote: { fontSize: 11.5, color: "#8A8072", marginTop: 30, lineHeight: 1.6, borderTop: "1px solid #EFE9D9", paddingTop: 16 },
 
   modalOverlay: { position: "fixed", inset: 0, background: "rgba(28,23,18,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 },
   modalCard: { background: "#FFFFFF", borderRadius: 8, maxWidth: 760, width: "100%", maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 50px rgba(28,23,18,0.25)" },
