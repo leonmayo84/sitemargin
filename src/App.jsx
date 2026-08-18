@@ -1197,7 +1197,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut }) {
       <GlobalStyles />
       <div style={styles.dashHeader}>
         <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
-        <h1 style={styles.dashTitle}>Budget templates</h1>
+        <h1 style={styles.dashTitle}>Templates</h1>
       </div>
 
       <TopNav current="templates" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
