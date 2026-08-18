@@ -497,17 +497,34 @@ function SummaryCard({ label, value, accent }) {
 }
 
 function AppLogo() {
+  const mRef = useRef(null);
+  const lineRef = useRef(null);
+
+  useEffect(() => {
+    function drawUnderline() {
+      if (!mRef.current || !lineRef.current) return;
+      const b = mRef.current.getBBox();
+      lineRef.current.setAttribute("x1", b.x);
+      lineRef.current.setAttribute("x2", b.x + b.width);
+    }
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(drawUnderline);
+    }
+    const t = setTimeout(drawUnderline, 400);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div style={styles.appLogoRow}>
       <svg style={styles.appLogoMark} viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg">
         <text x="150" y="90" fontFamily="'Fraunces', serif" fontStyle="italic" fontWeight="600" fill="#C1633A" textAnchor="middle">
           <tspan fontSize="70">s</tspan>
-          <tspan fontSize="108">m</tspan>
+          <tspan ref={mRef} fontSize="108">m</tspan>
         </text>
-        <line x1="55" y1="112" x2="245" y2="112" stroke="#C1633A" strokeWidth="5" />
+        <line ref={lineRef} x1="0" y1="100" x2="0" y2="100" stroke="#C1633A" strokeWidth="5" />
       </svg>
       <div style={styles.appLogoText}>
-        Site<span style={{ color: "#B85C2C" }}>Margin</span>
+        site<span style={{ color: "#B85C2C" }}>Margin</span>
       </div>
     </div>
   );
