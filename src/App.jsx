@@ -504,9 +504,11 @@ function GlobalStyles() {
       input:focus, select:focus, textarea:focus { outline: 2px solid #B85C2C; outline-offset: 1px; }
       button:focus-visible { outline: 2px solid #B85C2C; outline-offset: 2px; }
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+      .print-only-status { display: none; }
       @media print {
         .no-print { display: none !important; }
         body, html { background: #fff !important; }
+        .print-only-status { display: inline !important; text-transform: capitalize; }
       }
     `}</style>
   );
@@ -531,6 +533,7 @@ function TopNav({ current, onNavigate, userEmail, onSignOut }) {
       ))}
       {onSignOut && (
         <div style={styles.topNavRight}>
+          <button style={styles.exportBtn} onClick={() => window.print()}>Print</button>
           {userEmail && <span style={styles.topNavEmail}>{userEmail}</span>}
           <button style={styles.topNavSignOut} onClick={onSignOut}>Sign out</button>
         </div>
@@ -908,7 +911,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
         </div>
       )}
 
-      <div style={styles.newProjectRow}>
+      <div className="no-print" style={styles.newProjectRow}>
         <input
           style={{ ...styles.addInput, flex: 1 }}
           placeholder="New project name (e.g. Fernwood Residence)"
@@ -935,7 +938,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
               <div key={p.id} style={styles.projectCard} onClick={() => onOpen(p.id)}>
                 <div style={styles.projectCardTop}>
                   <div style={styles.projectName}>{p.name}</div>
-                  <button style={styles.deleteProjectBtn} onClick={(e) => { e.stopPropagation(); deleteProject(p.id, p.name); }}>✕</button>
+                  <button style={styles.deleteProjectBtn} className="no-print" onClick={(e) => { e.stopPropagation(); deleteProject(p.id, p.name); }}>✕</button>
                 </div>
                 <div style={{ height: 5, background: "#EFE9D9", borderRadius: 3, marginBottom: 10 }}>
                   <div style={{ width: `${spentPct}%`, height: "100%", background: color, borderRadius: 3 }} />
@@ -1023,7 +1026,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut }) {
         you set per line item. Dimensions with no data yet show a dash rather than a misleading zero.
       </div>
 
-      <div style={styles.addRowStandalone}>
+      <div className="no-print" style={styles.addRowStandalone}>
         <input style={{ ...styles.addInput, flex: 1.6 }} placeholder="Subcontractor name" value={newName} onChange={(e) => setNewName(e.target.value)} />
         <input style={{ ...styles.addInput, flex: 1.2 }} placeholder="Trade (e.g. Electrical)" value={newTrade} onChange={(e) => setNewTrade(e.target.value)} />
         <input style={{ ...styles.addInput, flex: 1.2 }} placeholder="Contact (optional)" value={newContact} onChange={(e) => setNewContact(e.target.value)} />
@@ -1054,7 +1057,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut }) {
                         {score.overall == null ? "—" : Math.round(score.overall)}
                       </div>
                     </div>
-                    <button style={styles.deleteProjectBtn} onClick={() => removeSub(sub.id, sub.name)}>✕</button>
+                    <button style={styles.deleteProjectBtn} className="no-print" onClick={() => removeSub(sub.id, sub.name)}>✕</button>
                   </div>
                 </div>
 
@@ -1080,7 +1083,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut }) {
                   detail={score.ratedCount ? `${score.avgQuality.toFixed(1)} / 5 across ${score.ratedCount} rated item${score.ratedCount > 1 ? "s" : ""}` : "Rate line items 1–5 to score this"}
                 />
 
-                <button style={styles.miniLinkBlock} onClick={() => setExpanded(isOpen ? null : sub.id)}>
+                <button style={styles.miniLinkBlock} className="no-print" onClick={() => setExpanded(isOpen ? null : sub.id)}>
                   {isOpen ? "Hide line items" : `View ${score.itemCount} line item${score.itemCount === 1 ? "" : "s"}`}
                 </button>
 
@@ -1205,7 +1208,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut }) {
         straight back out as a new template from inside that project.
       </div>
 
-      <div style={styles.addRowStandalone}>
+      <div className="no-print" style={styles.addRowStandalone}>
         <input style={{ ...styles.addInput, flex: 1.4 }} placeholder="Template name (e.g. Standard residential build)" value={newName} onChange={(e) => setNewName(e.target.value)} />
         <input style={{ ...styles.addInput, flex: 1.6 }} placeholder="Description (optional)" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} />
         <button style={styles.addBtn} onClick={createTemplate}>+ New template</button>
@@ -1233,7 +1236,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut }) {
                       {tItems.length} line item{tItems.length === 1 ? "" : "s"} · {fmt(total)}
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }} className="no-print">
                     <button style={styles.miniLink} onClick={() => setExpanded(isOpen ? null : t.id)}>
                       {isOpen ? "Collapse" : "Edit items"}
                     </button>
@@ -1251,10 +1254,10 @@ function TemplatesView({ onNavigate, userEmail, onSignOut }) {
                         </span>
                         <span style={{ fontSize: 11.5, color: "#6B6258", flex: 0.8 }}>{i.category}</span>
                         <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", flex: 0.8, textAlign: "right" }}>{fmt(i.budget)}</span>
-                        <button style={{ ...styles.removeBtn, flex: 0.2, textAlign: "right" }} onClick={() => removeTemplateItem(t.id, i.id)}>✕</button>
+                        <button style={{ ...styles.removeBtn, flex: 0.2, textAlign: "right" }} className="no-print" onClick={() => removeTemplateItem(t.id, i.id)}>✕</button>
                       </div>
                     ))}
-                    <div style={{ ...styles.addRow, marginTop: 10, borderRadius: 4 }}>
+                    <div className="no-print" style={{ ...styles.addRow, marginTop: 10, borderRadius: 4 }}>
                       <input style={{ ...styles.addInput, flex: 2 }} placeholder="Line item name" value={addingTo === t.id ? itemName : ""} onChange={(e) => { setAddingTo(t.id); setItemName(e.target.value); }} />
                       <select style={{ ...styles.addInput, flex: 1 }} value={addingTo === t.id ? itemCategory : CATEGORIES[0]} onChange={(e) => { setAddingTo(t.id); setItemCategory(e.target.value); }}>
                         {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -1876,7 +1879,7 @@ function ProjectView({ projectId, onBack }) {
       )}
 
       {view === "charts" && (
-        <div className="no-print" style={styles.chartGrid}>
+        <div style={styles.chartGrid}>
           <div style={styles.chartCard}>
             <div style={styles.chartTitle}>Budget vs actual</div>
             <div style={styles.chartSub}>Largest eight line items by budget.</div>
@@ -2029,7 +2032,7 @@ function ProjectView({ projectId, onBack }) {
       )}
 
       {view === "changeorders" && (
-        <div className="no-print" style={styles.ledger}>
+        <div style={styles.ledger}>
           <div style={styles.ledgerHeaderRow}>
             <span style={{ ...styles.thCell, flex: 2.6 }}>Description</span>
             <span style={{ ...styles.thCell, flex: 1, textAlign: "right" }}>Amount</span>
@@ -2040,7 +2043,7 @@ function ProjectView({ projectId, onBack }) {
             <div key={co.id} style={styles.row}>
               <span style={{ ...styles.tdCell, flex: 2.6 }}>{co.description}</span>
               <span style={{ ...styles.tdCell, flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(co.amount)}</span>
-              <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "center" }}>
+              <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "center" }} className="no-print">
                 <select value={co.status} onChange={(e) => setCoStatus(co.id, e.target.value)}
                   style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: co.status === "approved" ? "#4C7A5C" : co.status === "rejected" ? "#C1462B" : "#B8862F" }}>
                   <option value="pending">Pending</option>
@@ -2048,7 +2051,8 @@ function ProjectView({ projectId, onBack }) {
                   <option value="rejected">Rejected</option>
                 </select>
               </span>
-              <span style={{ ...styles.tdCell, flex: 0.6, textAlign: "right" }}>
+              <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "center" }} className="print-only-status">{co.status}</span>
+              <span style={{ ...styles.tdCell, flex: 0.6, textAlign: "right" }} className="no-print">
                 <button style={styles.removeBtn} onClick={() => removeChangeOrder(co.id)}>✕</button>
               </span>
             </div>
@@ -2058,7 +2062,7 @@ function ProjectView({ projectId, onBack }) {
               No change orders yet. Add one below when a client approves a variation to the original budget.
             </div>
           )}
-          <div style={styles.addRow}>
+          <div className="no-print" style={styles.addRow}>
             <input style={{ ...styles.addInput, flex: 2.6 }} placeholder="e.g. Additional retaining wall per client request" value={coDesc} onChange={(e) => setCoDesc(e.target.value)} />
             <input style={{ ...styles.addInput, flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Amount" type="number" value={coAmount} onChange={(e) => setCoAmount(e.target.value)} />
             <button style={styles.addBtn} onClick={addChangeOrder}>+ Add change order</button>
@@ -2067,8 +2071,8 @@ function ProjectView({ projectId, onBack }) {
       )}
 
       {view === "trend" && (
-        <div className="no-print" style={styles.ledger}>
-          <div style={{ padding: 20 }}>
+        <div style={styles.ledger}>
+          <div className="no-print" style={{ padding: 20 }}>
             <button style={styles.addBtn} onClick={logSnapshot}>+ Log snapshot now</button>
             <p style={{ fontSize: 12.5, color: "#8A8072", marginTop: 10 }}>
               Click this weekly (or before each client meeting) to record where budget vs actual stand right now.
