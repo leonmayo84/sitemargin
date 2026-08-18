@@ -790,6 +790,15 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     console.error("SiteMargin crashed:", error, info);
+    try {
+      supabase.from("error_logs").insert({
+        message: error?.message || String(error),
+        stack: error?.stack || info?.componentStack || null,
+        page_url: window.location.href,
+      });
+    } catch (e) {
+      // best-effort only — never let logging itself break the fallback UI
+    }
   }
 
   render() {
@@ -1521,6 +1530,24 @@ function ProjectView({ projectId, onBack }) {
     attachInputRef.current?.click();
   }
 
+  // Files are private now, so a fresh, short-lived signed URL is requested
+  // at the moment someone actually clicks — nothing permanent is exposed.
+  async function openAttachment(attachment) {
+    if (!attachment.path) {
+      // Backward compatibility for attachments uploaded before the bucket
+      // was locked down, which stored a direct URL instead of a path.
+      if (attachment.url) window.open(attachment.url, "_blank", "noopener");
+      return;
+    }
+    const { data, error } = await supabase.storage.from("attachments").createSignedUrl(attachment.path, 60);
+    if (error || !data?.signedUrl) {
+      setImportMessage({ type: "error", text: "Couldn't open that file — please try again." });
+      setTimeout(() => setImportMessage(null), 6000);
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener");
+  }
+
   async function handleAttachFile(e) {
     const file = e.target.files?.[0];
     const item = attachTargetItem.current;
@@ -1528,8 +1555,10 @@ function ProjectView({ projectId, onBack }) {
     const path = `${projectId}/${item.id}/${Date.now()}-${file.name}`;
     const { error } = await supabase.storage.from("attachments").upload(path, file);
     if (!error) {
-      const { data: pub } = supabase.storage.from("attachments").getPublicUrl(path);
-      const newAttachments = [...(item.attachments || []), { name: file.name, url: pub.publicUrl }];
+      // Store the storage path, not a permanent public URL — the bucket is
+      // private now, so a fresh time-limited signed URL is generated on
+      // each click instead (see openAttachment below).
+      const newAttachments = [...(item.attachments || []), { name: file.name, path }];
       await supabase.from("line_items").update({ attachments: newAttachments }).eq("id", item.id);
       setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, attachments: newAttachments } : i)));
     }
@@ -1822,7 +1851,7 @@ function ProjectView({ projectId, onBack }) {
                         <button style={styles.addBtn} onClick={() => { scheduleSave(item.id, { notes: noteDraft }); setExpandedRow(null); }}>Save note</button>
                         <button style={styles.importBtn} onClick={() => triggerAttach(item)}>Attach file</button>
                         {item.attachments?.map((a, idx) => (
-                          <a key={idx} href={a.url} target="_blank" rel="noreferrer" style={styles.attachmentLink}>📎 {a.name}</a>
+                          <button key={idx} onClick={() => openAttachment(a)} style={{ ...styles.attachmentLink, background: "none", border: "none", cursor: "pointer", padding: 0 }}>📎 {a.name}</button>
                         ))}
                       </div>
                     </div>

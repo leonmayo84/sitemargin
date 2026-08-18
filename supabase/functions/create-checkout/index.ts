@@ -1,107 +1,121 @@
-// supabase/functions/payfast-itn/index.ts
+// supabase/functions/create-checkout/index.ts
 //
-// PayFast calls this URL server-to-server after a payment completes (this is
-// their "ITN" — Instant Transaction Notification). This is the ONLY place a
-// subscription actually gets activated — never trust the browser redirect
-// alone, since that can be faked by anyone typing the URL.
+// Builds a signed PayFast payment request server-side, where the passphrase
+// can stay secret. The frontend calls this function with { email, tier },
+// and gets back a URL to redirect the user to for PayFast's hosted checkout
+// (which itself offers Apple Pay, Google Pay, cards, and EFT as options).
 
 import { createHash } from "node:crypto";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
+const PAYFAST_MERCHANT_ID = Deno.env.get("PAYFAST_MERCHANT_ID")!;
+const PAYFAST_MERCHANT_KEY = Deno.env.get("PAYFAST_MERCHANT_KEY")!;
 const PAYFAST_PASSPHRASE = Deno.env.get("PAYFAST_PASSPHRASE")!;
-const PAYFAST_MODE = Deno.env.get("PAYFAST_MODE") ?? "live";
+const PAYFAST_MODE = Deno.env.get("PAYFAST_MODE") ?? "live"; // "live" | "sandbox"
+const APP_URL = Deno.env.get("APP_URL") ?? "https://app.sitemargin.co.za";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+const TIERS: Record<string, { amount: string; label: string }> = {
+  contractor: { amount: "249.00", label: "SiteMargin — Contractor plan" },
+  firm: { amount: "599.00", label: "SiteMargin — Firm plan" },
+};
+
+// PayFast requires values urlencoded PHP-style (spaces as '+', not %20).
 function pfEncode(value: string): string {
   return encodeURIComponent(value).replace(/%20/g, "+");
 }
 
-function verifySignature(fields: URLSearchParams, passphrase: string): boolean {
-  const receivedSignature = fields.get("signature");
-  const parts: string[] = [];
-  for (const [key, value] of fields.entries()) {
-    if (key === "signature") continue;
-    if (value === "") continue;
-    parts.push(`${key}=${pfEncode(value)}`);
-  }
+function buildSignature(fields: [string, string][], passphrase: string): string {
+  const parts = fields
+    .filter(([, v]) => v !== undefined && v !== null && v !== "")
+    .map(([k, v]) => `${k}=${pfEncode(String(v))}`);
   const paramString = parts.join("&") + `&passphrase=${pfEncode(passphrase)}`;
-  const computed = createHash("md5").update(paramString).digest("hex");
-  return computed === receivedSignature;
-}
-
-async function validateWithPayfast(rawBody: string): Promise<boolean> {
-  const host = PAYFAST_MODE === "sandbox" ? "https://sandbox.payfast.co.za" : "https://www.payfast.co.za";
-  const res = await fetch(`${host}/eng/query/validate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: rawBody,
-  });
-  const text = await res.text();
-  return text.trim() === "VALID";
+  return createHash("md5").update(paramString).digest("hex");
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405 });
-  }
+  const cors = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  };
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
 
   try {
-    const rawBody = await req.text();
-    const fields = new URLSearchParams(rawBody);
+    const { email, tier } = await req.json();
 
-    // 1. Verify the signature matches what we'd compute ourselves.
-    if (!verifySignature(fields, PAYFAST_PASSPHRASE)) {
-      console.error("payfast-itn: signature mismatch");
-      return new Response("Invalid signature", { status: 400 });
-    }
-
-    // 2. Confirm with PayFast directly that this notification is genuine
-    //    (protects against spoofed requests hitting this URL directly).
-    const isValid = await validateWithPayfast(rawBody);
-    if (!isValid) {
-      console.error("payfast-itn: failed PayFast validation");
-      return new Response("Failed validation", { status: 400 });
-    }
-
-    const paymentStatus = fields.get("payment_status");
-    const email = fields.get("email_address");
-    const mPaymentId = fields.get("m_payment_id");
-    const token = fields.get("token"); // present for recurring/subscription payments
-
-    if (!email) {
-      return new Response("Missing email", { status: 400 });
+    if (!email || !TIERS[tier]) {
+      return new Response(JSON.stringify({ error: "Missing or invalid email/tier." }), {
+        status: 400,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-    if (paymentStatus === "COMPLETE") {
-      const periodEnd = new Date();
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
+    // Rate limit: block more than 5 checkout attempts from the same email
+    // within 5 minutes, so this endpoint can't be spammed against PayFast.
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { count } = await supabase
+      .from("checkout_rate_limits")
+      .select("id", { count: "exact", head: true })
+      .eq("email", email)
+      .gte("created_at", fiveMinutesAgo);
 
-      await supabase
-        .from("subscriptions")
-        .update({
-          status: "active",
-          payfast_token: token ?? null,
-          current_period_end: periodEnd.toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("email", email)
-        .eq("m_payment_id", mPaymentId);
-    } else if (paymentStatus === "CANCELLED") {
-      await supabase
-        .from("subscriptions")
-        .update({ status: "cancelled", updated_at: new Date().toISOString() })
-        .eq("email", email);
+    if ((count ?? 0) >= 5) {
+      return new Response(JSON.stringify({ error: "Too many checkout attempts — please wait a few minutes and try again." }), {
+        status: 429,
+        headers: { ...cors, "Content-Type": "application/json" },
+      });
     }
+    await supabase.from("checkout_rate_limits").insert({ email });
 
-    // PayFast just needs a 200 OK — it doesn't read the body.
-    return new Response("OK", { status: 200 });
+    const mPaymentId = `sm_${crypto.randomUUID()}`;
+
+    // Record the pending subscription attempt so the ITN webhook has something to match against.
+    await supabase.from("subscriptions").upsert(
+      {
+        email,
+        tier,
+        status: "inactive",
+        m_payment_id: mPaymentId,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "email" }
+    );
+
+    const { amount, label } = TIERS[tier];
+
+    // Field order matters for PayFast's signature — this follows their documented order.
+    const fields: [string, string][] = [
+      ["merchant_id", PAYFAST_MERCHANT_ID],
+      ["merchant_key", PAYFAST_MERCHANT_KEY],
+      ["return_url", `${APP_URL}/?payment=success`],
+      ["cancel_url", `${APP_URL}/?payment=cancelled`],
+      ["notify_url", `${SUPABASE_URL}/functions/v1/payfast-itn`],
+      ["email_address", email],
+      ["m_payment_id", mPaymentId],
+      ["amount", amount],
+      ["item_name", label],
+      ["subscription_type", "1"],
+      ["recurring_amount", amount],
+      ["frequency", "3"], // monthly
+      ["cycles", "0"], // 0 = indefinite, until cancelled
+    ];
+
+    const signature = buildSignature(fields, PAYFAST_PASSPHRASE);
+    const query = fields.map(([k, v]) => `${k}=${pfEncode(v)}`).join("&") + `&signature=${signature}`;
+
+    const base = PAYFAST_MODE === "sandbox" ? "https://sandbox.payfast.co.za/eng/process" : "https://www.payfast.co.za/eng/process";
+
+    return new Response(JSON.stringify({ redirectUrl: `${base}?${query}` }), {
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
   } catch (err) {
-    console.error("payfast-itn error:", err);
-    // Still return 200 so PayFast doesn't endlessly retry a request we can't process —
-    // the error is logged for you to investigate instead.
-    return new Response("Error logged", { status: 200 });
+    console.error("create-checkout error:", err);
+    return new Response(JSON.stringify({ error: "Something went wrong building the checkout." }), {
+      status: 500,
+      headers: { ...cors, "Content-Type": "application/json" },
+    });
   }
 });
