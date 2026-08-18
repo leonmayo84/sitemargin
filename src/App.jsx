@@ -548,6 +548,18 @@ function GlobalStyles() {
   );
 }
 
+function PageHeader({ title }) {
+  return (
+    <div style={styles.dashHeader}>
+      <div style={styles.dashNavBar}>
+        <AppLogo />
+        <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
+      </div>
+      <h1 style={styles.dashTitle}>{title}</h1>
+    </div>
+  );
+}
+
 function TopNav({ current, onNavigate, userEmail, onSignOut }) {
   const tabs = [
     ["dashboard", "Projects"],
@@ -950,11 +962,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <div style={styles.dashHeader}>
-        <AppLogo />
-        <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
-        <h1 style={styles.dashTitle}>Your projects</h1>
-      </div>
+      <PageHeader title="Your projects" />
 
       <TopNav current="dashboard" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
@@ -1082,11 +1090,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut }) {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <div style={styles.dashHeader}>
-        <AppLogo />
-        <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
-        <h1 style={styles.dashTitle}>Subcontractor scorecards</h1>
-      </div>
+      <PageHeader title="Subcontractor scorecards" />
 
       <TopNav current="subcontractors" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
@@ -1265,11 +1269,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut }) {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <div style={styles.dashHeader}>
-        <AppLogo />
-        <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
-        <h1 style={styles.dashTitle}>Templates</h1>
-      </div>
+      <PageHeader title="Templates" />
 
       <TopNav current="templates" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
@@ -2257,8 +2257,6 @@ const styles = {
   page: {
     minHeight: "100vh",
     background: "#F5EFE2",
-    backgroundImage: "linear-gradient(rgba(184,164,124,0.20) 1px, transparent 1px), linear-gradient(90deg, rgba(184,164,124,0.20) 1px, transparent 1px)",
-    backgroundSize: "28px 28px",
     color: "#1C1712",
     fontFamily: "'Inter', sans-serif",
     padding: "20px 16px 48px",
@@ -2269,10 +2267,11 @@ const styles = {
   appLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em", color: "#1C1712" },
   eyebrowLink: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, textTransform: "uppercase", textDecoration: "none", display: "inline-block" },
 
-  dashHeader: { maxWidth: 1180, margin: "0 auto 16px" },
-  dashTitle: { fontFamily: "'Fraunces', serif", fontSize: 34, fontWeight: 500, marginTop: 4, letterSpacing: "-0.01em" },
+  dashHeader: { maxWidth: 1180, margin: "0 auto 20px" },
+  dashNavBar: { display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #E4DCC8", paddingBottom: 16, marginBottom: 22, gap: 16, flexWrap: "wrap" },
+  dashTitle: { fontFamily: "'Fraunces', serif", fontSize: 34, fontWeight: 500, letterSpacing: "-0.01em" },
 
-  topNav: { maxWidth: 1180, margin: "0 auto 20px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #EFE9D9", paddingBottom: 12 },
+  topNav: { maxWidth: 1180, margin: "0 auto 20px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #E4DCC8", paddingBottom: 12 },
   topNavRight: { marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 },
   topNavEmail: { fontSize: 12, color: "#8A8072", fontFamily: "'IBM Plex Mono', monospace" },
   topNavSignOut: { background: "none", border: "1px solid #E4DCC8", borderRadius: 3, color: "#6B6258", fontSize: 12, padding: "6px 12px", cursor: "pointer" },
