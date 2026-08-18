@@ -711,9 +711,15 @@ function AuthGate() {
     if (!email.trim()) return;
     setSendState("sending");
     setErrorMsg("");
+    // Always send the magic link back to production, unless we're actually
+    // running the local dev server right now. This stops sign-in links from
+    // silently pointing at localhost (or a stray preview URL) just because
+    // that's what tab happened to be open when the link was requested.
+    const PROD_ORIGIN = "https://app.sitemargin.co.za";
+    const redirectOrigin = window.location.hostname === "localhost" ? window.location.origin : PROD_ORIGIN;
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: redirectOrigin },
     });
     if (error) {
       setSendState("error");
