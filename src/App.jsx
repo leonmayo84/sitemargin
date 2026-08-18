@@ -496,6 +496,23 @@ function SummaryCard({ label, value, accent }) {
   );
 }
 
+function AppLogo() {
+  return (
+    <div style={styles.appLogoRow}>
+      <svg style={styles.appLogoMark} viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg">
+        <text x="150" y="90" fontFamily="'Fraunces', serif" fontStyle="italic" fontWeight="600" fill="#C1633A" textAnchor="middle">
+          <tspan fontSize="70">s</tspan>
+          <tspan fontSize="108">m</tspan>
+        </text>
+        <line x1="55" y1="112" x2="245" y2="112" stroke="#C1633A" strokeWidth="5" />
+      </svg>
+      <div style={styles.appLogoText}>
+        Site<span style={{ color: "#B85C2C" }}>Margin</span>
+      </div>
+    </div>
+  );
+}
+
 function GlobalStyles() {
   return (
     <style>{`
@@ -687,6 +704,7 @@ function AuthGate() {
     <div style={styles.page}>
       <GlobalStyles />
       <div style={styles.gateWrap}>
+        <AppLogo />
         <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
         <h1 style={{ ...styles.dashTitle, marginTop: 14, marginBottom: 10 }}>
           {status === "pending" ? "Almost there" : status === "denied" ? "Something went wrong" : "Sign in to SiteMargin"}
@@ -811,6 +829,7 @@ class ErrorBoundary extends React.Component {
         <div style={styles.page}>
           <GlobalStyles />
           <div style={styles.gateWrap}>
+            <AppLogo />
             <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
             <h1 style={{ ...styles.dashTitle, marginTop: 14, marginBottom: 10 }}>Something went wrong</h1>
             <p style={styles.gateText}>
@@ -915,6 +934,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
     <div style={styles.page}>
       <GlobalStyles />
       <div style={styles.dashHeader}>
+        <AppLogo />
         <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
         <h1 style={styles.dashTitle}>Your projects</h1>
       </div>
@@ -1046,6 +1066,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut }) {
     <div style={styles.page}>
       <GlobalStyles />
       <div style={styles.dashHeader}>
+        <AppLogo />
         <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
         <h1 style={styles.dashTitle}>Subcontractor scorecards</h1>
       </div>
@@ -1228,6 +1249,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut }) {
     <div style={styles.page}>
       <GlobalStyles />
       <div style={styles.dashHeader}>
+        <AppLogo />
         <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
         <h1 style={styles.dashTitle}>Templates</h1>
       </div>
@@ -2225,6 +2247,9 @@ const styles = {
     padding: "20px 16px 48px",
   },
   eyebrow: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, textTransform: "uppercase" },
+  appLogoRow: { display: "flex", alignItems: "center", gap: 8, marginBottom: 14 },
+  appLogoMark: { height: 46, width: "auto", display: "block" },
+  appLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em", color: "#1C1712" },
   eyebrowLink: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, textTransform: "uppercase", textDecoration: "none", display: "inline-block" },
 
   dashHeader: { maxWidth: 1180, margin: "0 auto 16px" },
