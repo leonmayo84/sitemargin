@@ -1,16 +1,5 @@
 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background: near-black rounded square, matches the new theme's dark accent badge -->
-  <rect width="64" height="64" rx="14" fill="#1C1712"/>
-
-  <!-- Subtle border, matches the site's warm border tone -->
-  <rect x="6" y="6" width="52" height="52" rx="9" fill="none" stroke="#4A443B" stroke-width="1.5" opacity="0.5"/>
-
-  <!-- Plumb line: vertical line with a bob -->
-  <line x1="26" y1="14" x2="26" y2="50" stroke="#B0A891" stroke-width="2.5" stroke-linecap="round"/>
-  <circle cx="26" cy="50" r="4.5" fill="#B0A891"/>
-
-  <!-- Tolerance gauge tick + fill, in the new terracotta brand accent -->
-  <rect x="34" y="30" width="20" height="5" rx="2.5" fill="#0F0C09"/>
-  <rect x="34" y="30" width="13" height="5" rx="2.5" fill="#B85C2C"/>
-  <line x1="45.7" y1="26" x2="45.7" y2="39" stroke="#F5EFE2" stroke-width="1.6"/>
+  <rect width="64" height="64" rx="14" fill="#F3EAD9"></rect>
+  <text x="34" y="48" font-family="'Playfair Display', serif" font-style="italic" font-weight="700" fill="#C1633A" text-anchor="middle"><tspan font-size="34">s</tspan><tspan font-size="52">m</tspan></text>
+  <line x1="5" y1="56" x2="59" y2="56" stroke="#C1633A" stroke-width="2.5"></line>
 </svg>
