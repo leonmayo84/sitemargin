@@ -658,9 +658,10 @@ function AppShell({ userEmail, onSignOut }) {
 }
 
 /* ============================== AUTH GATE ============================== */
-/* Access requires: (1) a magic-link email sign-in, and (2) that email being
-   marked access_granted in the signups table. Nobody sees the app itself
-   until both are true. */
+/* Access requires a magic-link email sign-in. Every signed-in email is
+   auto-granted the Free tier (1 project) in checkAccess() below — paid
+   tiers (Contractor/Firm) are unlocked separately via an active
+   subscription. */
 
 function AuthGate() {
   const [status, setStatus] = useState("checking"); // checking | signedout | pending | denied | approved
@@ -703,10 +704,10 @@ function AuthGate() {
       return;
     }
 
-    // First time we've ever seen this email: auto-grant the Free tier
-    // (matches the pricing page — 1 project, no approval needed). If a
-    // signups row already exists with access_granted explicitly false,
-    // that was a deliberate revocation, so leave it alone.
+    // Every signed-in email gets the Free tier automatically (matches the
+    // pricing page — 1 project, no approval needed). Cover both cases:
+    // a brand-new email (no signups row yet) and a legacy row left over
+    // from before self-serve Free existed (access_granted still false).
     if (!signup) {
       const { data: created, error: createErr } = await supabase
         .from("signups")
@@ -715,6 +716,16 @@ function AuthGate() {
         .single();
       if (!createErr && created) {
         signup = created;
+      }
+    } else if (!signup.access_granted) {
+      const { data: updated, error: updateErr } = await supabase
+        .from("signups")
+        .update({ access_granted: true })
+        .eq("email", userEmailAddr)
+        .select("access_granted")
+        .single();
+      if (!updateErr && updated) {
+        signup = updated;
       }
     }
 
