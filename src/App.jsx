@@ -780,45 +780,63 @@ function AuthGate() {
     <div style={styles.page}>
       <GlobalStyles />
       <div style={styles.gateWrap}>
-        <AppLogo />
-        <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
-        <h1 style={{ ...styles.dashTitle, marginTop: 14, marginBottom: 10 }}>
-          {status === "pending" ? "Almost there" : status === "denied" ? "Something went wrong" : "Sign in to SiteMargin"}
+        <div style={styles.dashNavBar}>
+          <AppLogo />
+          <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
+        </div>
+        <h1 style={{ ...styles.dashTitle, marginBottom: 10 }}>
+          {status === "pending" ? "Almost there" : status === "denied" ? "Something went wrong" : "Please sign in"}
         </h1>
 
         {status === "signedout" && (
           <>
-            <p style={styles.gateText}>
-              SiteMargin is invite-only while we're in early testing. Enter the email you signed up with and
-              we'll send you a one-click sign-in link — no password needed.
-            </p>
             {sendState === "sent" ? (
               <div style={styles.gateNotice}>
                 Check your inbox at <b>{email}</b> for the sign-in link. You can close this tab.
               </div>
             ) : (
-              <form onSubmit={sendMagicLink} style={styles.gateForm}>
-                <input
-                  type="email"
-                  required
-                  placeholder="you@yourcompany.co.za"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={styles.addInput}
-                />
-                <button type="submit" style={styles.addBtn} disabled={sendState === "sending"}>
-                  {sendState === "sending" ? "Sending…" : "Send sign-in link"}
-                </button>
-              </form>
+              <>
+                <p style={styles.gateText}>
+                  Enter your email and we'll send you a one-click sign-in link — no password needed.
+                </p>
+                <form onSubmit={sendMagicLink} style={styles.gateForm}>
+                  <input
+                    type="email"
+                    required
+                    placeholder="you@yourcompany.co.za"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    style={styles.addInput}
+                  />
+                  <button type="submit" style={styles.addBtn} disabled={sendState === "sending"}>
+                    {sendState === "sending" ? "Sending…" : "Send sign-in link"}
+                  </button>
+                </form>
+              </>
             )}
             {sendState === "error" && <div style={styles.gateError}>{errorMsg}</div>}
-            <p style={styles.gateFootnote}>
-              Not signed up yet?{" "}
-              <a href="https://sitemargin.co.za/contact.html" style={{ color: "#B85C2C" }}>
-                Request early access
-              </a>
-              .
-            </p>
+            <div style={styles.pricingHead}>Pricing</div>
+            <div style={styles.checkoutGrid}>
+              <div style={styles.checkoutCard}>
+                <div style={styles.checkoutTier}>Free</div>
+                <div style={styles.checkoutPrice}>R0</div>
+                <div style={styles.checkoutDesc}>For trying it out on a single job. 1 active project, unlimited line items.</div>
+              </div>
+              <div style={styles.checkoutCard}>
+                <div style={styles.checkoutTier}>Contractor</div>
+                <div style={styles.checkoutPrice}>
+                  R199<span style={styles.checkoutPriceUnit}>/month</span>
+                </div>
+                <div style={styles.checkoutDesc}>Unlimited projects, change orders, payments &amp; retention, PDF export.</div>
+              </div>
+              <div style={styles.checkoutCard}>
+                <div style={styles.checkoutTier}>Firm</div>
+                <div style={styles.checkoutPrice}>
+                  R599<span style={styles.checkoutPriceUnit}>/month</span>
+                </div>
+                <div style={styles.checkoutDesc}>Everything in Contractor, plus unlimited attachments and priority support.</div>
+              </div>
+            </div>
           </>
         )}
 
@@ -838,7 +856,7 @@ function AuthGate() {
               <div style={styles.checkoutCard}>
                 <div style={styles.checkoutTier}>Contractor</div>
                 <div style={styles.checkoutPrice}>
-                  R249<span style={styles.checkoutPriceUnit}>/month</span>
+                  R199<span style={styles.checkoutPriceUnit}>/month</span>
                 </div>
                 <div style={styles.checkoutDesc}>Unlimited projects, change orders, payments &amp; retention, PDF export.</div>
                 <button style={styles.addBtn} onClick={() => startCheckout("contractor")} disabled={checkoutTier !== null}>
@@ -2346,6 +2364,7 @@ const styles = {
   topNavSignOut: { background: "none", border: "1px solid #E4DCC8", borderRadius: 3, color: "#6B6258", fontSize: 12, padding: "6px 12px", cursor: "pointer" },
 
   gateWrap: { maxWidth: 640, margin: "80px auto", padding: "0 16px" },
+  pricingHead: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12.5, letterSpacing: "0.1em", color: "#8A8072", textTransform: "uppercase", fontWeight: 600, margin: "34px 0 12px" },
   checkoutGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginTop: 8 },
   checkoutCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "20px 18px", boxShadow: "0 2px 8px rgba(28,23,18,0.04)" },
   checkoutTier: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12.5, letterSpacing: "0.08em", color: "#8A8072", textTransform: "uppercase", fontWeight: 600, marginBottom: 10 },
