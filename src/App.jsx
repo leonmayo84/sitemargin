@@ -516,14 +516,14 @@ function AppLogo() {
 
   return (
     <div style={styles.appLogoRow}>
-      <svg style={styles.appLogoMark} viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg">
+      <svg className="sm-app-logo-mark" style={styles.appLogoMark} viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg">
         <text x="150" y="90" fontFamily="'Fraunces', serif" fontStyle="italic" fontWeight="600" fill="#1C1712" textAnchor="middle">
           <tspan fontSize="70">s</tspan>
           <tspan ref={mRef} fontSize="108" fill="#C1633A">m</tspan>
         </text>
         <line ref={lineRef} x1="0" y1="100" x2="0" y2="100" stroke="#C1633A" strokeWidth="5" />
       </svg>
-      <div style={styles.appLogoText}>
+      <div className="sm-app-logo-text" style={styles.appLogoText}>
         site<span style={{ color: "#B85C2C" }}>Margin</span>
       </div>
     </div>
@@ -545,6 +545,15 @@ function GlobalStyles() {
         body, html { background: #fff !important; }
         .print-only-status { display: inline !important; text-transform: capitalize; }
         .print-only-footer { display: block !important; }
+      }
+      @media (max-width: 640px) {
+        /* TopNav duplicates everything (tabs, Print, email, Sign out) that's
+           already in PageHeader's hamburger menu — on a phone-width screen
+           it doesn't fit in one row and was overflowing off-screen, so hide
+           it rather than trying to cram it in. */
+        .sm-top-nav { display: none !important; }
+        .sm-app-logo-mark { height: 56px !important; }
+        .sm-app-logo-text { font-size: 22px !important; }
       }
     `}</style>
   );
@@ -610,7 +619,7 @@ function TopNav({ current, onNavigate, userEmail, onSignOut }) {
     ["templates", "Templates"],
   ];
   return (
-    <div className="no-print" style={styles.topNav}>
+    <div className="no-print sm-top-nav" style={styles.topNav}>
       {tabs.map(([key, label]) => (
         <button
           key={key}
@@ -2532,10 +2541,10 @@ const styles = {
   toggleBtn: { background: "#FAF6EC", border: "1px solid #E4DCC8", borderRadius: 3, color: "#6B6258", fontSize: 13, fontWeight: 500, padding: "8px 16px", cursor: "pointer" },
   toggleBtnActive: { background: "#1C1712", borderColor: "#1C1712", color: "#F5EFE2", fontWeight: 600 },
 
-  ledger: { maxWidth: 1180, margin: "0 auto", background: "#FFFFFF", borderRadius: 6, overflow: "hidden", border: "1px solid #E4DCC8", boxShadow: "0 4px 16px rgba(28,23,18,0.05)" },
-  ledgerHeaderRow: { display: "flex", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid #E4DCC8", background: "#FAF6EC" },
+  ledger: { maxWidth: 1180, margin: "0 auto", background: "#FFFFFF", borderRadius: 6, overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch", border: "1px solid #E4DCC8", boxShadow: "0 4px 16px rgba(28,23,18,0.05)" },
+  ledgerHeaderRow: { display: "flex", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid #E4DCC8", background: "#FAF6EC", minWidth: 640 },
   thCell: { fontSize: 11, letterSpacing: "0.08em", color: "#8A8072", textTransform: "uppercase" },
-  row: { display: "flex", alignItems: "center", padding: "12px 14px", borderBottom: "1px solid #EFE9D9" },
+  row: { display: "flex", alignItems: "center", padding: "12px 14px", borderBottom: "1px solid #EFE9D9", minWidth: 640 },
   tdCell: { fontSize: 14, paddingRight: 8 },
   actualButton: { background: "none", border: "none", color: "#1C1712", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, cursor: "pointer", borderBottom: "1px dashed #8A8072", padding: 0 },
   inlineInput: { width: "100%", background: "#EFE9D9", border: "1px solid #B85C2C", borderRadius: 3, color: "#1C1712", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, padding: "2px 6px", textAlign: "right" },
