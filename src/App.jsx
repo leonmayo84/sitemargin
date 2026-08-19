@@ -517,9 +517,9 @@ function AppLogo() {
   return (
     <div style={styles.appLogoRow}>
       <svg style={styles.appLogoMark} viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg">
-        <text x="150" y="90" fontFamily="'Fraunces', serif" fontStyle="italic" fontWeight="600" fill="#C1633A" textAnchor="middle">
+        <text x="150" y="90" fontFamily="'Fraunces', serif" fontStyle="italic" fontWeight="600" fill="#1C1712" textAnchor="middle">
           <tspan fontSize="70">s</tspan>
-          <tspan ref={mRef} fontSize="108">m</tspan>
+          <tspan ref={mRef} fontSize="108" fill="#C1633A">m</tspan>
         </text>
         <line ref={lineRef} x1="0" y1="100" x2="0" y2="100" stroke="#C1633A" strokeWidth="5" />
       </svg>
@@ -1324,7 +1324,12 @@ function TemplatesView({ onNavigate, userEmail, onSignOut }) {
         Build a standard line-item set once — a typical residential build, a shopfit, whatever you repeat — then apply it
         to any new project in one click instead of retyping it. You can also save an existing project's line items
         straight back out as a new template from inside that project.
-        {" "}Need a starting point? <a href="https://jbcc.co.za/free-forms/" target="_blank" rel="noopener noreferrer" style={{ color: "#B85C2C", fontWeight: 600 }}>JBCC's free standard forms ↗</a>
+        <div style={{ marginTop: 10 }}>
+          Need a starting point? <a href="https://jbcc.co.za/free-forms/" target="_blank" rel="noopener noreferrer" style={styles.explainerLink}>JBCC's free standard forms ↗</a>
+          {" · "}<a href="https://www.cidb.org.za/about-us/our-construction-mandate/" target="_blank" rel="noopener noreferrer" style={styles.explainerLink}>CIDB registration ↗</a>
+          {" · "}<a href="https://www.sans10400.co.za/nhbrc-2/" target="_blank" rel="noopener noreferrer" style={styles.explainerLink}>NHBRC ↗</a>
+          {" · "}<a href="https://www.sans10400.co.za/" target="_blank" rel="noopener noreferrer" style={styles.explainerLink}>SANS 10400 ↗</a>
+        </div>
       </div>
 
       <div className="no-print" style={styles.addRowStandalone}>
@@ -2310,9 +2315,9 @@ const styles = {
     padding: "20px 16px 48px",
   },
   eyebrow: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, textTransform: "uppercase" },
-  appLogoRow: { display: "flex", alignItems: "center", gap: 8, marginBottom: 14 },
-  appLogoMark: { height: 46, width: "auto", display: "block" },
-  appLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 17, letterSpacing: "-0.01em", color: "#1C1712" },
+  appLogoRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 14 },
+  appLogoMark: { height: 92, width: "auto", display: "block" },
+  appLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 30, letterSpacing: "-0.01em", color: "#1C1712" },
   eyebrowLink: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, textTransform: "uppercase", textDecoration: "none", display: "inline-block" },
 
   dashHeader: { maxWidth: 1180, margin: "0 auto 20px", position: "relative" },
@@ -2356,6 +2361,7 @@ const styles = {
   topNavBtnActive: { background: "#1C1712", color: "#F5EFE2", fontWeight: 600 },
 
   explainer: { maxWidth: 1180, margin: "0 auto 18px", fontSize: 13, color: "#6B6258", lineHeight: 1.6, background: "#FAF6EC", border: "1px solid #EFE9D9", borderRadius: 4, padding: "12px 16px" },
+  explainerLink: { color: "#B85C2C", fontWeight: 600 },
 
   newProjectRow: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", gap: 10 },
   addRowStandalone: { maxWidth: 1180, margin: "0 auto 22px", display: "flex", gap: 10, flexWrap: "wrap" },
