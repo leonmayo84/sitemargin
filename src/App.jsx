@@ -1324,6 +1324,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut }) {
         Build a standard line-item set once — a typical residential build, a shopfit, whatever you repeat — then apply it
         to any new project in one click instead of retyping it. You can also save an existing project's line items
         straight back out as a new template from inside that project.
+        {" "}Need a starting point? <a href="https://jbcc.co.za/free-forms/" target="_blank" rel="noopener noreferrer" style={{ color: "#B85C2C", fontWeight: 600 }}>JBCC's free standard forms ↗</a>
       </div>
 
       <div className="no-print" style={styles.addRowStandalone}>
