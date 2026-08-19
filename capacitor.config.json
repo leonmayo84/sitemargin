@@ -1,0 +1,9 @@
+{
+  "appId": "za.co.sitemargin.app",
+  "appName": "SiteMargin",
+  "webDir": "dist",
+  "backgroundColor": "#F5EFE2",
+  "android": {
+    "backgroundColor": "#F5EFE2"
+  }
+}

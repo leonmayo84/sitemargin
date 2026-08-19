@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "android:sync": "vite build && npx cap sync android",
+    "android:open": "npx cap open android"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
