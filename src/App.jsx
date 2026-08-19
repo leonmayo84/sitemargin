@@ -670,6 +670,20 @@ function AuthGate() {
   const [sendState, setSendState] = useState("idle"); // idle | sending | sent | error
   const [errorMsg, setErrorMsg] = useState("");
   const [checkoutTier, setCheckoutTier] = useState(null); // which plan button is loading
+  const [selectedTier, setSelectedTier] = useState(() => {
+    try { return localStorage.getItem("sm_selected_tier") || null; } catch { return null; }
+  });
+  const emailInputRef = useRef(null);
+
+  function chooseTier(tier) {
+    setSelectedTier(tier);
+    try { localStorage.setItem("sm_selected_tier", tier); } catch {}
+    if (tier === "free") return;
+    // Paid tiers need a signed-in session before checkout can start —
+    // scroll them to the email form instead of a dead click.
+    emailInputRef.current?.focus();
+    emailInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 
   async function checkAccess(currentSession) {
     if (!currentSession) {
@@ -679,7 +693,7 @@ function AuthGate() {
     setSession(currentSession);
     const userEmailAddr = currentSession.user.email;
 
-    const [{ data: signup, error: signupErr }, { data: sub }] = await Promise.all([
+    let [{ data: signup, error: signupErr }, { data: sub }] = await Promise.all([
       supabase.from("signups").select("access_granted").eq("email", userEmailAddr).maybeSingle(),
       supabase.from("subscriptions").select("tier, status, current_period_end").eq("email", userEmailAddr).maybeSingle(),
     ]);
@@ -687,6 +701,21 @@ function AuthGate() {
     if (signupErr) {
       setStatus("denied");
       return;
+    }
+
+    // First time we've ever seen this email: auto-grant the Free tier
+    // (matches the pricing page — 1 project, no approval needed). If a
+    // signups row already exists with access_granted explicitly false,
+    // that was a deliberate revocation, so leave it alone.
+    if (!signup) {
+      const { data: created, error: createErr } = await supabase
+        .from("signups")
+        .insert({ email: userEmailAddr, access_granted: true })
+        .select("access_granted")
+        .single();
+      if (!createErr && created) {
+        signup = created;
+      }
     }
 
     const hasActiveSub = sub?.status === "active";
@@ -752,6 +781,7 @@ function AuthGate() {
       });
       const json = await res.json();
       if (json.redirectUrl) {
+        try { localStorage.removeItem("sm_selected_tier"); } catch {}
         window.location.href = json.redirectUrl;
       } else {
         setErrorMsg(json.error || "Couldn't start checkout — please try again.");
@@ -801,8 +831,14 @@ function AuthGate() {
                 <p style={styles.gateText}>
                   Enter your email and we'll send you a one-click sign-in link — no password needed.
                 </p>
+                {selectedTier && (
+                  <div style={styles.tierNote}>
+                    {selectedTier === "free" ? "Starting on the Free plan." : `Continuing with ${selectedTier === "contractor" ? "Contractor" : "Firm"} — you'll choose it again once you're signed in.`}
+                  </div>
+                )}
                 <form onSubmit={sendMagicLink} style={styles.gateForm}>
                   <input
+                    ref={emailInputRef}
                     type="email"
                     required
                     placeholder="you@yourcompany.co.za"
@@ -819,24 +855,27 @@ function AuthGate() {
             {sendState === "error" && <div style={styles.gateError}>{errorMsg}</div>}
             <div style={styles.pricingHead}>Pricing</div>
             <div style={styles.checkoutGrid}>
-              <div style={styles.checkoutCard}>
+              <div style={{ ...styles.checkoutCard, ...(selectedTier === "free" ? styles.checkoutCardSelected : {}) }}>
                 <div style={styles.checkoutTier}>Free</div>
                 <div style={styles.checkoutPrice}>R0</div>
                 <div style={styles.checkoutDesc}>For trying it out on a single job. 1 active project, unlimited line items.</div>
+                <button type="button" style={styles.tierCta} onClick={() => chooseTier("free")}>Get started</button>
               </div>
-              <div style={styles.checkoutCard}>
+              <div style={{ ...styles.checkoutCard, ...(selectedTier === "contractor" ? styles.checkoutCardSelected : {}) }}>
                 <div style={styles.checkoutTier}>Contractor</div>
                 <div style={styles.checkoutPrice}>
                   R199<span style={styles.checkoutPriceUnit}>/month</span>
                 </div>
                 <div style={styles.checkoutDesc}>Unlimited projects, change orders, payments &amp; retention, PDF export.</div>
+                <button type="button" style={styles.tierCta} onClick={() => chooseTier("contractor")}>Get started</button>
               </div>
-              <div style={styles.checkoutCard}>
+              <div style={{ ...styles.checkoutCard, ...(selectedTier === "firm" ? styles.checkoutCardSelected : {}) }}>
                 <div style={styles.checkoutTier}>Firm</div>
                 <div style={styles.checkoutPrice}>
                   R599<span style={styles.checkoutPriceUnit}>/month</span>
                 </div>
                 <div style={styles.checkoutDesc}>Everything in Contractor, plus unlimited attachments and priority support.</div>
+                <button type="button" style={styles.tierCta} onClick={() => chooseTier("firm")}>Get started</button>
               </div>
             </div>
           </>
@@ -855,7 +894,7 @@ function AuthGate() {
               </div>
             )}
             <div style={styles.checkoutGrid}>
-              <div style={styles.checkoutCard}>
+              <div style={{ ...styles.checkoutCard, ...(selectedTier === "contractor" ? styles.checkoutCardSelected : {}) }}>
                 <div style={styles.checkoutTier}>Contractor</div>
                 <div style={styles.checkoutPrice}>
                   R199<span style={styles.checkoutPriceUnit}>/month</span>
@@ -865,7 +904,7 @@ function AuthGate() {
                   {checkoutTier === "contractor" ? "Redirecting…" : "Subscribe"}
                 </button>
               </div>
-              <div style={styles.checkoutCard}>
+              <div style={{ ...styles.checkoutCard, ...(selectedTier === "firm" ? styles.checkoutCardSelected : {}) }}>
                 <div style={styles.checkoutTier}>Firm</div>
                 <div style={styles.checkoutPrice}>
                   R599<span style={styles.checkoutPriceUnit}>/month</span>
@@ -951,11 +990,23 @@ export default function SiteMargin() {
 
 /* ============================== DASHBOARD ============================== */
 
+const FREE_PROJECT_LIMIT = 1;
+
 function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [isPaid, setIsPaid] = useState(true); // assume paid until we know otherwise, so the cap never flashes incorrectly
+
+  useEffect(() => {
+    supabase
+      .from("subscriptions")
+      .select("status")
+      .eq("email", userEmail)
+      .maybeSingle()
+      .then(({ data }) => setIsPaid(data?.status === "active"));
+  }, [userEmail]);
 
   async function loadProjects() {
     setLoading(true);
@@ -990,8 +1041,10 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
 
   useEffect(() => { loadProjects(); }, []);
 
+  const atFreeLimit = !isPaid && projects.length >= FREE_PROJECT_LIMIT;
+
   async function createProject() {
-    if (!newName.trim() || creating) return;
+    if (!newName.trim() || creating || atFreeLimit) return;
     setCreating(true);
     const { data, error } = await supabase
       .from("projects_v2")
@@ -1055,18 +1108,27 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
         </div>
       )}
 
-      <div className="no-print" style={styles.newProjectRow}>
-        <input
-          style={{ ...styles.addInput, flex: 1 }}
-          placeholder="New project name (e.g. Fernwood Residence)"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && createProject()}
-        />
-        <button style={styles.addBtn} onClick={createProject} disabled={creating}>
-          {creating ? "Creating…" : "+ New project"}
-        </button>
-      </div>
+      {atFreeLimit ? (
+        <div className="no-print" style={styles.freeLimitBanner}>
+          <span>You've used your Free plan's {FREE_PROJECT_LIMIT} project. Upgrade to Contractor or Firm for unlimited projects.</span>
+          <a href="https://sitemargin.co.za/pricing.html" target="_blank" rel="noopener noreferrer" style={styles.freeLimitLink}>
+            See plans ↗
+          </a>
+        </div>
+      ) : (
+        <div className="no-print" style={styles.newProjectRow}>
+          <input
+            style={{ ...styles.addInput, flex: 1 }}
+            placeholder="New project name (e.g. Fernwood Residence)"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && createProject()}
+          />
+          <button style={styles.addBtn} onClick={createProject} disabled={creating}>
+            {creating ? "Creating…" : "+ New project"}
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ ...styles.footer, textAlign: "center", padding: 40 }}>Loading projects…</div>
@@ -2393,6 +2455,9 @@ const styles = {
   checkoutPrice: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 26, fontWeight: 600, color: "#1C1712", marginBottom: 8 },
   checkoutPriceUnit: { fontSize: 13, color: "#8A8072", fontWeight: 400 },
   checkoutDesc: { fontSize: 13, color: "#6B6258", marginBottom: 16, lineHeight: 1.5 },
+  checkoutCardSelected: { borderColor: "#B85C2C", boxShadow: "0 2px 10px rgba(184,92,44,0.14)" },
+  tierCta: { background: "transparent", border: "1px solid #D8CFB8", borderRadius: 6, padding: "9px 14px", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12.5, fontWeight: 600, color: "#1C1712", cursor: "pointer" },
+  tierNote: { fontSize: 12.5, color: "#B85C2C", fontWeight: 600, marginBottom: 10 },
   gateText: { fontSize: 15, color: "#5C544A", lineHeight: 1.6, marginBottom: 20 },
   gateForm: { display: "flex", flexDirection: "column", gap: 10 },
   gateNotice: { background: "#FBF1E7", border: "1px solid #B85C2C", borderRadius: 4, padding: "14px 16px", fontSize: 14, color: "#4A443B" },
@@ -2405,6 +2470,8 @@ const styles = {
   explainerLink: { color: "#B85C2C", fontWeight: 600 },
 
   newProjectRow: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", gap: 10 },
+  freeLimitBanner: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, background: "#FBF1E7", border: "1px solid #B85C2C", borderRadius: 6, padding: "14px 16px", fontSize: 13.5, color: "#4A443B", flexWrap: "wrap" },
+  freeLimitLink: { color: "#B85C2C", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" },
   addRowStandalone: { maxWidth: 1180, margin: "0 auto 22px", display: "flex", gap: 10, flexWrap: "wrap" },
   projectGrid: { maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 },
   projectCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "18px 20px", cursor: "pointer", boxShadow: "0 2px 8px rgba(28,23,18,0.04)" },
