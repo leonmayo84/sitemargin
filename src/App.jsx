@@ -539,10 +539,12 @@ function GlobalStyles() {
       button:focus-visible { outline: 2px solid #B85C2C; outline-offset: 2px; }
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
       .print-only-status { display: none; }
+      .print-only-footer { display: none; }
       @media print {
         .no-print { display: none !important; }
         body, html { background: #fff !important; }
         .print-only-status { display: inline !important; text-transform: capitalize; }
+        .print-only-footer { display: block !important; }
       }
     `}</style>
   );
@@ -2244,6 +2246,26 @@ function ProjectView({ projectId, onBack }) {
         </div>
       )}
 
+      <div className="print-only-footer" style={styles.docFooter}>
+        <div style={styles.dfRow}>
+          <div style={styles.dfBrand}>
+            <svg style={styles.dfMark} viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg">
+              <text x="150" y="90" fontFamily="'Fraunces', serif" fontStyle="italic" fontWeight="600" fill="#1C1712" textAnchor="middle">
+                <tspan fontSize="70">s</tspan>
+                <tspan fontSize="108" fill="#C1633A">m</tspan>
+              </text>
+            </svg>
+            <span style={styles.dfText}>
+              site<span style={{ color: "#B85C2C" }}>Margin</span> — Cost variance report for {project.name}
+            </span>
+          </div>
+          <div style={styles.dfMeta}>
+            Generated {new Date().toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}
+          </div>
+        </div>
+        <div style={styles.dfDisclaimer}>Figures as at date of generation, subject to final reconciliation. sitemargin.co.za</div>
+      </div>
+
       <div className="no-print" style={styles.footer}>
         Click Actual to log spend, or "Details" on any line to set the subcontractor, dates, quality rating, notes and files.
       </div>
@@ -2453,6 +2475,13 @@ const styles = {
   addInput: { background: "#EFE9D9", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontSize: 14, padding: "8px 10px" },
   addBtn: { background: "#B85C2C", border: "none", borderRadius: 3, color: "#FFFFFF", fontWeight: 600, fontSize: 13, padding: "9px 14px", cursor: "pointer", whiteSpace: "nowrap" },
   footer: { maxWidth: 1180, margin: "16px auto 0", fontSize: 12, color: "#8A8072" },
+  docFooter: { maxWidth: 1180, margin: "30px auto 0", paddingTop: 14, borderTop: "1px solid #D8CFB8" },
+  dfRow: { display: "flex", justifyContent: "space-between", alignItems: "center" },
+  dfBrand: { display: "flex", alignItems: "center", gap: 6, fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 14, color: "#1C1712" },
+  dfMark: { height: 20, width: "auto", display: "block" },
+  dfText: { fontStyle: "normal" },
+  dfMeta: { fontSize: 11, color: "#8A8072", fontFamily: "Arial, sans-serif" },
+  dfDisclaimer: { fontSize: 10, color: "#9C9384", marginTop: 4, fontFamily: "Arial, sans-serif" },
 
   detailPanel: { background: "#FAF6EC", padding: "16px 18px", borderBottom: "1px solid #EFE9D9" },
   detailGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 },
