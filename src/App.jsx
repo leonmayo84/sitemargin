@@ -832,8 +832,8 @@ function AuthGate() {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <div style={styles.gateWrap}>
-        <div style={styles.dashNavBar}>
+      <div style={styles.gateNavWrap}>
+        <div style={styles.gateNav}>
           <AppLogo />
           <button
             type="button"
@@ -848,16 +848,20 @@ function AuthGate() {
             <span style={{ ...styles.menuBtnBar, ...(gateMenuOpen ? styles.menuBtnBar3Open : {}) }} />
           </button>
         </div>
-        {gateMenuOpen && (
-          <div id="gateMenuPanel" style={styles.menuPanel}>
-            <div style={styles.menuPanelInner}>
-              <a href="https://sitemargin.co.za" style={styles.menuPanelLink}>← sitemargin.co.za</a>
-              <div style={styles.menuPanelActions}>
-                <button style={styles.menuPanelGhost} onClick={() => setGateMenuOpen(false)}>Close</button>
-              </div>
-            </div>
+      </div>
+      {gateMenuOpen && (
+        <div id="gateMenuPanel" style={styles.menuPanel}>
+          <div style={styles.menuPanelInner}>
+            <button
+              style={styles.menuPanelLink}
+              onClick={() => { setGateMenuOpen(false); window.location.href = "https://sitemargin.co.za"; }}
+            >
+              ← sitemargin.co.za
+            </button>
           </div>
-        )}
+        </div>
+      )}
+      <div style={styles.gateWrap}>
         {status === "signedout" && sendState !== "sent" && (
           <div style={styles.heroWrap}>
             <div style={styles.eyebrow}>COST VARIANCE INTELLIGENCE · FOR SOUTH AFRICAN CONTRACTORS</div>
@@ -2535,7 +2539,9 @@ const styles = {
   topNavEmail: { fontSize: 12, color: "#8A8072", fontFamily: "'IBM Plex Mono', monospace" },
   topNavSignOut: { background: "none", border: "1px solid #E4DCC8", borderRadius: 3, color: "#6B6258", fontSize: 12, padding: "6px 12px", cursor: "pointer" },
 
-  gateWrap: { maxWidth: 640, margin: "80px auto", padding: "0 16px" },
+  gateNavWrap: { maxWidth: 980, margin: "0 auto", padding: "0 20px" },
+  gateNav: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 0", borderBottom: "1px solid #E4DCC8" },
+  gateWrap: { maxWidth: 640, margin: "48px auto 0", padding: "0 16px" },
   heroWrap: { marginBottom: 36, paddingBottom: 32, borderBottom: "1px solid #E4DCC8" },
   heroEm: { fontStyle: "italic", color: "#B85C2C" },
   heroSub: { fontSize: 16, color: "#5C544A", lineHeight: 1.6, marginBottom: 26 },
