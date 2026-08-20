@@ -683,6 +683,7 @@ function AuthGate() {
   const [selectedTier, setSelectedTier] = useState(() => {
     try { return localStorage.getItem("sm_selected_tier") || null; } catch { return null; }
   });
+  const [gateMenuOpen, setGateMenuOpen] = useState(false);
   const emailInputRef = useRef(null);
 
   function chooseTier(tier) {
@@ -831,13 +832,128 @@ function AuthGate() {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <div style={styles.gateWrap}>
-        <div style={styles.dashNavBar}>
-          <AppLogo />
-          <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
+      <div style={styles.gateNavOuter}>
+        <div style={styles.gateNavWrap}>
+          <div style={styles.gateNav}>
+            <AppLogo />
+            <button
+              type="button"
+              style={styles.menuBtn}
+              aria-expanded={gateMenuOpen}
+              aria-controls="gateMenuPanel"
+              aria-label={gateMenuOpen ? "Close menu" : "Open menu"}
+              onClick={() => setGateMenuOpen((v) => !v)}
+            >
+              <span style={{ ...styles.menuBtnBar, ...(gateMenuOpen ? styles.menuBtnBar1Open : {}) }} />
+              <span style={{ ...styles.menuBtnBar, ...(gateMenuOpen ? styles.menuBtnBarMidOpen : {}) }} />
+              <span style={{ ...styles.menuBtnBar, ...(gateMenuOpen ? styles.menuBtnBar3Open : {}) }} />
+            </button>
+          </div>
         </div>
+      </div>
+      {gateMenuOpen && (
+        <div id="gateMenuPanel" style={{ ...styles.menuPanel, paddingTop: 140 }}>
+          <div style={styles.menuPanelInner}>
+            {[
+              { label: "Home", href: "https://sitemargin.co.za/index.html" },
+              { label: "What's inside", href: "https://sitemargin.co.za/whats-inside.html" },
+              { label: "Pricing", href: "https://sitemargin.co.za/pricing.html" },
+              { label: "About", href: "https://sitemargin.co.za/about.html" },
+              { label: "Contact", href: "https://sitemargin.co.za/contact.html" },
+            ].map((item) => (
+              <button
+                key={item.label}
+                style={styles.menuPanelLink}
+                onClick={() => { setGateMenuOpen(false); window.location.href = item.href; }}
+              >
+                {item.label}
+              </button>
+            ))}
+            {[
+              { label: "Terms", href: "https://sitemargin.co.za/terms.html" },
+              { label: "Privacy", href: "https://sitemargin.co.za/privacy.html" },
+            ].map((item, i) => (
+              <button
+                key={item.label}
+                style={{
+                  ...styles.menuPanelLink,
+                  fontSize: 15,
+                  opacity: 0.7,
+                  paddingTop: i === 0 ? 8 : 0,
+                  paddingBottom: i === 0 ? 8 : 18,
+                  borderBottom: i === 0 ? "none" : styles.menuPanelLink.borderBottom,
+                }}
+                onClick={() => { setGateMenuOpen(false); window.location.href = item.href; }}
+              >
+                {item.label}
+              </button>
+            ))}
+            <div style={{ ...styles.menuPanelActions, flexDirection: "column" }}>
+              <button
+                style={styles.menuPanelGhost}
+                onClick={() => { setGateMenuOpen(false); window.location.href = "https://app.sitemargin.co.za"; }}
+              >
+                Open the app
+              </button>
+              <button
+                style={styles.menuPanelSolid}
+                onClick={() => { setGateMenuOpen(false); window.location.href = "https://app.sitemargin.co.za"; }}
+              >
+                Sign up free
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div style={styles.gateWrap}>
+        {status === "signedout" && sendState !== "sent" && (
+          <div style={styles.heroWrap}>
+            <div style={styles.eyebrow}>COST VARIANCE INTELLIGENCE · FOR SOUTH AFRICAN CONTRACTORS</div>
+            <h1 style={{ ...styles.dashTitle, margin: "10px 0 14px" }}>
+              Know you're <em style={styles.heroEm}>over budget</em> before your client does.
+            </h1>
+            <p style={styles.heroSub}>
+              Stop finding out about cost overruns at month-end. SiteMargin flags budget risk the moment it
+              happens — built for contractors who don't have time for enterprise QS software.
+            </p>
+
+            <div style={styles.mockSheet}>
+              <div style={styles.mockHead}>
+                <span>Line item</span>
+                <span>Tolerance</span>
+              </div>
+              {[
+                { name: "Concrete & foundations", nums: "R448,000 / R420,000", pct: "+6.7%", fill: 76, color: "#C1462B", bg: "rgba(193,70,43,0.1)", tag: "OVER" },
+                { name: "Plumbing rough-in", nums: "R126,000 / R118,000", pct: "+6.8%", fill: 76, color: "#B8862F", bg: "rgba(184,134,47,0.1)", tag: "WATCH" },
+                { name: "Structural steel", nums: "R298,000 / R310,000", pct: "-3.9%", fill: 68, color: "#4C7A5C", bg: "rgba(76,122,92,0.1)", tag: "ON TRACK" },
+              ].map((row) => (
+                <div key={row.name} style={styles.mockRow}>
+                  <span style={styles.mockName}>{row.name}</span>
+                  <span style={styles.mockNums}>{row.nums}</span>
+                  <span style={styles.mockGauge}>
+                    <div style={styles.gaugeTrack}>
+                      <div style={{ ...styles.gaugeFill, width: `${row.fill}%`, background: row.color }} />
+                    </div>
+                    <span style={{ ...styles.gaugeLabel, color: row.color }}>{row.pct}</span>
+                  </span>
+                  <span style={{ ...styles.pill, color: row.color, background: row.bg }}>{row.tag}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={styles.problemBlock}>
+              <div style={styles.pricingHead}>The problem</div>
+              <p style={{ ...styles.gateText, marginBottom: 0 }}>
+                Most overruns are visible weeks before anyone notices them. The number that gives it away isn't
+                the budget — it's the gap between money spent and work actually done. SiteMargin watches that gap
+                on every line item and tells you the moment it opens up.
+              </p>
+            </div>
+          </div>
+        )}
+
         <h1 style={{ ...styles.dashTitle, marginBottom: 10 }}>
-          {status === "pending" ? "Almost there" : status === "denied" ? "Something went wrong" : "Please sign in"}
+          {status === "pending" ? "Almost there" : status === "denied" ? "Something went wrong" : "Try it for free"}
         </h1>
 
         {status === "signedout" && (
@@ -2467,7 +2583,24 @@ const styles = {
   topNavEmail: { fontSize: 12, color: "#8A8072", fontFamily: "'IBM Plex Mono', monospace" },
   topNavSignOut: { background: "none", border: "1px solid #E4DCC8", borderRadius: 3, color: "#6B6258", fontSize: 12, padding: "6px 12px", cursor: "pointer" },
 
-  gateWrap: { maxWidth: 640, margin: "80px auto", padding: "0 16px" },
+  gateNavOuter: { position: "relative", zIndex: 201, background: "#F5EFE2" },
+  gateNavWrap: { maxWidth: 980, margin: "0 auto", padding: "0 20px" },
+  gateNav: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 0", borderBottom: "1px solid #E4DCC8" },
+  gateWrap: { maxWidth: 640, margin: "48px auto 0", padding: "0 16px" },
+  heroWrap: { marginBottom: 36, paddingBottom: 32, borderBottom: "1px solid #E4DCC8" },
+  heroEm: { fontStyle: "italic", color: "#B85C2C" },
+  heroSub: { fontSize: 16, color: "#5C544A", lineHeight: 1.6, marginBottom: 26 },
+  mockSheet: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 8, padding: "16px 18px", boxShadow: "0 2px 10px rgba(28,23,18,0.05)", marginBottom: 28 },
+  mockHead: { display: "flex", justifyContent: "space-between", fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: "0.08em", color: "#8A8072", textTransform: "uppercase", fontWeight: 600, paddingBottom: 10, marginBottom: 10, borderBottom: "1px solid #EFE9D9" },
+  mockRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 0", borderBottom: "1px solid #F3EEE0", flexWrap: "wrap" },
+  mockName: { fontSize: 13.5, fontWeight: 600, color: "#1C1712", flex: "1 1 150px" },
+  mockNums: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#6B6258", flex: "0 0 auto" },
+  mockGauge: { display: "flex", alignItems: "center", gap: 8, flex: "0 0 auto" },
+  gaugeTrack: { position: "relative", width: 60, height: 6, background: "#EFE9D9", borderRadius: 4, overflow: "hidden" },
+  gaugeFill: { position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: 4 },
+  gaugeLabel: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 11.5, fontWeight: 600, width: 44 },
+  pill: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", padding: "4px 9px", borderRadius: 20, flex: "0 0 auto" },
+  problemBlock: { marginTop: 4 },
   pricingHead: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12.5, letterSpacing: "0.1em", color: "#8A8072", textTransform: "uppercase", fontWeight: 600, margin: "34px 0 12px" },
   checkoutGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginTop: 8 },
   checkoutCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "20px 18px", boxShadow: "0 2px 8px rgba(28,23,18,0.04)" },
