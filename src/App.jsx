@@ -683,6 +683,7 @@ function AuthGate() {
   const [selectedTier, setSelectedTier] = useState(() => {
     try { return localStorage.getItem("sm_selected_tier") || null; } catch { return null; }
   });
+  const [gateMenuOpen, setGateMenuOpen] = useState(false);
   const emailInputRef = useRef(null);
 
   function chooseTier(tier) {
@@ -834,8 +835,29 @@ function AuthGate() {
       <div style={styles.gateWrap}>
         <div style={styles.dashNavBar}>
           <AppLogo />
-          <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
+          <button
+            type="button"
+            style={styles.menuBtn}
+            aria-expanded={gateMenuOpen}
+            aria-controls="gateMenuPanel"
+            aria-label={gateMenuOpen ? "Close menu" : "Open menu"}
+            onClick={() => setGateMenuOpen((v) => !v)}
+          >
+            <span style={{ ...styles.menuBtnBar, ...(gateMenuOpen ? styles.menuBtnBar1Open : {}) }} />
+            <span style={{ ...styles.menuBtnBar, ...(gateMenuOpen ? styles.menuBtnBarMidOpen : {}) }} />
+            <span style={{ ...styles.menuBtnBar, ...(gateMenuOpen ? styles.menuBtnBar3Open : {}) }} />
+          </button>
         </div>
+        {gateMenuOpen && (
+          <div id="gateMenuPanel" style={styles.menuPanel}>
+            <div style={styles.menuPanelInner}>
+              <a href="https://sitemargin.co.za" style={styles.menuPanelLink}>← sitemargin.co.za</a>
+              <div style={styles.menuPanelActions}>
+                <button style={styles.menuPanelGhost} onClick={() => setGateMenuOpen(false)}>Close</button>
+              </div>
+            </div>
+          </div>
+        )}
         {status === "signedout" && sendState !== "sent" && (
           <div style={styles.heroWrap}>
             <div style={styles.eyebrow}>COST VARIANCE INTELLIGENCE · FOR SOUTH AFRICAN CONTRACTORS</div>
