@@ -852,7 +852,7 @@ function AuthGate() {
         </div>
       </div>
       {gateMenuOpen && (
-        <div id="gateMenuPanel" style={styles.menuPanel}>
+        <div id="gateMenuPanel" style={{ ...styles.menuPanel, paddingTop: 140 }}>
           <div style={styles.menuPanelInner}>
             <button
               style={styles.menuPanelLink}
