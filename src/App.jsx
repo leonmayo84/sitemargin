@@ -2,6 +2,8 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import * as XLSX from "xlsx";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 import { supabase } from "./supabaseClient";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
@@ -496,7 +498,7 @@ function SummaryCard({ label, value, accent }) {
   );
 }
 
-function AppLogo() {
+function AppLogo({ large = false }) {
   const mRef = useRef(null);
   const lineRef = useRef(null);
 
@@ -515,15 +517,20 @@ function AppLogo() {
   }, []);
 
   return (
-    <div style={styles.appLogoRow}>
-      <svg className="sm-app-logo-mark" style={styles.appLogoMark} viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg">
+    <div style={large ? styles.appLogoColLarge : styles.appLogoRow}>
+      <svg
+        className={large ? "sm-app-logo-mark-lg" : "sm-app-logo-mark"}
+        style={large ? styles.appLogoMarkLarge : styles.appLogoMark}
+        viewBox="0 0 300 140"
+        xmlns="http://www.w3.org/2000/svg"
+      >
         <text x="150" y="90" fontFamily="'Fraunces', serif" fontStyle="italic" fontWeight="600" fill="#1C1712" textAnchor="middle">
           <tspan fontSize="70">s</tspan>
           <tspan ref={mRef} fontSize="108" fill="#C1633A">m</tspan>
         </text>
         <line ref={lineRef} x1="0" y1="100" x2="0" y2="100" stroke="#C1633A" strokeWidth="5" />
       </svg>
-      <div className="sm-app-logo-text" style={styles.appLogoText}>
+      <div className={large ? "sm-app-logo-text-lg" : "sm-app-logo-text"} style={large ? styles.appLogoTextLarge : styles.appLogoText}>
         site<span style={{ color: "#B85C2C" }}>Margin</span>
       </div>
     </div>
@@ -554,6 +561,8 @@ function GlobalStyles() {
         .sm-top-nav { display: none !important; }
         .sm-app-logo-mark { height: 56px !important; }
         .sm-app-logo-text { font-size: 22px !important; }
+        .sm-app-logo-mark-lg { height: 110px !important; }
+        .sm-app-logo-text-lg { font-size: 34px !important; }
       }
     `}</style>
   );
@@ -753,7 +762,40 @@ function AuthGate() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
       checkAccess(newSession);
     });
-    return () => listener.subscription.unsubscribe();
+
+    // Native app only: magic-link sign-in redirects to a custom URL scheme
+    // (za.co.sitemargin.app://auth-callback, see AndroidManifest.xml)
+    // instead of a normal https page, since there's no in-app browser tab
+    // for a web redirect to land back on — without this, Android opened
+    // the link in Chrome and the app had no way to pick the session back
+    // up. Capacitor delivers that redirect as an appUrlOpen event instead
+    // of a page load, so we hand the URL to Supabase manually here.
+    let urlListenerHandle;
+    if (Capacitor.isNativePlatform()) {
+      CapacitorApp.addListener("appUrlOpen", async ({ url }) => {
+        if (!url || !url.includes("auth-callback")) return;
+        try {
+          await supabase.auth.exchangeCodeForSession(url);
+        } catch (err) {
+          // Fallback for implicit-flow style links (#access_token=...&refresh_token=...)
+          // in case this Supabase project isn't using PKCE-flow magic links.
+          const hash = url.split("#")[1];
+          const params = hash ? new URLSearchParams(hash) : null;
+          const access_token = params?.get("access_token");
+          const refresh_token = params?.get("refresh_token");
+          if (access_token && refresh_token) {
+            await supabase.auth.setSession({ access_token, refresh_token });
+          } else {
+            console.error("Sign-in link could not be completed", err);
+          }
+        }
+      }).then((handle) => { urlListenerHandle = handle; });
+    }
+
+    return () => {
+      listener.subscription.unsubscribe();
+      urlListenerHandle?.remove();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -762,12 +804,17 @@ function AuthGate() {
     if (!email.trim()) return;
     setSendState("sending");
     setErrorMsg("");
-    // Always send the magic link back to production, unless we're actually
+    // Native app: send the link back into the app itself via a custom URL
+    // scheme (see the appUrlOpen listener above) instead of a web address,
+    // so it opens SiteMargin directly instead of Chrome.
+    // Web/PWA: always send it back to production, unless we're actually
     // running the local dev server right now. This stops sign-in links from
     // silently pointing at localhost (or a stray preview URL) just because
     // that's what tab happened to be open when the link was requested.
     const PROD_ORIGIN = "https://app.sitemargin.co.za";
-    const redirectOrigin = window.location.hostname === "localhost" ? window.location.origin : PROD_ORIGIN;
+    const redirectOrigin = Capacitor.isNativePlatform()
+      ? "za.co.sitemargin.app://auth-callback"
+      : (window.location.hostname === "localhost" ? window.location.origin : PROD_ORIGIN);
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: { emailRedirectTo: redirectOrigin },
@@ -832,8 +879,10 @@ function AuthGate() {
     <div style={styles.page}>
       <GlobalStyles />
       <div style={styles.gateWrap}>
-        <div style={styles.dashNavBar}>
-          <AppLogo />
+        <div style={{ textAlign: "center" }}>
+          <AppLogo large />
+        </div>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
           <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
         </div>
         <h1 style={{ ...styles.dashTitle, marginBottom: 10 }}>
@@ -2440,6 +2489,12 @@ const styles = {
   appLogoRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 14 },
   appLogoMark: { height: 92, width: "auto", display: "block" },
   appLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 30, letterSpacing: "-0.01em", color: "#1C1712" },
+  // Bigger, stacked (mark above wordmark) treatment for "opening" moments —
+  // the sign-in gate screen and the error boundary — as opposed to the
+  // compact inline header lockup used in the dashboard nav bar.
+  appLogoColLarge: { display: "flex", flexDirection: "column", alignItems: "center", gap: 16, marginBottom: 32 },
+  appLogoMarkLarge: { height: 150, width: "auto", display: "block" },
+  appLogoTextLarge: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 44, letterSpacing: "-0.01em", color: "#1C1712" },
   eyebrowLink: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, textTransform: "uppercase", textDecoration: "none", display: "inline-block" },
 
   dashHeader: { maxWidth: 1180, margin: "0 auto 20px", position: "relative" },
