@@ -2,8 +2,6 @@ import React, { useState, useMemo, useEffect, useRef } from "react";
 import * as XLSX from "xlsx";
 import * as pdfjsLib from "pdfjs-dist";
 import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-import { Capacitor } from "@capacitor/core";
-import { App as CapacitorApp } from "@capacitor/app";
 import { supabase } from "./supabaseClient";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
@@ -498,7 +496,7 @@ function SummaryCard({ label, value, accent }) {
   );
 }
 
-function AppLogo({ large = false }) {
+function AppLogo() {
   const mRef = useRef(null);
   const lineRef = useRef(null);
 
@@ -517,20 +515,15 @@ function AppLogo({ large = false }) {
   }, []);
 
   return (
-    <div style={large ? styles.appLogoColLarge : styles.appLogoRow}>
-      <svg
-        className={large ? "sm-app-logo-mark-lg" : "sm-app-logo-mark"}
-        style={large ? styles.appLogoMarkLarge : styles.appLogoMark}
-        viewBox="0 0 300 140"
-        xmlns="http://www.w3.org/2000/svg"
-      >
+    <div style={styles.appLogoRow}>
+      <svg className="sm-app-logo-mark" style={styles.appLogoMark} viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg">
         <text x="150" y="90" fontFamily="'Fraunces', serif" fontStyle="italic" fontWeight="600" fill="#1C1712" textAnchor="middle">
           <tspan fontSize="70">s</tspan>
           <tspan ref={mRef} fontSize="108" fill="#C1633A">m</tspan>
         </text>
         <line ref={lineRef} x1="0" y1="100" x2="0" y2="100" stroke="#C1633A" strokeWidth="5" />
       </svg>
-      <div className={large ? "sm-app-logo-text-lg" : "sm-app-logo-text"} style={large ? styles.appLogoTextLarge : styles.appLogoText}>
+      <div className="sm-app-logo-text" style={styles.appLogoText}>
         site<span style={{ color: "#B85C2C" }}>Margin</span>
       </div>
     </div>
@@ -561,8 +554,6 @@ function GlobalStyles() {
         .sm-top-nav { display: none !important; }
         .sm-app-logo-mark { height: 56px !important; }
         .sm-app-logo-text { font-size: 22px !important; }
-        .sm-app-logo-mark-lg { height: 110px !important; }
-        .sm-app-logo-text-lg { font-size: 34px !important; }
       }
     `}</style>
   );
@@ -762,40 +753,7 @@ function AuthGate() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
       checkAccess(newSession);
     });
-
-    // Native app only: magic-link sign-in redirects to a custom URL scheme
-    // (za.co.sitemargin.app://auth-callback, see AndroidManifest.xml)
-    // instead of a normal https page, since there's no in-app browser tab
-    // for a web redirect to land back on — without this, Android opened
-    // the link in Chrome and the app had no way to pick the session back
-    // up. Capacitor delivers that redirect as an appUrlOpen event instead
-    // of a page load, so we hand the URL to Supabase manually here.
-    let urlListenerHandle;
-    if (Capacitor.isNativePlatform()) {
-      CapacitorApp.addListener("appUrlOpen", async ({ url }) => {
-        if (!url || !url.includes("auth-callback")) return;
-        try {
-          await supabase.auth.exchangeCodeForSession(url);
-        } catch (err) {
-          // Fallback for implicit-flow style links (#access_token=...&refresh_token=...)
-          // in case this Supabase project isn't using PKCE-flow magic links.
-          const hash = url.split("#")[1];
-          const params = hash ? new URLSearchParams(hash) : null;
-          const access_token = params?.get("access_token");
-          const refresh_token = params?.get("refresh_token");
-          if (access_token && refresh_token) {
-            await supabase.auth.setSession({ access_token, refresh_token });
-          } else {
-            console.error("Sign-in link could not be completed", err);
-          }
-        }
-      }).then((handle) => { urlListenerHandle = handle; });
-    }
-
-    return () => {
-      listener.subscription.unsubscribe();
-      urlListenerHandle?.remove();
-    };
+    return () => listener.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -804,17 +762,12 @@ function AuthGate() {
     if (!email.trim()) return;
     setSendState("sending");
     setErrorMsg("");
-    // Native app: send the link back into the app itself via a custom URL
-    // scheme (see the appUrlOpen listener above) instead of a web address,
-    // so it opens SiteMargin directly instead of Chrome.
-    // Web/PWA: always send it back to production, unless we're actually
+    // Always send the magic link back to production, unless we're actually
     // running the local dev server right now. This stops sign-in links from
     // silently pointing at localhost (or a stray preview URL) just because
     // that's what tab happened to be open when the link was requested.
     const PROD_ORIGIN = "https://app.sitemargin.co.za";
-    const redirectOrigin = Capacitor.isNativePlatform()
-      ? "za.co.sitemargin.app://auth-callback"
-      : (window.location.hostname === "localhost" ? window.location.origin : PROD_ORIGIN);
+    const redirectOrigin = window.location.hostname === "localhost" ? window.location.origin : PROD_ORIGIN;
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: { emailRedirectTo: redirectOrigin },
@@ -879,14 +832,58 @@ function AuthGate() {
     <div style={styles.page}>
       <GlobalStyles />
       <div style={styles.gateWrap}>
-        <div style={{ textAlign: "center" }}>
-          <AppLogo large />
-        </div>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
+        <div style={styles.dashNavBar}>
+          <AppLogo />
           <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
         </div>
+        {status === "signedout" && sendState !== "sent" && (
+          <div style={styles.heroWrap}>
+            <div style={styles.eyebrow}>COST VARIANCE INTELLIGENCE · FOR SOUTH AFRICAN CONTRACTORS</div>
+            <h1 style={{ ...styles.dashTitle, margin: "10px 0 14px" }}>
+              Know you're <em style={styles.heroEm}>over budget</em> before your client does.
+            </h1>
+            <p style={styles.heroSub}>
+              Stop finding out about cost overruns at month-end. SiteMargin flags budget risk the moment it
+              happens — built for contractors who don't have time for enterprise QS software.
+            </p>
+
+            <div style={styles.mockSheet}>
+              <div style={styles.mockHead}>
+                <span>Line item</span>
+                <span>Tolerance</span>
+              </div>
+              {[
+                { name: "Concrete & foundations", nums: "R448,000 / R420,000", pct: "+6.7%", fill: 76, color: "#C1462B", bg: "rgba(193,70,43,0.1)", tag: "OVER" },
+                { name: "Plumbing rough-in", nums: "R126,000 / R118,000", pct: "+6.8%", fill: 76, color: "#B8862F", bg: "rgba(184,134,47,0.1)", tag: "WATCH" },
+                { name: "Structural steel", nums: "R298,000 / R310,000", pct: "-3.9%", fill: 68, color: "#4C7A5C", bg: "rgba(76,122,92,0.1)", tag: "ON TRACK" },
+              ].map((row) => (
+                <div key={row.name} style={styles.mockRow}>
+                  <span style={styles.mockName}>{row.name}</span>
+                  <span style={styles.mockNums}>{row.nums}</span>
+                  <span style={styles.mockGauge}>
+                    <div style={styles.gaugeTrack}>
+                      <div style={{ ...styles.gaugeFill, width: `${row.fill}%`, background: row.color }} />
+                    </div>
+                    <span style={{ ...styles.gaugeLabel, color: row.color }}>{row.pct}</span>
+                  </span>
+                  <span style={{ ...styles.pill, color: row.color, background: row.bg }}>{row.tag}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={styles.problemBlock}>
+              <div style={styles.pricingHead}>The problem</div>
+              <p style={{ ...styles.gateText, marginBottom: 0 }}>
+                Most overruns are visible weeks before anyone notices them. The number that gives it away isn't
+                the budget — it's the gap between money spent and work actually done. SiteMargin watches that gap
+                on every line item and tells you the moment it opens up.
+              </p>
+            </div>
+          </div>
+        )}
+
         <h1 style={{ ...styles.dashTitle, marginBottom: 10 }}>
-          {status === "pending" ? "Almost there" : status === "denied" ? "Something went wrong" : "Please sign in"}
+          {status === "pending" ? "Almost there" : status === "denied" ? "Something went wrong" : "Try it for free"}
         </h1>
 
         {status === "signedout" && (
@@ -2489,12 +2486,6 @@ const styles = {
   appLogoRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 14 },
   appLogoMark: { height: 92, width: "auto", display: "block" },
   appLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 30, letterSpacing: "-0.01em", color: "#1C1712" },
-  // Bigger, stacked (mark above wordmark) treatment for "opening" moments —
-  // the sign-in gate screen and the error boundary — as opposed to the
-  // compact inline header lockup used in the dashboard nav bar.
-  appLogoColLarge: { display: "flex", flexDirection: "column", alignItems: "center", gap: 16, marginBottom: 32 },
-  appLogoMarkLarge: { height: 150, width: "auto", display: "block" },
-  appLogoTextLarge: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 44, letterSpacing: "-0.01em", color: "#1C1712" },
   eyebrowLink: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, textTransform: "uppercase", textDecoration: "none", display: "inline-block" },
 
   dashHeader: { maxWidth: 1180, margin: "0 auto 20px", position: "relative" },
@@ -2523,6 +2514,20 @@ const styles = {
   topNavSignOut: { background: "none", border: "1px solid #E4DCC8", borderRadius: 3, color: "#6B6258", fontSize: 12, padding: "6px 12px", cursor: "pointer" },
 
   gateWrap: { maxWidth: 640, margin: "80px auto", padding: "0 16px" },
+  heroWrap: { marginBottom: 36, paddingBottom: 32, borderBottom: "1px solid #E4DCC8" },
+  heroEm: { fontStyle: "italic", color: "#B85C2C" },
+  heroSub: { fontSize: 16, color: "#5C544A", lineHeight: 1.6, marginBottom: 26 },
+  mockSheet: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 8, padding: "16px 18px", boxShadow: "0 2px 10px rgba(28,23,18,0.05)", marginBottom: 28 },
+  mockHead: { display: "flex", justifyContent: "space-between", fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: "0.08em", color: "#8A8072", textTransform: "uppercase", fontWeight: 600, paddingBottom: 10, marginBottom: 10, borderBottom: "1px solid #EFE9D9" },
+  mockRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 0", borderBottom: "1px solid #F3EEE0", flexWrap: "wrap" },
+  mockName: { fontSize: 13.5, fontWeight: 600, color: "#1C1712", flex: "1 1 150px" },
+  mockNums: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#6B6258", flex: "0 0 auto" },
+  mockGauge: { display: "flex", alignItems: "center", gap: 8, flex: "0 0 auto" },
+  gaugeTrack: { position: "relative", width: 60, height: 6, background: "#EFE9D9", borderRadius: 4, overflow: "hidden" },
+  gaugeFill: { position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: 4 },
+  gaugeLabel: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 11.5, fontWeight: 600, width: 44 },
+  pill: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", padding: "4px 9px", borderRadius: 20, flex: "0 0 auto" },
+  problemBlock: { marginTop: 4 },
   pricingHead: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12.5, letterSpacing: "0.1em", color: "#8A8072", textTransform: "uppercase", fontWeight: 600, margin: "34px 0 12px" },
   checkoutGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginTop: 8 },
   checkoutCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "20px 18px", boxShadow: "0 2px 8px rgba(28,23,18,0.04)" },
