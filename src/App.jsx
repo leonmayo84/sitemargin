@@ -2539,7 +2539,7 @@ const styles = {
   topNavEmail: { fontSize: 12, color: "#8A8072", fontFamily: "'IBM Plex Mono', monospace" },
   topNavSignOut: { background: "none", border: "1px solid #E4DCC8", borderRadius: 3, color: "#6B6258", fontSize: 12, padding: "6px 12px", cursor: "pointer" },
 
-  gateNavWrap: { maxWidth: 980, margin: "0 auto", padding: "0 20px" },
+  gateNavWrap: { maxWidth: 980, margin: "0 auto", padding: "0 20px", position: "relative", zIndex: 201, background: "#F5EFE2" },
   gateNav: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 0", borderBottom: "1px solid #E4DCC8" },
   gateWrap: { maxWidth: 640, margin: "48px auto 0", padding: "0 16px" },
   heroWrap: { marginBottom: 36, paddingBottom: 32, borderBottom: "1px solid #E4DCC8" },
