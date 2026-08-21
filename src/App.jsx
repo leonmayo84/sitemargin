@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import * as XLSX from "xlsx";
-import * as pdfjsLib from "pdfjs-dist";
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { supabase } from "./supabaseClient";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// xlsx and pdfjs-dist are both large libraries only needed by the "import a
+// spreadsheet/PDF" feature. They're loaded on demand (see xlsxBufferToRows
+// and pdfBufferToRows below) instead of at the top of the file, so a visitor
+// who never touches file import doesn't pay to download either of them.
 
 // Supabase Edge Functions live at the same project ref, under /functions/v1
 const SUPABASE_FUNCTIONS_URL = "https://mcxmtnlhqubaljvnwmzc.supabase.co/functions/v1";
@@ -125,7 +125,9 @@ function csvTextToRows(text) {
 }
 
 // Reads an .xlsx file's first sheet into the same row-array shape as CSV parsing.
-function xlsxBufferToRows(arrayBuffer) {
+// Loads the xlsx library on demand (see the file-level comment above).
+async function xlsxBufferToRows(arrayBuffer) {
+  const XLSX = await import("xlsx");
   const workbook = XLSX.read(arrayBuffer, { type: "array" });
   const firstSheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[firstSheetName];
@@ -141,6 +143,11 @@ function xlsxBufferToRows(arrayBuffer) {
 // visible spacing between columns. It cannot read scanned or photographed
 // pages — those have no extractable text at all, only an image.
 async function pdfBufferToRows(arrayBuffer) {
+  const [pdfjsLib, { default: pdfjsWorker }] = await Promise.all([
+    import("pdfjs-dist"),
+    import("pdfjs-dist/build/pdf.worker.min.mjs?url"),
+  ]);
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const allRows = [];
 
@@ -531,9 +538,12 @@ function AppLogo() {
 }
 
 function GlobalStyles() {
+  // Font loading itself now lives in index.html's <head> (preconnect + a
+  // real <link rel="stylesheet">) instead of this @import, so the browser
+  // starts fetching fonts in parallel with the JS bundle instead of only
+  // discovering them after React mounts and injects this style tag.
   return (
     <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
       * { box-sizing: border-box; }
       input:focus, select:focus, textarea:focus { outline: 2px solid #B85C2C; outline-offset: 1px; }
       button:focus-visible { outline: 2px solid #B85C2C; outline-offset: 2px; }
@@ -1761,7 +1771,7 @@ function ProjectView({ projectId, onBack }) {
     reader.onload = async (evt) => {
       try {
         if (isExcel) {
-          const rows = xlsxBufferToRows(evt.target.result);
+          const rows = await xlsxBufferToRows(evt.target.result);
           const { items: parsed, error } = rowsToItems(rows);
           openPreview(parsed, error);
         } else if (isPdf) {
