@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "./supabaseClient";
 
 // xlsx and pdfjs-dist are both large libraries only needed by the "import a
@@ -582,7 +583,6 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut }) {
       <div style={styles.dashNavBar}>
         <AppLogo />
         <div className="no-print" style={styles.dashNavRight}>
-          <a href="https://sitemargin.co.za" style={styles.eyebrowLink}>← sitemargin.co.za</a>
           <button
             style={styles.menuBtn}
             aria-expanded={menuOpen}
@@ -610,6 +610,20 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut }) {
                 {label}
               </button>
             ))}
+            {/* On the native mobile app there's no reason to send someone to the
+                marketing website — they're already inside the app, and doing so
+                via window.location.href would hijack the app's own webview to
+                show an external page with no way back. Only show this link on
+                the web version (app.sitemargin.co.za opened in a browser tab),
+                where "back to the marketing site" is a meaningful action. */}
+            {!Capacitor.isNativePlatform() && (
+              <button
+                style={styles.menuPanelLink}
+                onClick={closeAnd(() => { window.location.href = "https://sitemargin.co.za"; })}
+              >
+                ← sitemargin.co.za
+              </button>
+            )}
             <div style={styles.menuPanelActions}>
               <button style={styles.menuPanelGhost} onClick={closeAnd(() => window.print())}>Print</button>
               {onSignOut && <button style={styles.menuPanelSolid} onClick={closeAnd(onSignOut)}>Sign out</button>}
