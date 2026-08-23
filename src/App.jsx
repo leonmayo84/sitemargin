@@ -15,6 +15,19 @@ const SUPABASE_FUNCTIONS_URL = "https://mcxmtnlhqubaljvnwmzc.supabase.co/functio
 const fmt = (n) =>
   new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(n || 0);
 
+// #8: "Your projects" -> "[name]'s projects". There's no separate display-name
+// field anywhere yet, only the sign-in email, so this derives a reasonable
+// first name from the email's local part (strips trailing digits, splits on
+// non-letter separators, capitalizes). Falls back to "Your" if email is empty.
+function friendlyFirstName(email) {
+  if (!email) return "Your";
+  const local = String(email).split("@")[0];
+  const cleaned = local.replace(/[^a-zA-Z]+$/, "").replace(/[^a-zA-Z]+/g, " ").trim();
+  const first = cleaned.split(" ").filter(Boolean)[0];
+  if (!first) return "Your";
+  return first[0].toUpperCase() + first.slice(1);
+}
+
 const fmtShort = (n) => {
   const v = Number(n || 0);
   if (Math.abs(v) >= 1000000) return `R${(v / 1000000).toFixed(1)}M`;
@@ -570,12 +583,13 @@ function GlobalStyles() {
   );
 }
 
-function PageHeader({ title, current, onNavigate, userEmail, onSignOut }) {
+function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const tabs = [
     ["dashboard", "Projects"],
     ["subcontractors", "Subcontractors"],
     ["templates", "Templates"],
+    ["apptools", "App Tools"],
   ];
   const closeAnd = (fn) => () => { setMenuOpen(false); if (fn) fn(); };
   return (
@@ -596,7 +610,15 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut }) {
           </button>
         </div>
       </div>
-      <h1 style={styles.dashTitle}>{title}</h1>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {logoUrl && (
+          // Deliberately not "no-print" — the company logo should appear on
+          // printed/exported output (change order sheets, cost reports etc.),
+          // not just on screen.
+          <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />
+        )}
+        <h1 style={styles.dashTitle}>{title}</h1>
+      </div>
 
       {menuOpen && (
         <div id="appMenuPanel" className="no-print" style={styles.menuPanel}>
@@ -641,6 +663,7 @@ function TopNav({ current, onNavigate, userEmail, onSignOut }) {
     ["dashboard", "Projects"],
     ["subcontractors", "Subcontractors"],
     ["templates", "Templates"],
+    ["apptools", "App Tools"],
   ];
   return (
     <div className="no-print sm-top-nav" style={styles.topNav}>
@@ -668,17 +691,49 @@ function TopNav({ current, onNavigate, userEmail, onSignOut }) {
 
 function AppShell({ userEmail, onSignOut }) {
   const [route, setRoute] = useState({ page: "dashboard", projectId: null });
+  // #9: company logo, set on the App Tools page, shown next to the page
+  // title everywhere (and on printed output — see ProjectView's title
+  // block). Lives in its own table keyed by owner_email rather than on
+  // each project, since it's one logo per account, not per project.
+  const [companyLogoUrl, setCompanyLogoUrl] = useState(null);
+
+  useEffect(() => {
+    if (!userEmail) return;
+    supabase
+      .from("company_settings")
+      .select("logo_data_url")
+      .eq("owner_email", userEmail)
+      .maybeSingle()
+      .then(({ data }) => setCompanyLogoUrl(data?.logo_data_url || null));
+  }, [userEmail]);
 
   const navigate = (page) => setRoute({ page, projectId: null });
 
   if (route.page === "project") {
-    return <ProjectView projectId={route.projectId} onBack={() => setRoute({ page: "dashboard", projectId: null })} />;
+    return (
+      <ProjectView
+        projectId={route.projectId}
+        onBack={() => setRoute({ page: "dashboard", projectId: null })}
+        logoUrl={companyLogoUrl}
+      />
+    );
   }
   if (route.page === "subcontractors") {
-    return <SubcontractorsView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} />;
+    return <SubcontractorsView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={companyLogoUrl} />;
   }
   if (route.page === "templates") {
-    return <TemplatesView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} />;
+    return <TemplatesView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={companyLogoUrl} />;
+  }
+  if (route.page === "apptools") {
+    return (
+      <AppToolsPage
+        onNavigate={navigate}
+        userEmail={userEmail}
+        onSignOut={onSignOut}
+        logoUrl={companyLogoUrl}
+        onLogoChange={setCompanyLogoUrl}
+      />
+    );
   }
   return (
     <Dashboard
@@ -686,14 +741,92 @@ function AppShell({ userEmail, onSignOut }) {
       onNavigate={navigate}
       userEmail={userEmail}
       onSignOut={onSignOut}
+      logoUrl={companyLogoUrl}
     />
+  );
+}
+
+/* ============================== APP TOOLS ============================== */
+/* #9: currently just the company logo, uploaded once per account and shown
+   next to the page title across the app (and on printed cost/change-order
+   sheets). Stored as a data URL directly on company_settings rather than in
+   a storage bucket — logos are small, and this avoids standing up bucket
+   RLS for a single per-account image. */
+
+function AppToolsPage({ onNavigate, userEmail, onSignOut, logoUrl, onLogoChange }) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+  const logoInputRef = useRef(null);
+
+  async function handleLogoFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!/^image\/(png|jpeg|jpg|svg\+xml|webp)$/.test(file.type)) {
+      setError("Please choose a PNG, JPG, SVG, or WEBP image.");
+      return;
+    }
+    if (file.size > 1_500_000) {
+      setError("That image is a bit large — please use something under 1.5MB.");
+      return;
+    }
+    setError(null);
+    setUploading(true);
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const { error: upsertError } = await supabase
+      .from("company_settings")
+      .upsert({ owner_email: userEmail, logo_data_url: dataUrl, updated_at: new Date().toISOString() });
+    setUploading(false);
+    if (upsertError) { setError("Couldn't save the logo — please try again."); return; }
+    onLogoChange(dataUrl);
+  }
+
+  async function removeLogo() {
+    if (!window.confirm("Remove the company logo?")) return;
+    await supabase.from("company_settings").upsert({ owner_email: userEmail, logo_data_url: null, updated_at: new Date().toISOString() });
+    onLogoChange(null);
+  }
+
+  return (
+    <div style={styles.page}>
+      <GlobalStyles />
+      <PageHeader title="App Tools" current="apptools" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
+      <TopNav current="apptools" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
+
+      <div style={{ maxWidth: 640, margin: "0 auto" }}>
+        <div style={styles.apptoolsPanel}>
+          <div style={styles.apptoolsTitle}>Company logo</div>
+          <p style={{ fontSize: 13, color: "#8A8072", lineHeight: 1.55, margin: "0 0 16px" }}>
+            Shown next to the page title across the app, and on printed cost sheets and change order exports.
+          </p>
+          <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" style={{ display: "none" }} onChange={handleLogoFile} />
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <div style={styles.logoPreviewBox}>
+              {logoUrl ? <img src={logoUrl} alt="Company logo" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} /> : <span style={{ fontSize: 11, color: "#8A8072" }}>No logo set</span>}
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button style={styles.addBtn} onClick={() => logoInputRef.current?.click()} disabled={uploading}>
+                {uploading ? "Uploading…" : logoUrl ? "Replace logo" : "Upload logo"}
+              </button>
+              {logoUrl && <button style={styles.removeBtn} onClick={removeLogo}>Remove</button>}
+            </div>
+          </div>
+          {error && <div style={{ ...styles.gateError, marginTop: 12 }}>{error}</div>}
+        </div>
+      </div>
+    </div>
   );
 }
 
 /* ============================== AUTH GATE ============================== */
 /* Access requires a magic-link email sign-in. Every signed-in email is
    auto-granted the Free tier (1 project) in checkAccess() below — paid
-   tiers (Contractor/Firm) are unlocked separately via an active
+   tiers (Contractor/Company) are unlocked separately via an active
    subscription. */
 
 function AuthGate() {
@@ -993,7 +1126,7 @@ function AuthGate() {
                 </p>
                 {selectedTier && (
                   <div style={styles.tierNote}>
-                    {selectedTier === "free" ? "Starting on the Free plan." : `Continuing with ${selectedTier === "contractor" ? "Contractor" : "Firm"} — you'll choose it again once you're signed in.`}
+                    {selectedTier === "free" ? "Starting on the Free plan." : `Continuing with ${selectedTier === "contractor" ? "Contractor" : "Company"} — you'll choose it again once you're signed in.`}
                   </div>
                 )}
                 <form onSubmit={sendMagicLink} style={styles.gateForm}>
@@ -1030,7 +1163,7 @@ function AuthGate() {
                 <button type="button" style={styles.tierCta} onClick={() => chooseTier("contractor")}>Get started</button>
               </div>
               <div style={{ ...styles.checkoutCard, ...(selectedTier === "firm" ? styles.checkoutCardSelected : {}) }}>
-                <div style={styles.checkoutTier}>Firm</div>
+                <div style={styles.checkoutTier}>Company</div>
                 <div style={styles.checkoutPrice}>
                   R599<span style={styles.checkoutPriceUnit}>/month</span>
                 </div>
@@ -1065,7 +1198,7 @@ function AuthGate() {
                 </button>
               </div>
               <div style={{ ...styles.checkoutCard, ...(selectedTier === "firm" ? styles.checkoutCardSelected : {}) }}>
-                <div style={styles.checkoutTier}>Firm</div>
+                <div style={styles.checkoutTier}>Company</div>
                 <div style={styles.checkoutPrice}>
                   R599<span style={styles.checkoutPriceUnit}>/month</span>
                 </div>
@@ -1152,7 +1285,7 @@ export default function SiteMargin() {
 
 const FREE_PROJECT_LIMIT = 1;
 
-function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
+function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl }) {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
@@ -1242,7 +1375,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <PageHeader title="Your projects" current="dashboard" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
+      <PageHeader title={`${friendlyFirstName(userEmail)}'s projects`} current="dashboard" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
 
       <TopNav current="dashboard" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
@@ -1270,7 +1403,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
 
       {atFreeLimit ? (
         <div className="no-print" style={styles.freeLimitBanner}>
-          <span>You've used your Free plan's {FREE_PROJECT_LIMIT} project. Upgrade to Contractor or Firm for unlimited projects.</span>
+          <span>You've used your Free plan's {FREE_PROJECT_LIMIT} project. Upgrade to Contractor or Company for unlimited projects.</span>
           <a href="https://sitemargin.co.za/pricing.html" target="_blank" rel="noopener noreferrer" style={styles.freeLimitLink}>
             See plans ↗
           </a>
@@ -1327,7 +1460,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut }) {
 
 /* ============================== SUBCONTRACTORS ============================== */
 
-function SubcontractorsView({ onNavigate, userEmail, onSignOut }) {
+function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
   const [subs, setSubs] = useState([]);
   const [itemsBySub, setItemsBySub] = useState({});
   const [loading, setLoading] = useState(true);
@@ -1379,7 +1512,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut }) {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <PageHeader title="Subcontractor scorecards" current="subcontractors" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
+      <PageHeader title="Subcontractor scorecards" current="subcontractors" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
 
       <TopNav current="subcontractors" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
@@ -1486,7 +1619,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut }) {
 
 /* ============================== TEMPLATES ============================== */
 
-function TemplatesView({ onNavigate, userEmail, onSignOut }) {
+function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
   const [templates, setTemplates] = useState([]);
   const [itemsByTemplate, setItemsByTemplate] = useState({});
   const [loading, setLoading] = useState(true);
@@ -1558,7 +1691,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut }) {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <PageHeader title="Templates" current="templates" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
+      <PageHeader title="Templates" current="templates" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
 
       <TopNav current="templates" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
@@ -1644,7 +1777,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut }) {
 
 /* ============================== PROJECT VIEW ============================== */
 
-function ProjectView({ projectId, onBack }) {
+function ProjectView({ projectId, onBack, logoUrl }) {
   const [project, setProject] = useState(null);
   const [items, setItems] = useState([]);
   const [changeOrders, setChangeOrders] = useState([]);
@@ -1664,9 +1797,13 @@ function ProjectView({ projectId, onBack }) {
   const [importPreviewItems, setImportPreviewItems] = useState(null); // null = no modal open
   const [coDesc, setCoDesc] = useState("");
   const [coAmount, setCoAmount] = useState("");
+  const [coPriority, setCoPriority] = useState("Normal");
+  const [coPoNumber, setCoPoNumber] = useState("");
+  const [coDate, setCoDate] = useState(() => new Date().toISOString().slice(0, 10));
   const fileInputRef = useRef(null);
   const attachInputRef = useRef(null);
   const attachTargetItem = useRef(null);
+  const plansInputRef = useRef(null);
   const saveTimers = useRef({});
 
   async function loadAll() {
@@ -1935,18 +2072,124 @@ function ProjectView({ projectId, onBack }) {
     e.target.value = "";
   }
 
+  // "Plans" — reference documents (drawings, quotes, CAD exports, contracts)
+  // attached to the project as a whole, for quick reference, not tied to any
+  // single line item. Uses the same private "attachments" storage bucket as
+  // line-item files, under a projectId/plans/ path so the existing RLS
+  // policy (which keys off the first path segment being the project id)
+  // covers this without any policy changes.
+  async function openPlan(plan) {
+    const { data, error } = await supabase.storage.from("attachments").createSignedUrl(plan.path, 60);
+    if (error || !data?.signedUrl) {
+      setImportMessage({ type: "error", text: "Couldn't open that file — please try again." });
+      setTimeout(() => setImportMessage(null), 6000);
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener");
+  }
+
+  async function handlePlanUpload(e) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const uploaded = [];
+    for (const file of files) {
+      const path = `${projectId}/plans/${Date.now()}-${file.name}`;
+      const { error } = await supabase.storage.from("attachments").upload(path, file);
+      if (!error) uploaded.push({ name: file.name, path, size: file.size, uploaded_at: new Date().toISOString() });
+    }
+    if (uploaded.length) {
+      const newPlans = [...(project?.plans || []), ...uploaded];
+      await supabase.from("projects_v2").update({ plans: newPlans }).eq("id", projectId);
+      setProject((prev) => ({ ...prev, plans: newPlans }));
+    }
+    e.target.value = "";
+  }
+
+  // #6: Payments & Retention — a payment date plus a supporting document
+  // (payment certificate / proof of payment) per line item. The document is
+  // also appended to the item's general attachments array so it's linked
+  // into the same trail visible on the Cost & Progress tab.
+  const paymentDocInputRef = useRef(null);
+  const paymentDocTargetItem = useRef(null);
+
+  function triggerPaymentDocUpload(item) {
+    paymentDocTargetItem.current = item;
+    paymentDocInputRef.current?.click();
+  }
+
+  async function handlePaymentDocUpload(e) {
+    const file = e.target.files?.[0];
+    const item = paymentDocTargetItem.current;
+    if (!file || !item) return;
+    const path = `${projectId}/${item.id}/payment-${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage.from("attachments").upload(path, file);
+    if (!error) {
+      const linkedAttachments = [...(item.attachments || []), { name: file.name, path }];
+      await supabase.from("line_items").update({
+        payment_doc_name: file.name,
+        payment_doc_path: path,
+        attachments: linkedAttachments,
+      }).eq("id", item.id);
+      setItems((prev) => prev.map((i) => (i.id === item.id
+        ? { ...i, payment_doc_name: file.name, payment_doc_path: path, attachments: linkedAttachments }
+        : i)));
+    }
+    e.target.value = "";
+  }
+
+  async function openPaymentDoc(item) {
+    if (!item.payment_doc_path) return;
+    const { data, error } = await supabase.storage.from("attachments").createSignedUrl(item.payment_doc_path, 60);
+    if (error || !data?.signedUrl) return;
+    window.open(data.signedUrl, "_blank", "noopener");
+  }
+
+  async function setPaymentDate(itemId, date) {
+    setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, payment_date: date } : i)));
+    await supabase.from("line_items").update({ payment_date: date || null }).eq("id", itemId);
+  }
+
+  async function removePlan(path) {
+    const newPlans = (project?.plans || []).filter((p) => p.path !== path);
+    await supabase.from("projects_v2").update({ plans: newPlans }).eq("id", projectId);
+    setProject((prev) => ({ ...prev, plans: newPlans }));
+    await supabase.storage.from("attachments").remove([path]);
+  }
+
   async function addChangeOrder() {
     if (!coDesc.trim() || !coAmount) return;
     const { data, error } = await supabase
       .from("change_orders")
-      .insert({ project_id: projectId, description: coDesc.trim(), amount: Number(coAmount), status: "pending" })
+      .insert({
+        project_id: projectId,
+        description: coDesc.trim(),
+        amount: Number(coAmount),
+        status: "pending",
+        priority: coPriority,
+        po_number: coPoNumber.trim() || null,
+        co_date: coDate || new Date().toISOString().slice(0, 10),
+      })
       .select().single();
-    if (!error && data) { setChangeOrders((prev) => [data, ...prev]); setCoDesc(""); setCoAmount(""); }
+    if (!error && data) {
+      setChangeOrders((prev) => [data, ...prev]);
+      setCoDesc(""); setCoAmount(""); setCoPriority("Normal"); setCoPoNumber("");
+      setCoDate(new Date().toISOString().slice(0, 10));
+    }
   }
 
   async function setCoStatus(id, status) {
     setChangeOrders((prev) => prev.map((c) => (c.id === id ? { ...c, status } : c)));
     await supabase.from("change_orders").update({ status }).eq("id", id);
+  }
+
+  async function setCoPriorityValue(id, priority) {
+    setChangeOrders((prev) => prev.map((c) => (c.id === id ? { ...c, priority } : c)));
+    await supabase.from("change_orders").update({ priority }).eq("id", id);
+  }
+
+  async function setCoPoNumberValue(id, po_number) {
+    setChangeOrders((prev) => prev.map((c) => (c.id === id ? { ...c, po_number } : c)));
+    await supabase.from("change_orders").update({ po_number: po_number || null }).eq("id", id);
   }
 
   async function removeChangeOrder(id) {
@@ -1984,7 +2227,13 @@ function ProjectView({ projectId, onBack }) {
 
       <div style={styles.titleBlock}>
         <div style={styles.titleBlockLeft}>
-          <div style={styles.eyebrow}>SITEMARGIN — COST VARIANCE SHEET</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {/* Deliberately not "no-print" — this is the header of the
+                exported/printed cost sheet, so the company logo needs to
+                pull through onto the PDF, not just show on screen. */}
+            {logoUrl && <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />}
+            <div style={styles.eyebrow}>SITEMARGIN — COST VARIANCE SHEET</div>
+          </div>
           <input
             style={styles.projectInput}
             value={project.name}
@@ -2079,6 +2328,7 @@ function ProjectView({ projectId, onBack }) {
           ["charts", "Charts"],
           ["payments", "Payments & Retention"],
           ["changeorders", `Change Orders${changeOrders.length ? ` (${changeOrders.length})` : ""}`],
+          ["plans", `Plans${(project?.plans || []).length ? ` (${(project.plans || []).length})` : ""}`],
           ["trend", "Trend"],
         ].map(([key, label]) => (
           <button key={key} style={{ ...styles.toggleBtn, ...(view === key ? styles.toggleBtnActive : {}) }} onClick={() => setView(key)}>
@@ -2343,14 +2593,22 @@ function ProjectView({ projectId, onBack }) {
       )}
 
       {view === "payments" && (
-        <div style={styles.ledger}>
-          <div style={styles.ledgerHeaderRow}>
+        <div style={{ ...styles.ledger, overflowX: "auto" }}>
+          <input
+            ref={paymentDocInputRef}
+            type="file"
+            style={{ display: "none" }}
+            onChange={handlePaymentDocUpload}
+          />
+          <div style={{ ...styles.ledgerHeaderRow, minWidth: 980 }}>
             <span style={{ ...styles.thCell, flex: 2.4 }}>Line item</span>
             <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>Claimed</span>
             <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>Certified</span>
             <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>Retention held</span>
             <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>Paid to date</span>
             <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>Uncertified</span>
+            <span style={{ ...styles.thCell, flex: 1.1, textAlign: "center" }}>Payment date</span>
+            <span style={{ ...styles.thCell, flex: 1.3, textAlign: "center" }}>Document</span>
           </div>
           {items.map((item) => {
             const certified = Number(item.certified || 0);
@@ -2358,7 +2616,7 @@ function ProjectView({ projectId, onBack }) {
             const retentionHeld = certified * (totals.retentionPct / 100);
             const uncertified = claimed - certified;
             return (
-              <div key={item.id} style={styles.row}>
+              <div key={item.id} style={{ ...styles.row, minWidth: 980 }}>
                 <span style={{ ...styles.tdCell, flex: 2.4, fontWeight: 500 }}>{item.name}</span>
                 <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>
                   {editingCell === `${item.id}:claimed` ? (
@@ -2383,31 +2641,80 @@ function ProjectView({ projectId, onBack }) {
                 <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#B8862F" }}>{fmt(retentionHeld)}</span>
                 <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#4C7A5C" }}>{fmt(certified - retentionHeld)}</span>
                 <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: uncertified > 0 ? "#C1462B" : "#8A8072" }}>{fmt(uncertified)}</span>
+                <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "center" }} className="no-print">
+                  <input
+                    type="date"
+                    style={{ ...styles.addInput, padding: "4px 6px", fontSize: 12 }}
+                    value={item.payment_date || ""}
+                    onChange={(e) => setPaymentDate(item.id, e.target.value)}
+                  />
+                </span>
+                <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }} className="print-only-status">
+                  {item.payment_date ? new Date(item.payment_date + "T00:00:00").toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                </span>
+                <span style={{ ...styles.tdCell, flex: 1.3, textAlign: "center" }}>
+                  {item.payment_doc_path ? (
+                    <button onClick={() => openPaymentDoc(item)} style={{ ...styles.attachmentLink, background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 12 }}>
+                      📎 {item.payment_doc_name}
+                    </button>
+                  ) : (
+                    <button className="no-print" style={{ ...styles.addBtn, padding: "4px 10px", fontSize: 11.5 }} onClick={() => triggerPaymentDocUpload(item)}>
+                      + Attach
+                    </button>
+                  )}
+                </span>
               </div>
             );
           })}
-          <div style={{ ...styles.row, background: "#FAF6EC", fontWeight: 600 }}>
+          <div style={{ ...styles.row, background: "#FAF6EC", fontWeight: 600, minWidth: 980 }}>
             <span style={{ ...styles.tdCell, flex: 2.4 }}>Totals</span>
             <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.claimed)}</span>
             <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.certified)}</span>
             <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#B8862F" }}>{fmt(totals.retentionHeld)}</span>
             <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#4C7A5C" }}>{fmt(totals.paidToDate)}</span>
             <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: totals.uncertified > 0 ? "#C1462B" : "#8A8072" }}>{fmt(totals.uncertified)}</span>
+            <span style={{ ...styles.tdCell, flex: 1.1 }}></span>
+            <span style={{ ...styles.tdCell, flex: 1.3 }}></span>
           </div>
         </div>
       )}
 
       {view === "changeorders" && (
-        <div style={styles.ledger}>
-          <div style={styles.ledgerHeaderRow}>
-            <span style={{ ...styles.thCell, flex: 2.6 }}>Description</span>
+        <div style={{ ...styles.ledger, overflowX: "auto" }}>
+          <div style={{ ...styles.ledgerHeaderRow, minWidth: 860 }}>
+            <span style={{ ...styles.thCell, flex: 2.2 }}>Description</span>
+            <span style={{ ...styles.thCell, flex: 1, textAlign: "center" }}>Priority</span>
+            <span style={{ ...styles.thCell, flex: 1, textAlign: "center" }}>PO #</span>
+            <span style={{ ...styles.thCell, flex: 1, textAlign: "center" }}>Date</span>
             <span style={{ ...styles.thCell, flex: 1, textAlign: "right" }}>Amount</span>
             <span style={{ ...styles.thCell, flex: 1.2, textAlign: "center" }}>Status</span>
             <span style={{ ...styles.thCell, flex: 0.6 }}></span>
           </div>
           {changeOrders.map((co) => (
-            <div key={co.id} style={styles.row}>
-              <span style={{ ...styles.tdCell, flex: 2.6 }}>{co.description}</span>
+            <div key={co.id} style={{ ...styles.row, minWidth: 860 }}>
+              <span style={{ ...styles.tdCell, flex: 2.2 }}>{co.description}</span>
+              <span style={{ ...styles.tdCell, flex: 1, textAlign: "center" }} className="no-print">
+                <select value={co.priority || "Normal"} onChange={(e) => setCoPriorityValue(co.id, e.target.value)}
+                  style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: co.priority === "High" ? "#C1462B" : co.priority === "Low" ? "#8A8072" : "#B8862F" }}>
+                  <option value="High">High</option>
+                  <option value="Normal">Normal</option>
+                  <option value="Low">Low</option>
+                </select>
+              </span>
+              <span style={{ ...styles.tdCell, flex: 1, textAlign: "center" }} className="print-only-status">{co.priority || "Normal"}</span>
+              <span style={{ ...styles.tdCell, flex: 1, textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }} className="no-print">
+                <input
+                  style={{ ...styles.addInput, padding: "4px 6px", fontSize: 12, textAlign: "center" }}
+                  placeholder="—"
+                  value={co.po_number || ""}
+                  onChange={(e) => setChangeOrders((prev) => prev.map((c) => (c.id === co.id ? { ...c, po_number: e.target.value } : c)))}
+                  onBlur={(e) => setCoPoNumberValue(co.id, e.target.value.trim())}
+                />
+              </span>
+              <span style={{ ...styles.tdCell, flex: 1, textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }} className="print-only-status">{co.po_number || "—"}</span>
+              <span style={{ ...styles.tdCell, flex: 1, textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }}>
+                {co.co_date ? new Date(co.co_date + "T00:00:00").toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+              </span>
               <span style={{ ...styles.tdCell, flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(co.amount)}</span>
               <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "center" }} className="no-print">
                 <select value={co.status} onChange={(e) => setCoStatus(co.id, e.target.value)}
@@ -2428,10 +2735,55 @@ function ProjectView({ projectId, onBack }) {
               No change orders yet. Add one below when a client approves a variation to the original budget.
             </div>
           )}
-          <div className="no-print" style={styles.addRow}>
-            <input style={{ ...styles.addInput, flex: 2.6 }} placeholder="e.g. Additional retaining wall per client request" value={coDesc} onChange={(e) => setCoDesc(e.target.value)} />
+          <div className="no-print" style={{ ...styles.addRow, minWidth: 860 }}>
+            <input style={{ ...styles.addInput, flex: 2.2 }} placeholder="e.g. Additional retaining wall per client request" value={coDesc} onChange={(e) => setCoDesc(e.target.value)} />
+            <select style={{ ...styles.addInput, flex: 1 }} value={coPriority} onChange={(e) => setCoPriority(e.target.value)}>
+              <option value="High">High</option>
+              <option value="Normal">Normal</option>
+              <option value="Low">Low</option>
+            </select>
+            <input style={{ ...styles.addInput, flex: 1 }} placeholder="PO # (optional)" value={coPoNumber} onChange={(e) => setCoPoNumber(e.target.value)} />
+            <input style={{ ...styles.addInput, flex: 1 }} type="date" value={coDate} onChange={(e) => setCoDate(e.target.value)} />
             <input style={{ ...styles.addInput, flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Amount" type="number" value={coAmount} onChange={(e) => setCoAmount(e.target.value)} />
             <button style={styles.addBtn} onClick={addChangeOrder}>+ Add change order</button>
+          </div>
+        </div>
+      )}
+
+      {view === "plans" && (
+        <div style={styles.ledger}>
+          <input
+            ref={plansInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.dwg,.dxf,.dwf,.xlsx,.xls,.csv,.doc,.docx"
+            style={{ display: "none" }}
+            onChange={handlePlanUpload}
+          />
+          <div style={{ padding: "16px 20px 4px", fontSize: 13, color: "#8A8072", lineHeight: 1.5 }}>
+            Reference documents for this project — drawings, CAD exports, quotes, contracts. Uploaded here so
+            they're on hand for quick reference; not tied to any single line item. PDF, CAD (DWG/DXF/DWF), Excel,
+            and Word files are supported.
+          </div>
+          {(project?.plans || []).length === 0 ? (
+            <div style={{ padding: "8px 20px 20px", fontSize: 13, color: "#8A8072" }}>No documents uploaded yet.</div>
+          ) : (
+            <div style={{ padding: "8px 20px 4px" }}>
+              {(project.plans || []).map((p) => (
+                <div key={p.path} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #EDE6D4" }}>
+                  <button onClick={() => openPlan(p)} style={{ ...styles.attachmentLink, background: "none", border: "none", cursor: "pointer", padding: 0, flex: 1, textAlign: "left" }}>
+                    📄 {p.name}
+                  </button>
+                  <span style={{ fontSize: 11.5, color: "#8A8072", fontFamily: "'IBM Plex Mono', monospace" }}>
+                    {p.size ? `${(p.size / 1024).toFixed(0)} KB` : ""}
+                  </span>
+                  <button className="no-print" style={styles.removeBtn} onClick={() => removePlan(p.path)}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="no-print" style={{ padding: "12px 20px 20px" }}>
+            <button style={styles.addBtn} onClick={() => plansInputRef.current?.click()}>+ Upload documents</button>
           </div>
         </div>
       )}
@@ -2586,6 +2938,10 @@ const styles = {
   dashNavBar: { display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #E4DCC8", paddingBottom: 16, marginBottom: 22, gap: 16, flexWrap: "wrap" },
   dashNavRight: { display: "flex", alignItems: "center", gap: 14 },
   dashTitle: { fontFamily: "'Fraunces', serif", fontSize: "clamp(36px, 6vw, 58px)", fontWeight: 500, letterSpacing: "-0.01em" },
+  companyLogoMark: { height: "clamp(28px, 4.5vw, 44px)", width: "auto", maxWidth: 140, objectFit: "contain", borderRadius: 6 },
+  apptoolsPanel: { border: "1px solid #E4DCC8", borderRadius: 10, background: "#FAF6EC", padding: "20px 22px", margin: "8px 0 30px" },
+  apptoolsTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "#8A8072", marginBottom: 6 },
+  logoPreviewBox: { width: 84, height: 84, borderRadius: 10, border: "1.5px dashed #E4DCC8", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, padding: 8, background: "#FFFDF7" },
 
   menuBtn: { width: 46, height: 46, border: "1px solid #D8CFB8", borderRadius: 6, background: "#FFFFFF", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, padding: 0, flexShrink: 0 },
   menuBtnBar: { display: "block", width: 20, height: 2, background: "#1C1712", borderRadius: 2, transition: "transform 0.25s ease, opacity 0.2s ease" },
