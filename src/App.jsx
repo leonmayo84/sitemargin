@@ -2306,25 +2306,26 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
       <div style={styles.titleBlock}>
         <div style={styles.titleBlockLeft}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
             {/* Deliberately not "no-print" — this is the header of the
                 exported/printed cost sheet, so the company logo needs to
                 pull through onto the PDF, not just show on screen. */}
             {logoUrl && <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />}
-            <div style={styles.eyebrow}>COST VARIANCE SHEET</div>
+            <div style={styles.eyebrowProminent}>COST VARIANCE SHEET</div>
+            <span style={styles.titleDivider}>·</span>
+            <input
+              style={styles.projectInput}
+              value={project.name}
+              onChange={(e) => {
+                const name = e.target.value;
+                setProject((p) => ({ ...p, name }));
+                if (saveTimers.current.projectName) clearTimeout(saveTimers.current.projectName);
+                saveTimers.current.projectName = setTimeout(() => {
+                  supabase.from("projects_v2").update({ name }).eq("id", projectId);
+                }, 500);
+              }}
+            />
           </div>
-          <input
-            style={styles.projectInput}
-            value={project.name}
-            onChange={(e) => {
-              const name = e.target.value;
-              setProject((p) => ({ ...p, name }));
-              if (saveTimers.current.projectName) clearTimeout(saveTimers.current.projectName);
-              saveTimers.current.projectName = setTimeout(() => {
-                supabase.from("projects_v2").update({ name }).eq("id", projectId);
-              }, 500);
-            }}
-          />
         </div>
         <div style={styles.titleBlockRight} className="no-print">
           <div style={styles.tbCell}>
@@ -3078,6 +3079,8 @@ const styles = {
     padding: "20px 16px 48px",
   },
   eyebrow: { fontSize: 12, letterSpacing: "0.1em", color: "#6E6E73", fontWeight: 600, textTransform: "uppercase" },
+  eyebrowProminent: { fontSize: 17, letterSpacing: "0.06em", color: "#B85C2C", fontWeight: 800, textTransform: "uppercase" },
+  titleDivider: { fontSize: 22, color: "#C9C4B8", fontWeight: 400, lineHeight: 1 },
   appLogoRow: { display: "flex", alignItems: "center", gap: 8 },
   appLogoMark: { height: 64, width: "auto", display: "block" },
   appLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 22, letterSpacing: "-0.01em", color: "#1D1D1F" },
@@ -3189,7 +3192,7 @@ const styles = {
 
   titleBlock: { display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-end", gap: 16, borderBottom: "2px solid #E8E8ED", paddingBottom: 14, maxWidth: 1180, margin: "0 auto 20px" },
   titleBlockLeft: { display: "flex", flexDirection: "column", gap: 6, flex: 1, minWidth: 240 },
-  projectInput: { background: "transparent", border: "none", color: "#1D1D1F", fontSize: 26, fontWeight: 700, padding: 0, width: "100%", letterSpacing: "-0.02em" },
+  projectInput: { background: "transparent", border: "none", color: "#1D1D1F", fontSize: 26, fontWeight: 700, padding: 0, flex: "1 1 auto", minWidth: 160, letterSpacing: "-0.02em" },
   titleBlockRight: { display: "flex", gap: 22 },
   tbCell: { display: "flex", flexDirection: "column", alignItems: "flex-end" },
   tbLabel: { fontSize: 10, letterSpacing: "0.1em", color: "#6E6E73" },
