@@ -1871,6 +1871,11 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const [taskLineItemId, setTaskLineItemId] = useState("");
   const [taskStart, setTaskStart] = useState(() => new Date().toISOString().slice(0, 10));
   const [taskEnd, setTaskEnd] = useState(() => new Date().toISOString().slice(0, 10));
+  const [documents, setDocuments] = useState([]);
+  const [docCategory, setDocCategory] = useState("Drawings");
+  const [docLineItemId, setDocLineItemId] = useState("");
+  const documentsInputRef = useRef(null);
+  const DOC_CATEGORIES = ["Drawings", "Contracts", "Specifications", "Photos", "Correspondence", "Other"];
   const fileInputRef = useRef(null);
   const attachInputRef = useRef(null);
   const attachTargetItem = useRef(null);
@@ -1878,7 +1883,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const saveTimers = useRef({});
 
   async function loadAll() {
-    const [{ data: proj }, { data: lineItems }, { data: cos }, { data: snaps }, { data: subsData }, { data: temps }, { data: pos }, { data: tends }, { data: tasks }] =
+    const [{ data: proj }, { data: lineItems }, { data: cos }, { data: snaps }, { data: subsData }, { data: temps }, { data: pos }, { data: tends }, { data: tasks }, { data: docs }] =
       await Promise.all([
         supabase.from("projects_v2").select("*").eq("id", projectId).single(),
         supabase.from("line_items").select("*").eq("project_id", projectId).order("created_at", { ascending: true }),
@@ -1889,6 +1894,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         supabase.from("purchase_orders").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
         supabase.from("tenders").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
         supabase.from("schedule_tasks").select("*").eq("project_id", projectId).order("start_date", { ascending: true }),
+        supabase.from("document_files").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
       ]);
     setProject(proj);
     setItems(lineItems || []);
@@ -1899,6 +1905,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     setPurchaseOrders(pos || []);
     setTenders(tends || []);
     setScheduleTasks(tasks || []);
+    setDocuments(docs || []);
     const tenderIds = (tends || []).map((t) => t.id);
     if (tenderIds.length) {
       const { data: bids } = await supabase.from("tender_bids").select("*").in("tender_id", tenderIds).order("amount", { ascending: true });
@@ -2426,6 +2433,64 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     await supabase.from("schedule_tasks").delete().eq("id", id);
   }
 
+  // Document & Drawings register — categorized, versioned files stored in the
+  // private "documents" bucket under projectId/... so the storage RLS policy
+  // (first path segment = project id, owner match) covers it. Distinct from
+  // the lightweight "Plans" quick-reference list: this is the full register
+  // with category, version, and optional line-item linkage.
+  async function handleDocumentUpload(e) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    for (const file of files) {
+      const path = `${projectId}/documents/${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
+      if (upErr) continue;
+      const existingVersions = documents.filter((d) => d.name === file.name);
+      const version = existingVersions.length
+        ? Math.max(...existingVersions.map((d) => d.version || 1)) + 1
+        : 1;
+      const { data, error } = await supabase
+        .from("document_files")
+        .insert({
+          project_id: projectId,
+          line_item_id: docLineItemId || null,
+          name: file.name,
+          category: docCategory,
+          file_path: path,
+          file_size: file.size,
+          version,
+        })
+        .select().single();
+      if (!error && data) {
+        setDocuments((prev) => [data, ...prev]);
+      }
+    }
+    e.target.value = "";
+  }
+
+  async function openDocument(doc) {
+    const { data, error } = await supabase.storage.from("documents").createSignedUrl(doc.file_path, 60);
+    if (error || !data?.signedUrl) {
+      setImportMessage({ type: "error", text: "Couldn't open that file — please try again." });
+      setTimeout(() => setImportMessage(null), 6000);
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener");
+  }
+
+  async function removeDocument(doc) {
+    setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+    await supabase.from("document_files").delete().eq("id", doc.id);
+    await supabase.storage.from("documents").remove([doc.file_path]);
+  }
+
+  function fmtFileSize(bytes) {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
   async function logSnapshot() {
     const { data, error } = await supabase
       .from("snapshots")
@@ -2569,6 +2634,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           ["purchaseorders", `Purchase Orders${purchaseOrders.length ? ` (${purchaseOrders.length})` : ""}`],
           ["tenders", `Tenders${tenders.length ? ` (${tenders.length})` : ""}`],
           ["schedule", `Schedule${scheduleTasks.length ? ` (${scheduleTasks.length})` : ""}`],
+          ["documents", `Documents${documents.length ? ` (${documents.length})` : ""}`],
           ["plans", `Plans${(project?.plans || []).length ? ` (${(project.plans || []).length})` : ""}`],
           ["trend", "Trend"],
         ].map(([key, label]) => (
@@ -3220,6 +3286,60 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           </div>
         );
       })()}
+
+      {view === "documents" && (
+        <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+          <input
+            ref={documentsInputRef}
+            type="file"
+            multiple
+            style={{ display: "none" }}
+            onChange={handleDocumentUpload}
+          />
+          <div className="no-print" style={{ ...styles.addRow, flexWrap: "nowrap", borderRadius: 18, marginBottom: 16 }}>
+            <select style={{ ...styles.addInput, flex: 1.2, minWidth: 0 }} value={docCategory} onChange={(e) => setDocCategory(e.target.value)}>
+              {DOC_CATEGORIES.map((c) => (<option key={c} value={c}>{c}</option>))}
+            </select>
+            <select style={{ ...styles.addInput, flex: 1.6, minWidth: 0 }} value={docLineItemId} onChange={(e) => setDocLineItemId(e.target.value)}>
+              <option value="">No line item</option>
+              {items.map((i) => (<option key={i.id} value={i.id}>{i.name}</option>))}
+            </select>
+            <button style={{ ...styles.addBtn, flex: "1.4 0 auto" }} onClick={() => documentsInputRef.current?.click()}>+ Upload files</button>
+          </div>
+
+          {documents.length === 0 ? (
+            <div style={{ ...styles.ledger, padding: 20, fontSize: 13, color: "#6E6E73" }}>
+              No documents yet. Upload drawings, contracts, specs, or site photos above — pick a category and, optionally, the budget line they belong to.
+            </div>
+          ) : (
+            <div style={styles.ledger}>
+              {DOC_CATEGORIES.filter((cat) => documents.some((d) => d.category === cat)).map((cat) => (
+                <div key={cat}>
+                  <div style={{ padding: "10px 16px", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#B85C2C", background: "#FAF7F2", borderBottom: "1px solid #E8E8ED" }}>
+                    {cat}
+                  </div>
+                  {documents.filter((d) => d.category === cat).map((doc) => {
+                    const linkedItem = items.find((i) => i.id === doc.line_item_id);
+                    return (
+                      <div key={doc.id} style={{ padding: "10px 16px", borderBottom: "1px solid #F2F2F5", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0, flexWrap: "wrap" }}>
+                          <button onClick={() => openDocument(doc)} style={{ background: "none", border: "none", padding: 0, color: "#1D1D1F", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>
+                            {doc.name}
+                          </button>
+                          {doc.version > 1 && <span style={{ fontSize: 11, fontWeight: 700, color: "#B85C2C", background: "rgba(184,92,44,0.1)", borderRadius: 100, padding: "2px 8px" }}>v{doc.version}</span>}
+                          {linkedItem && <span style={{ fontSize: 12, color: "#6E6E73" }}>· {linkedItem.name}</span>}
+                          <span style={{ fontSize: 12, color: "#6E6E73" }}>{fmtFileSize(doc.file_size)}</span>
+                        </div>
+                        <button className="no-print" style={styles.removeBtn} onClick={() => removeDocument(doc)}>✕</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {view === "plans" && (
         <div style={styles.ledger}>
