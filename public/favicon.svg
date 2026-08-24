@@ -1,5 +1,7 @@
 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" rx="13" fill="#F3EAD9"/>
-  <text x="31" y="47" font-family="'Fraunces', serif" font-style="italic" font-weight="600" fill="#1C1712" text-anchor="middle"><tspan font-size="40">s</tspan><tspan font-size="58" fill="#C1633A">m</tspan></text>
-  <line x1="19" y1="51.5" x2="57" y2="51.5" stroke="#C1633A" stroke-width="2.5"/>
+  <rect width="64" height="64" rx="13" fill="#3C2E1E"></rect>
+  <rect x="10" y="18" width="27" height="8" fill="#FFFFFF"></rect>
+  <rect x="40" y="18" width="12" height="8" fill="#D08050"></rect>
+  <rect x="10" y="29" width="44" height="8" fill="#FFFFFF"></rect>
+  <rect x="10" y="40" width="44" height="8" fill="#FFFFFF"></rect>
 </svg>
