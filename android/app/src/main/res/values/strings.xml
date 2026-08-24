@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SiteMargin</string>
+    <string name="title_activity_main">SiteMargin</string>
+    <string name="package_name">za.co.sitemargin.app</string>
+    <string name="custom_url_scheme">za.co.sitemargin.app</string>
+</resources>
