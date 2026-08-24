@@ -546,6 +546,7 @@ function GlobalStyles() {
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
       .print-only-status { display: none; }
       .print-only-footer { display: none; }
+      .sm-logo-menu-item:hover { background: #F5F5F7; }
       @media print {
         .no-print { display: none !important; }
         body, html { background: #fff !important; }
@@ -1237,7 +1238,18 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
   const nameSaveTimer = useRef(null);
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoError, setLogoError] = useState(null);
+  const [logoMenuOpen, setLogoMenuOpen] = useState(false);
   const logoInputRef = useRef(null);
+  const logoMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!logoMenuOpen) return;
+    function handleOutside(e) {
+      if (logoMenuRef.current && !logoMenuRef.current.contains(e.target)) setLogoMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [logoMenuOpen]);
 
   useEffect(() => { setNameDraft(displayName || ""); }, [displayName]);
 
@@ -1377,17 +1389,35 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
         userEmail={userEmail}
         onSignOut={onSignOut}
         logoNode={
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {logoUrl && (
-              // Deliberately not "no-print" — appears on printed/exported output too.
-              <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />
+          <div ref={logoMenuRef} style={{ position: "relative" }}>
+            {/* Deliberately not "no-print" — the button wrapping the logo still
+                needs to render the logo image itself on printed/exported output;
+                only the popover menu below is screen-only. */}
+            <button
+              type="button"
+              onClick={() => setLogoMenuOpen((v) => !v)}
+              disabled={logoUploading}
+              title={logoUrl ? "Change or remove company logo" : "Add company logo"}
+              style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", padding: 4, borderRadius: 10, cursor: logoUploading ? "default" : "pointer" }}
+            >
+              {logoUrl ? (
+                <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />
+              ) : (
+                <span style={{ ...styles.logoTextBtn, fontSize: 13 }}>{logoUploading ? "Uploading…" : "+ Add logo"}</span>
+              )}
+            </button>
+            {logoMenuOpen && (
+              <div className="no-print" style={styles.logoMenuPopover}>
+                <button type="button" className="sm-logo-menu-item" style={styles.logoMenuItem} onClick={() => { setLogoMenuOpen(false); logoInputRef.current?.click(); }} disabled={logoUploading}>
+                  {logoUploading ? "Uploading…" : logoUrl ? "Change logo" : "Add logo"}
+                </button>
+                {logoUrl && (
+                  <button type="button" className="sm-logo-menu-item" style={{ ...styles.logoMenuItem, color: "#C1462B" }} onClick={() => { setLogoMenuOpen(false); removeLogo(); }}>
+                    Remove logo
+                  </button>
+                )}
+              </div>
             )}
-            <div className="no-print" style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <button type="button" style={styles.logoTextBtn} onClick={() => logoInputRef.current?.click()} disabled={logoUploading}>
-                {logoUploading ? "Uploading…" : logoUrl ? "Change logo" : "+ Add logo"}
-              </button>
-              {logoUrl && <button type="button" style={styles.logoTextBtnMuted} onClick={removeLogo}>Remove</button>}
-            </div>
             <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" style={{ display: "none" }} onChange={handleLogoFile} />
           </div>
         }
@@ -3103,6 +3133,8 @@ const styles = {
   companyLogoMark: { height: "clamp(28px, 4.5vw, 44px)", width: "auto", maxWidth: 140, objectFit: "contain", borderRadius: 6 },
   logoTextBtn: { background: "none", border: "none", color: "#B85C2C", fontSize: 11.5, fontWeight: 600, textAlign: "left", padding: 0, cursor: "pointer" },
   logoTextBtnMuted: { background: "none", border: "none", color: "#6E6E73", fontSize: 11, textAlign: "left", padding: 0, cursor: "pointer" },
+  logoMenuPopover: { position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 30, background: "#FFFFFF", borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.14)", padding: 6, minWidth: 150, display: "flex", flexDirection: "column", gap: 2 },
+  logoMenuItem: { background: "none", border: "none", color: "#1D1D1F", fontSize: 13.5, fontWeight: 500, textAlign: "left", padding: "9px 12px", borderRadius: 8, cursor: "pointer" },
 
   menuBtn: { width: 40, height: 40, border: "none", borderRadius: "50%", background: "#F5F5F7", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, padding: 0, flexShrink: 0 },
   menuBtnBar: { display: "block", width: 15, height: 1.5, background: "#1D1D1F", borderRadius: 2, transition: "transform 0.25s ease, opacity 0.2s ease" },
