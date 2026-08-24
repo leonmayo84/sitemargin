@@ -3173,4 +3173,25 @@ const styles = {
 
   trendRow: { display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #EFE9D9" },
 
-  quoteSheet: { maxWidth: 800, margin: "0 auto", background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "36px 40px",
+  quoteSheet: { maxWidth: 800, margin: "0 auto", background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "36px 40px", boxShadow: "0 4px 16px rgba(28,23,18,0.05)" },
+  quoteHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #1C1712", paddingBottom: 20, marginBottom: 28 },
+  quoteEyebrow: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, marginBottom: 6 },
+  quoteProjectName: { fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 500, color: "#1C1712" },
+  quoteMeta: { textAlign: "right", fontSize: 12.5, color: "#6B6258", lineHeight: 1.7 },
+  quoteCatHeading: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, letterSpacing: "0.06em", color: "#8A8072", textTransform: "uppercase", marginBottom: 8, paddingBottom: 6, borderBottom: "1px solid #EFE9D9" },
+  quoteRow: { display: "flex", padding: "6px 0", fontSize: 14, color: "#1C1712" },
+  quoteTotalRow: { display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 600, color: "#1C1712", borderTop: "2px solid #1C1712", paddingTop: 14, marginTop: 10 },
+  quoteFootnote: { fontSize: 11.5, color: "#8A8072", marginTop: 30, lineHeight: 1.6, borderTop: "1px solid #EFE9D9", paddingTop: 16 },
+
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(28,23,18,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 },
+  modalCard: { background: "#FFFFFF", borderRadius: 8, maxWidth: 760, width: "100%", maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 50px rgba(28,23,18,0.25)" },
+  modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "20px 24px", borderBottom: "1px solid #E4DCC8" },
+  modalTitle: { fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 600, color: "#1C1712" },
+  modalSub: { fontSize: 12.5, color: "#6B6258", marginTop: 4, maxWidth: 480 },
+  modalBody: { padding: "12px 24px", overflowY: "auto", flex: 1 },
+  modalFooter: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderTop: "1px solid #E4DCC8" },
+  previewHeaderRow: { display: "flex", gap: 10, fontSize: 11, letterSpacing: "0.06em", color: "#8A8072", textTransform: "uppercase", padding: "8px 0", borderBottom: "1px solid #E4DCC8" },
+  previewRow: { display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 0", borderBottom: "1px solid #EFE9D9" },
+  previewInput: { width: "100%", background: "#FAF6EC", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontSize: 13, padding: "6px 8px" },
+  previewNote: { fontSize: 10.5, color: "#8A8072", marginTop: 3 },
+};
