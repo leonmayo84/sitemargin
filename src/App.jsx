@@ -2311,7 +2311,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                 exported/printed cost sheet, so the company logo needs to
                 pull through onto the PDF, not just show on screen. */}
             {logoUrl && <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />}
-            <div style={styles.eyebrow}>SITEMARGIN — COST VARIANCE SHEET</div>
+            <div style={styles.eyebrow}>COST VARIANCE SHEET</div>
           </div>
           <input
             style={styles.projectInput}
@@ -2835,32 +2835,32 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           <div style={{ padding: "12px 16px", fontSize: 13, color: "#6E6E73", borderBottom: "1px solid #E8E8ED" }}>
             Outstanding (not yet received): <strong style={{ color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(poOutstandingTotal)}</strong>
           </div>
-          <div style={{ ...styles.ledgerHeaderRow, minWidth: 980 }}>
+          <div style={{ ...styles.ledgerHeaderRow, minWidth: 1180 }}>
             <span style={{ ...styles.thCell, flex: 1.4 }}>Supplier</span>
-            <span style={{ ...styles.thCell, flex: 1 }}>PO #</span>
+            <span style={{ ...styles.thCell, flex: 0.9 }}>PO #</span>
             <span style={{ ...styles.thCell, flex: 1.8 }}>Description</span>
             <span style={{ ...styles.thCell, flex: 1.4 }}>Against line item</span>
             <span style={{ ...styles.thCell, flex: 1, textAlign: "center" }}>Order date</span>
-            <span style={{ ...styles.thCell, flex: 1, textAlign: "right" }}>Amount</span>
-            <span style={{ ...styles.thCell, flex: 1.2, textAlign: "center" }}>Status</span>
-            <span style={{ ...styles.thCell, flex: 0.6 }}></span>
+            <span style={{ ...styles.thCell, flex: 0.9, textAlign: "right" }}>Amount</span>
+            <span style={{ ...styles.thCell, flex: 1.1, textAlign: "center" }}>Status</span>
+            <span style={{ ...styles.thCell, flex: 0.5 }} className="no-print"></span>
           </div>
           {purchaseOrders.map((po) => {
             const linkedItem = items.find((i) => i.id === po.line_item_id);
             const poStatusColor = po.status === "received" ? "#4C7A5C" : po.status === "cancelled" ? "#C1462B" : po.status === "confirmed" ? "#1D1D1F" : po.status === "sent" ? "#B8862F" : "#6E6E73";
             return (
-              <div key={po.id} style={{ ...styles.row, minWidth: 980 }}>
+              <div key={po.id} style={{ ...styles.row, minWidth: 1180 }}>
                 <span style={{ ...styles.tdCell, flex: 1.4 }}>{po.supplier_name}</span>
-                <span style={{ ...styles.tdCell, flex: 1, fontFamily: "'IBM Plex Mono', monospace" }}>{po.po_number || "—"}</span>
+                <span style={{ ...styles.tdCell, flex: 0.9, fontFamily: "'IBM Plex Mono', monospace" }}>{po.po_number || "—"}</span>
                 <span style={{ ...styles.tdCell, flex: 1.8 }}>{po.description || "—"}</span>
                 <span style={{ ...styles.tdCell, flex: 1.4, color: "#6E6E73" }}>{linkedItem ? linkedItem.name : "—"}</span>
                 <span style={{ ...styles.tdCell, flex: 1, textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }}>
                   {po.order_date ? new Date(po.order_date + "T00:00:00").toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </span>
-                <span style={{ ...styles.tdCell, flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(po.amount)}</span>
-                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "center" }} className="no-print">
+                <span style={{ ...styles.tdCell, flex: 0.9, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(po.amount)}</span>
+                <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "center" }} className="no-print">
                   <select value={po.status} onChange={(e) => setPoStatus(po.id, e.target.value)}
-                    style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: poStatusColor }}>
+                    style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: poStatusColor, width: "100%" }}>
                     <option value="draft">Draft</option>
                     <option value="sent">Sent</option>
                     <option value="confirmed">Confirmed</option>
@@ -2868,8 +2868,8 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </span>
-                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "center", color: poStatusColor }} className="print-only-status">{po.status}</span>
-                <span style={{ ...styles.tdCell, flex: 0.6, textAlign: "right" }} className="no-print">
+                <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "center", color: poStatusColor }} className="print-only-status">{po.status}</span>
+                <span style={{ ...styles.tdCell, flex: 0.5, textAlign: "right" }} className="no-print">
                   <button style={styles.removeBtn} onClick={() => removePurchaseOrder(po.id)}>✕</button>
                 </span>
               </div>
@@ -2880,19 +2880,19 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               No purchase orders yet. Log a supplier order below to track it against this project's budget.
             </div>
           )}
-          <div className="no-print" style={{ ...styles.addRow, minWidth: 980, flexWrap: "wrap" }}>
-            <input style={{ ...styles.addInput, flex: 1.4 }} placeholder="Supplier name" value={poSupplier} onChange={(e) => setPoSupplier(e.target.value)} />
-            <input style={{ ...styles.addInput, flex: 1 }} placeholder="PO # (optional)" value={poNumber} onChange={(e) => setPoNumber(e.target.value)} />
-            <input style={{ ...styles.addInput, flex: 1.8 }} placeholder="Description / materials" value={poDescription} onChange={(e) => setPoDescription(e.target.value)} />
-            <select style={{ ...styles.addInput, flex: 1.4 }} value={poLineItemId} onChange={(e) => setPoLineItemId(e.target.value)}>
+          <div className="no-print" style={{ ...styles.addRow, minWidth: 1180, flexWrap: "nowrap" }}>
+            <input style={{ ...styles.addInput, flex: 1.4, minWidth: 0 }} placeholder="Supplier name" value={poSupplier} onChange={(e) => setPoSupplier(e.target.value)} />
+            <input style={{ ...styles.addInput, flex: 0.9, minWidth: 0 }} placeholder="PO # (optional)" value={poNumber} onChange={(e) => setPoNumber(e.target.value)} />
+            <input style={{ ...styles.addInput, flex: 1.8, minWidth: 0 }} placeholder="Description / materials" value={poDescription} onChange={(e) => setPoDescription(e.target.value)} />
+            <select style={{ ...styles.addInput, flex: 1.4, minWidth: 0 }} value={poLineItemId} onChange={(e) => setPoLineItemId(e.target.value)}>
               <option value="">No line item</option>
               {items.map((i) => (
                 <option key={i.id} value={i.id}>{i.name}</option>
               ))}
             </select>
-            <input style={{ ...styles.addInput, flex: 1 }} type="date" value={poOrderDate} onChange={(e) => setPoOrderDate(e.target.value)} />
-            <input style={{ ...styles.addInput, flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Amount" type="number" value={poAmount} onChange={(e) => setPoAmount(e.target.value)} />
-            <button style={styles.addBtn} onClick={addPurchaseOrder}>+ Add purchase order</button>
+            <input style={{ ...styles.addInput, flex: 1, minWidth: 0 }} type="date" value={poOrderDate} onChange={(e) => setPoOrderDate(e.target.value)} />
+            <input style={{ ...styles.addInput, flex: 0.9, minWidth: 0, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Amount" type="number" value={poAmount} onChange={(e) => setPoAmount(e.target.value)} />
+            <button style={{ ...styles.addBtn, flex: "1.6 0 auto" }} onClick={addPurchaseOrder}>+ Add purchase order</button>
           </div>
         </div>
       )}
