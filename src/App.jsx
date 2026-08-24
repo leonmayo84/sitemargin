@@ -583,13 +583,12 @@ function GlobalStyles() {
   );
 }
 
-function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl, hideTitle }) {
+function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl, hideTitle, titleNode, logoNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const tabs = [
     ["dashboard", "Projects"],
     ["subcontractors", "Subcontractors"],
     ["templates", "Templates"],
-    ["apptools", "App Tools"],
   ];
   const closeAnd = (fn) => () => { setMenuOpen(false); if (fn) fn(); };
   return (
@@ -597,6 +596,13 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
       <div style={styles.dashNavBar}>
         <AppLogo />
         <div className="no-print" style={styles.dashNavRight}>
+          {/* Mirrors the marketing site's always-visible "Go to App" button,
+              in the same spot next to the hamburger — pointing the other
+              way. Native-only exclusion for the same reason as elsewhere:
+              it would hijack the app's own webview with no way back. */}
+          {!Capacitor.isNativePlatform() && (
+            <a href="https://sitemargin.co.za" style={styles.navHomeLink}>Home</a>
+          )}
           <button
             style={styles.menuBtn}
             aria-expanded={menuOpen}
@@ -634,20 +640,6 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                 {label}
               </button>
             ))}
-            {/* On the native mobile app there's no reason to send someone to the
-                marketing website — they're already inside the app, and doing so
-                via window.location.href would hijack the app's own webview to
-                show an external page with no way back. Only show this link on
-                the web version (app.sitemargin.co.za opened in a browser tab),
-                where "back to the marketing site" is a meaningful action. */}
-            {!Capacitor.isNativePlatform() && (
-              <button
-                style={styles.menuPanelLink}
-                onClick={closeAnd(() => { window.location.href = "https://sitemargin.co.za"; })}
-              >
-                ← sitemargin.co.za
-              </button>
-            )}
             <div style={styles.menuPanelActions}>
               <button style={styles.menuPanelGhost} onClick={closeAnd(() => window.print())}>Print</button>
               {onSignOut && <button style={styles.menuPanelSolid} onClick={closeAnd(onSignOut)}>Sign out</button>}
@@ -689,15 +681,14 @@ function AppFooter() {
 
 function AppShell({ userEmail, onSignOut }) {
   const [route, setRoute] = useState({ page: "dashboard", projectId: null });
-  // #9: company logo, set on the App Tools page, shown next to the page
+  // Company logo, edited inline on the dashboard, shown next to the page
   // title everywhere (and on printed output — see ProjectView's title
   // block). Lives in its own table keyed by owner_email rather than on
   // each project, since it's one logo per account, not per project.
   const [companyLogoUrl, setCompanyLogoUrl] = useState(null);
-  // Client-chosen account/display name, set on App Tools. Used for the
-  // dashboard title ("[name]'s projects") instead of defaulting to
-  // something derived from the sign-in email — clients should be able to
-  // name their own account freely.
+  // Client-chosen account/company name, edited inline on the dashboard
+  // title itself, instead of defaulting to something derived from the
+  // sign-in email — clients should be able to name their own account freely.
   const [companyDisplayName, setCompanyDisplayName] = useState(null);
 
   useEffect(() => {
@@ -733,19 +724,6 @@ function AppShell({ userEmail, onSignOut }) {
   if (route.page === "templates") {
     return <TemplatesView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={companyLogoUrl} />;
   }
-  if (route.page === "apptools") {
-    return (
-      <AppToolsPage
-        onNavigate={navigate}
-        userEmail={userEmail}
-        onSignOut={onSignOut}
-        logoUrl={companyLogoUrl}
-        onLogoChange={setCompanyLogoUrl}
-        displayName={companyDisplayName}
-        onDisplayNameChange={setCompanyDisplayName}
-      />
-    );
-  }
   return (
     <Dashboard
       onOpen={(id) => setRoute({ page: "project", projectId: id })}
@@ -753,124 +731,10 @@ function AppShell({ userEmail, onSignOut }) {
       userEmail={userEmail}
       onSignOut={onSignOut}
       logoUrl={companyLogoUrl}
+      onLogoChange={setCompanyLogoUrl}
       displayName={companyDisplayName}
+      onDisplayNameChange={setCompanyDisplayName}
     />
-  );
-}
-
-/* ============================== APP TOOLS ============================== */
-/* #9: currently just the company logo, uploaded once per account and shown
-   next to the page title across the app (and on printed cost/change-order
-   sheets). Stored as a data URL directly on company_settings rather than in
-   a storage bucket — logos are small, and this avoids standing up bucket
-   RLS for a single per-account image. */
-
-function AppToolsPage({ onNavigate, userEmail, onSignOut, logoUrl, onLogoChange, displayName, onDisplayNameChange }) {
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState(null);
-  const logoInputRef = useRef(null);
-  const [nameDraft, setNameDraft] = useState(displayName || "");
-  const [nameSaving, setNameSaving] = useState(false);
-  const [nameSaved, setNameSaved] = useState(false);
-
-  useEffect(() => { setNameDraft(displayName || ""); }, [displayName]);
-
-  async function saveDisplayName() {
-    const trimmed = nameDraft.trim();
-    setNameSaving(true);
-    const { error: upsertError } = await supabase
-      .from("company_settings")
-      .upsert({ owner_email: userEmail, display_name: trimmed || null, updated_at: new Date().toISOString() });
-    setNameSaving(false);
-    if (upsertError) { setError("Couldn't save the account name — please try again."); return; }
-    onDisplayNameChange(trimmed || null);
-    setNameSaved(true);
-    setTimeout(() => setNameSaved(false), 2500);
-  }
-
-  async function handleLogoFile(e) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (!/^image\/(png|jpeg|jpg|svg\+xml|webp)$/.test(file.type)) {
-      setError("Please choose a PNG, JPG, SVG, or WEBP image.");
-      return;
-    }
-    if (file.size > 1_500_000) {
-      setError("That image is a bit large — please use something under 1.5MB.");
-      return;
-    }
-    setError(null);
-    setUploading(true);
-    const dataUrl = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-    const { error: upsertError } = await supabase
-      .from("company_settings")
-      .upsert({ owner_email: userEmail, logo_data_url: dataUrl, updated_at: new Date().toISOString() });
-    setUploading(false);
-    if (upsertError) { setError("Couldn't save the logo — please try again."); return; }
-    onLogoChange(dataUrl);
-  }
-
-  async function removeLogo() {
-    if (!window.confirm("Remove the company logo?")) return;
-    await supabase.from("company_settings").upsert({ owner_email: userEmail, logo_data_url: null, updated_at: new Date().toISOString() });
-    onLogoChange(null);
-  }
-
-  return (
-    <div style={styles.page}>
-      <GlobalStyles />
-      <PageHeader title="App Tools" current="apptools" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
-
-      <div style={{ maxWidth: 640, margin: "0 auto" }}>
-        <div style={styles.apptoolsPanel}>
-          <div style={styles.apptoolsTitle}>Account name</div>
-          <p style={{ fontSize: 13, color: "#8A8072", lineHeight: 1.55, margin: "0 0 16px" }}>
-            Used for the "[name]'s projects" title on your dashboard. Defaults to a name guessed from your
-            sign-in email until you set one here.
-          </p>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <input
-              style={{ ...styles.addInput, flex: "1 1 220px" }}
-              placeholder={friendlyFirstName(userEmail)}
-              value={nameDraft}
-              onChange={(e) => setNameDraft(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && saveDisplayName()}
-            />
-            <button style={styles.addBtn} onClick={saveDisplayName} disabled={nameSaving}>
-              {nameSaving ? "Saving…" : "Save name"}
-            </button>
-            {nameSaved && <span style={{ fontSize: 12.5, color: "#4C7A5C" }}>Saved</span>}
-          </div>
-        </div>
-
-        <div style={styles.apptoolsPanel}>
-          <div style={styles.apptoolsTitle}>Company logo</div>
-          <p style={{ fontSize: 13, color: "#8A8072", lineHeight: 1.55, margin: "0 0 16px" }}>
-            Shown next to the page title across the app, and on printed cost sheets and change order exports.
-          </p>
-          <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" style={{ display: "none" }} onChange={handleLogoFile} />
-          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-            <div style={styles.logoPreviewBox}>
-              {logoUrl ? <img src={logoUrl} alt="Company logo" style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} /> : <span style={{ fontSize: 11, color: "#8A8072" }}>No logo set</span>}
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button style={styles.addBtn} onClick={() => logoInputRef.current?.click()} disabled={uploading}>
-                {uploading ? "Uploading…" : logoUrl ? "Replace logo" : "Upload logo"}
-              </button>
-              {logoUrl && <button style={styles.removeBtn} onClick={removeLogo}>Remove</button>}
-            </div>
-          </div>
-          {error && <div style={{ ...styles.gateError, marginTop: 12 }}>{error}</div>}
-        </div>
-      </div>
-      <AppFooter />
-    </div>
   );
 }
 
@@ -1337,12 +1201,70 @@ export default function SiteMargin() {
 
 const FREE_PROJECT_LIMIT = 1;
 
-function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, displayName }) {
+function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoChange, displayName, onDisplayNameChange }) {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [isPaid, setIsPaid] = useState(true); // assume paid until we know otherwise, so the cap never flashes incorrectly
+
+  // Company logo + account name — edited inline right here on the dashboard
+  // (formerly a separate "App Tools" page) since this is the one place both
+  // are actually shown.
+  const [nameDraft, setNameDraft] = useState(displayName || "");
+  const nameSaveTimer = useRef(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState(null);
+  const logoInputRef = useRef(null);
+
+  useEffect(() => { setNameDraft(displayName || ""); }, [displayName]);
+
+  function handleNameInput(e) {
+    const value = e.target.value;
+    setNameDraft(value);
+    if (nameSaveTimer.current) clearTimeout(nameSaveTimer.current);
+    nameSaveTimer.current = setTimeout(async () => {
+      const trimmed = value.trim();
+      const { error } = await supabase
+        .from("company_settings")
+        .upsert({ owner_email: userEmail, display_name: trimmed || null, updated_at: new Date().toISOString() });
+      if (!error) onDisplayNameChange(trimmed || null);
+    }, 600);
+  }
+
+  async function handleLogoFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!/^image\/(png|jpeg|jpg|svg\+xml|webp)$/.test(file.type)) {
+      setLogoError("Please choose a PNG, JPG, SVG, or WEBP image.");
+      return;
+    }
+    if (file.size > 1_500_000) {
+      setLogoError("That image is a bit large — please use something under 1.5MB.");
+      return;
+    }
+    setLogoError(null);
+    setLogoUploading(true);
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const { error: upsertError } = await supabase
+      .from("company_settings")
+      .upsert({ owner_email: userEmail, logo_data_url: dataUrl, updated_at: new Date().toISOString() });
+    setLogoUploading(false);
+    if (upsertError) { setLogoError("Couldn't save the logo — please try again."); return; }
+    onLogoChange(dataUrl);
+  }
+
+  async function removeLogo() {
+    if (!window.confirm("Remove the company logo?")) return;
+    await supabase.from("company_settings").upsert({ owner_email: userEmail, logo_data_url: null, updated_at: new Date().toISOString() });
+    onLogoChange(null);
+  }
 
   useEffect(() => {
     supabase
@@ -1427,7 +1349,37 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, displayN
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <PageHeader title={`${(displayName || "").trim() || friendlyFirstName(userEmail)}'s projects`} current="dashboard" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
+      <PageHeader
+        current="dashboard"
+        onNavigate={onNavigate}
+        userEmail={userEmail}
+        onSignOut={onSignOut}
+        logoNode={
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {logoUrl && (
+              // Deliberately not "no-print" — appears on printed/exported output too.
+              <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />
+            )}
+            <div className="no-print" style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <button type="button" style={styles.logoTextBtn} onClick={() => logoInputRef.current?.click()} disabled={logoUploading}>
+                {logoUploading ? "Uploading…" : logoUrl ? "Change logo" : "+ Add logo"}
+              </button>
+              {logoUrl && <button type="button" style={styles.logoTextBtnMuted} onClick={removeLogo}>Remove</button>}
+            </div>
+            <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" style={{ display: "none" }} onChange={handleLogoFile} />
+          </div>
+        }
+        titleNode={
+          <input
+            style={styles.dashTitleInput}
+            value={nameDraft}
+            placeholder={friendlyFirstName(userEmail)}
+            onChange={handleNameInput}
+            aria-label="Account / company name"
+          />
+        }
+      />
+      {logoError && <div className="no-print" style={{ ...styles.gateError, maxWidth: 1180, margin: "-10px auto 16px" }}>{logoError}</div>}
 
       {projects.length > 0 && (
         <div style={styles.summaryStrip}>
@@ -3001,11 +2953,15 @@ const styles = {
   dashHeader: { maxWidth: 1180, margin: "0 auto 20px", position: "relative", zIndex: 201 },
   dashNavBar: { display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #E4DCC8", paddingBottom: 16, marginBottom: 22, gap: 16, flexWrap: "wrap" },
   dashNavRight: { display: "flex", alignItems: "center", gap: 14 },
+  // Matches sitemargin.co.za's own .nav-app-link exactly (same font, size,
+  // color, padding, radius) — the app's mirror-image equivalent, pointing
+  // back to the marketing site instead of into the app.
+  navHomeLink: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#FFFFFF", textDecoration: "none", letterSpacing: "0.01em", whiteSpace: "nowrap", background: "#B85C2C", padding: "11px 20px", borderRadius: 4, display: "inline-block" },
   dashTitle: { fontFamily: "'Fraunces', serif", fontSize: "clamp(36px, 6vw, 58px)", fontWeight: 500, letterSpacing: "-0.01em" },
+  dashTitleInput: { fontFamily: "'Fraunces', serif", fontSize: "clamp(36px, 6vw, 58px)", fontWeight: 500, letterSpacing: "-0.01em", color: "#1C1712", background: "none", border: "none", borderBottom: "1px dashed #D8CFB8", padding: 0, width: "100%", minWidth: 0 },
   companyLogoMark: { height: "clamp(28px, 4.5vw, 44px)", width: "auto", maxWidth: 140, objectFit: "contain", borderRadius: 6 },
-  apptoolsPanel: { border: "1px solid #E4DCC8", borderRadius: 10, background: "#FAF6EC", padding: "20px 22px", margin: "8px 0 30px" },
-  apptoolsTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "#8A8072", marginBottom: 6 },
-  logoPreviewBox: { width: 84, height: 84, borderRadius: 10, border: "1.5px dashed #E4DCC8", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, padding: 8, background: "#FFFDF7" },
+  logoTextBtn: { background: "none", border: "none", color: "#B85C2C", fontSize: 11.5, fontWeight: 600, textAlign: "left", padding: 0, cursor: "pointer" },
+  logoTextBtnMuted: { background: "none", border: "none", color: "#8A8072", fontSize: 11, textAlign: "left", padding: 0, cursor: "pointer" },
 
   menuBtn: { width: 46, height: 46, border: "1px solid #D8CFB8", borderRadius: 6, background: "#FFFFFF", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, padding: 0, flexShrink: 0 },
   menuBtnBar: { display: "block", width: 20, height: 2, background: "#1C1712", borderRadius: 2, transition: "transform 0.25s ease, opacity 0.2s ease" },
