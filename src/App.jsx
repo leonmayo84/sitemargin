@@ -2624,24 +2624,39 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         )}
       </div>
 
-      <div className="no-print" style={styles.viewToggle}>
-        {[
-          ["ledger", "Cost & Progress"],
-          ["quote", "Quote"],
-          ["charts", "Charts"],
-          ["payments", "Payments & Retention"],
-          ["changeorders", `Change Orders${changeOrders.length ? ` (${changeOrders.length})` : ""}`],
-          ["purchaseorders", `Purchase Orders${purchaseOrders.length ? ` (${purchaseOrders.length})` : ""}`],
-          ["tenders", `Tenders${tenders.length ? ` (${tenders.length})` : ""}`],
-          ["schedule", `Schedule${scheduleTasks.length ? ` (${scheduleTasks.length})` : ""}`],
-          ["documents", `Documents${documents.length ? ` (${documents.length})` : ""}`],
-          ["plans", `Plans${(project?.plans || []).length ? ` (${(project.plans || []).length})` : ""}`],
-          ["trend", "Trend"],
-        ].map(([key, label]) => (
-          <button key={key} style={{ ...styles.toggleBtn, ...(view === key ? styles.toggleBtnActive : {}) }} onClick={() => setView(key)}>
-            {label}
-          </button>
-        ))}
+      <div className="no-print" style={styles.toggleGroupWrap}>
+        <div style={styles.toggleGroupLabel}>Site & Delivery</div>
+        <div style={styles.viewToggle}>
+          {[
+            ["purchaseorders", `Purchase Orders${purchaseOrders.length ? ` (${purchaseOrders.length})` : ""}`],
+            ["tenders", `Tenders${tenders.length ? ` (${tenders.length})` : ""}`],
+            ["schedule", `Schedule${scheduleTasks.length ? ` (${scheduleTasks.length})` : ""}`],
+            ["documents", `Documents${documents.length ? ` (${documents.length})` : ""}`],
+            ["plans", `Plans${(project?.plans || []).length ? ` (${(project.plans || []).length})` : ""}`],
+            ["changeorders", `Change Orders${changeOrders.length ? ` (${changeOrders.length})` : ""}`],
+          ].map(([key, label]) => (
+            <button key={key} style={{ ...styles.toggleBtn, ...(view === key ? styles.toggleBtnActive : {}) }} onClick={() => setView(key)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="no-print" style={styles.toggleGroupWrap}>
+        <div style={styles.toggleGroupLabel}>Budget & Reporting</div>
+        <div style={styles.viewToggle}>
+          {[
+            ["ledger", "Cost & Progress"],
+            ["quote", "Quote"],
+            ["payments", "Payments & Retention"],
+            ["charts", "Charts"],
+            ["trend", "Trend"],
+          ].map(([key, label]) => (
+            <button key={key} style={{ ...styles.toggleBtn, ...(view === key ? styles.toggleBtnActive : {}) }} onClick={() => setView(key)}>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {view === "ledger" && (
@@ -3665,6 +3680,8 @@ const styles = {
   templateLink: { background: "none", border: "none", color: "#6E6E73", fontSize: 12.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
 
   viewToggle: { maxWidth: 1180, margin: "0 auto 12px", display: "flex", gap: 8, flexWrap: "wrap" },
+  toggleGroupWrap: { maxWidth: 1180, margin: "0 auto", marginBottom: 14 },
+  toggleGroupLabel: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73", margin: "0 0 8px 4px" },
   toggleBtn: { background: "#FFFFFF", border: "none", borderRadius: 100, color: "#6E6E73", fontSize: 13, fontWeight: 500, padding: "8px 16px", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
   toggleBtnActive: { background: "#1D1D1F", color: "#FFFFFF", fontWeight: 600 },
 
