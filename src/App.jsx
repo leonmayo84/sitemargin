@@ -518,31 +518,13 @@ function SummaryCard({ label, value, accent }) {
 }
 
 function AppLogo() {
-  const mRef = useRef(null);
-  const lineRef = useRef(null);
-
-  useEffect(() => {
-    function drawUnderline() {
-      if (!mRef.current || !lineRef.current) return;
-      const b = mRef.current.getBBox();
-      lineRef.current.setAttribute("x1", b.x);
-      lineRef.current.setAttribute("x2", b.x + b.width);
-    }
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(drawUnderline);
-    }
-    const t = setTimeout(drawUnderline, 400);
-    return () => clearTimeout(t);
-  }, []);
-
   return (
     <div style={styles.appLogoRow}>
-      <svg className="sm-app-logo-mark" style={styles.appLogoMark} viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg">
-        <text x="150" y="90" fontFamily="'Fraunces', serif" fontStyle="italic" fontWeight="600" fill="#1D1D1F" textAnchor="middle">
-          <tspan fontSize="70">s</tspan>
-          <tspan ref={mRef} fontSize="108" fill="#C1633A">m</tspan>
-        </text>
-        <line ref={lineRef} x1="0" y1="100" x2="0" y2="100" stroke="#C1633A" strokeWidth="5" />
+      <svg className="sm-app-logo-mark" style={styles.appLogoMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="8" width="28" height="8" fill="#3C2E1E" />
+        <rect x="34" y="8" width="10" height="8" fill="#B85C2C" />
+        <rect x="4" y="20" width="40" height="8" fill="#3C2E1E" />
+        <rect x="4" y="32" width="40" height="8" fill="#3C2E1E" />
       </svg>
       <div className="sm-app-logo-text" style={styles.appLogoText}>
         site<span style={{ color: "#B85C2C" }}>Margin</span>
@@ -2872,11 +2854,11 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       <div className="print-only-footer" style={styles.docFooter}>
         <div style={styles.dfRow}>
           <div style={styles.dfBrand}>
-            <svg style={styles.dfMark} viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg">
-              <text x="150" y="90" fontFamily="'Fraunces', serif" fontStyle="italic" fontWeight="600" fill="#1D1D1F" textAnchor="middle">
-                <tspan fontSize="70">s</tspan>
-                <tspan fontSize="108" fill="#C1633A">m</tspan>
-              </text>
+            <svg style={styles.dfMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+              <rect x="4" y="8" width="28" height="8" fill="#3C2E1E" />
+              <rect x="34" y="8" width="10" height="8" fill="#B85C2C" />
+              <rect x="4" y="20" width="40" height="8" fill="#3C2E1E" />
+              <rect x="4" y="32" width="40" height="8" fill="#3C2E1E" />
             </svg>
             <span style={styles.dfText}>
               site<span style={{ color: "#B85C2C" }}>Margin</span> — Cost variance report for {project.name}
@@ -3148,8 +3130,8 @@ const styles = {
   siteFooterLink: { color: "#6E6E73", textDecoration: "none" },
   docFooter: { maxWidth: 1180, margin: "30px auto 0", paddingTop: 14, borderTop: "1px solid #D9D9DE" },
   dfRow: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  dfBrand: { display: "flex", alignItems: "center", gap: 6, fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 14, color: "#1D1D1F" },
-  dfMark: { height: 20, width: "auto", display: "block" },
+  dfBrand: { display: "flex", alignItems: "center", gap: 6, fontWeight: 600, fontSize: 14, color: "#1D1D1F" },
+  dfMark: { height: 20, width: 20, display: "block" },
   dfText: { fontStyle: "normal" },
   dfMeta: { fontSize: 11, color: "#6E6E73", fontFamily: "Arial, sans-serif" },
   dfDisclaimer: { fontSize: 10, color: "#A0A0A6", marginTop: 4, fontFamily: "Arial, sans-serif" },
