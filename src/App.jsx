@@ -1860,6 +1860,12 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const [poAmount, setPoAmount] = useState("");
   const [poLineItemId, setPoLineItemId] = useState("");
   const [poOrderDate, setPoOrderDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [tenders, setTenders] = useState([]);
+  const [tenderBids, setTenderBids] = useState([]);
+  const [tTrade, setTTrade] = useState("");
+  const [tTitle, setTTitle] = useState("");
+  const [tLineItemId, setTLineItemId] = useState("");
+  const [bidDrafts, setBidDrafts] = useState({}); // { [tenderId]: { bidderName, subcontractorId, amount, notes } }
   const fileInputRef = useRef(null);
   const attachInputRef = useRef(null);
   const attachTargetItem = useRef(null);
@@ -1867,7 +1873,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const saveTimers = useRef({});
 
   async function loadAll() {
-    const [{ data: proj }, { data: lineItems }, { data: cos }, { data: snaps }, { data: subsData }, { data: temps }, { data: pos }] =
+    const [{ data: proj }, { data: lineItems }, { data: cos }, { data: snaps }, { data: subsData }, { data: temps }, { data: pos }, { data: tends }] =
       await Promise.all([
         supabase.from("projects_v2").select("*").eq("id", projectId).single(),
         supabase.from("line_items").select("*").eq("project_id", projectId).order("created_at", { ascending: true }),
@@ -1876,6 +1882,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         supabase.from("subcontractors").select("*").order("name"),
         supabase.from("templates").select("*").order("created_at", { ascending: false }),
         supabase.from("purchase_orders").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
+        supabase.from("tenders").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
       ]);
     setProject(proj);
     setItems(lineItems || []);
@@ -1884,6 +1891,14 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     setSubs(subsData || []);
     setTemplates(temps || []);
     setPurchaseOrders(pos || []);
+    setTenders(tends || []);
+    const tenderIds = (tends || []).map((t) => t.id);
+    if (tenderIds.length) {
+      const { data: bids } = await supabase.from("tender_bids").select("*").in("tender_id", tenderIds).order("amount", { ascending: true });
+      setTenderBids(bids || []);
+    } else {
+      setTenderBids([]);
+    }
     setLoaded(true);
   }
 
@@ -2298,6 +2313,80 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     [purchaseOrders]
   );
 
+  async function addTender() {
+    if (!tTrade.trim() || !tTitle.trim()) return;
+    const { data, error } = await supabase
+      .from("tenders")
+      .insert({
+        project_id: projectId,
+        trade: tTrade.trim(),
+        title: tTitle.trim(),
+        line_item_id: tLineItemId || null,
+        status: "open",
+      })
+      .select().single();
+    if (!error && data) {
+      setTenders((prev) => [data, ...prev]);
+      setTTrade(""); setTTitle(""); setTLineItemId("");
+    }
+  }
+
+  async function removeTender(id) {
+    setTenders((prev) => prev.filter((t) => t.id !== id));
+    setTenderBids((prev) => prev.filter((b) => b.tender_id !== id));
+    await supabase.from("tenders").delete().eq("id", id);
+  }
+
+  function updateBidDraft(tenderId, patch) {
+    setBidDrafts((prev) => ({ ...prev, [tenderId]: { ...(prev[tenderId] || {}), ...patch } }));
+  }
+
+  async function addBid(tenderId) {
+    const draft = bidDrafts[tenderId] || {};
+    if (!draft.bidderName?.trim() || !draft.amount) return;
+    const { data, error } = await supabase
+      .from("tender_bids")
+      .insert({
+        tender_id: tenderId,
+        bidder_name: draft.bidderName.trim(),
+        subcontractor_id: draft.subcontractorId || null,
+        amount: Number(draft.amount),
+        notes: (draft.notes || "").trim(),
+        status: "pending",
+      })
+      .select().single();
+    if (!error && data) {
+      setTenderBids((prev) => [...prev, data].sort((a, b) => Number(a.amount) - Number(b.amount)));
+      setBidDrafts((prev) => ({ ...prev, [tenderId]: { bidderName: "", subcontractorId: "", amount: "", notes: "" } }));
+    }
+  }
+
+  async function removeBid(id) {
+    setTenderBids((prev) => prev.filter((b) => b.id !== id));
+    await supabase.from("tender_bids").delete().eq("id", id);
+  }
+
+  async function awardBid(tender, bid) {
+    if (!window.confirm(`Award this tender to ${bid.bidder_name}?`)) return;
+    setTenderBids((prev) => prev.map((b) => {
+      if (b.tender_id !== tender.id) return b;
+      return { ...b, status: b.id === bid.id ? "awarded" : "declined" };
+    }));
+    setTenders((prev) => prev.map((t) => (t.id === tender.id ? { ...t, status: "awarded" } : t)));
+    await Promise.all([
+      supabase.from("tender_bids").update({ status: "awarded" }).eq("id", bid.id),
+      supabase.from("tender_bids").update({ status: "declined" }).eq("tender_id", tender.id).neq("id", bid.id),
+      supabase.from("tenders").update({ status: "awarded" }).eq("id", tender.id),
+    ]);
+    // Closes the loop with the Subcontractors feature: if this tender was
+    // raised against a specific budget line and the winning bidder is
+    // already a known subcontractor, appoint them to that line item.
+    if (tender.line_item_id && bid.subcontractor_id) {
+      setItems((prev) => prev.map((i) => (i.id === tender.line_item_id ? { ...i, subcontractor_id: bid.subcontractor_id } : i)));
+      await supabase.from("line_items").update({ subcontractor_id: bid.subcontractor_id }).eq("id", tender.line_item_id);
+    }
+  }
+
   async function logSnapshot() {
     const { data, error } = await supabase
       .from("snapshots")
@@ -2439,6 +2528,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           ["payments", "Payments & Retention"],
           ["changeorders", `Change Orders${changeOrders.length ? ` (${changeOrders.length})` : ""}`],
           ["purchaseorders", `Purchase Orders${purchaseOrders.length ? ` (${purchaseOrders.length})` : ""}`],
+          ["tenders", `Tenders${tenders.length ? ` (${tenders.length})` : ""}`],
           ["plans", `Plans${(project?.plans || []).length ? ` (${(project.plans || []).length})` : ""}`],
           ["trend", "Trend"],
         ].map(([key, label]) => (
@@ -2925,6 +3015,90 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             <input style={{ ...styles.addInput, flex: 0.9, minWidth: 0, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Amount" type="number" value={poAmount} onChange={(e) => setPoAmount(e.target.value)} />
             <button style={{ ...styles.addBtn, flex: "1.6 0 auto" }} onClick={addPurchaseOrder}>+ Add purchase order</button>
           </div>
+        </div>
+      )}
+
+      {view === "tenders" && (
+        <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+          <div className="no-print" style={{ ...styles.addRow, flexWrap: "nowrap", borderRadius: 18, marginBottom: 16 }}>
+            <input style={{ ...styles.addInput, flex: 1.2, minWidth: 0 }} placeholder="Trade (e.g. Plumbing)" value={tTrade} onChange={(e) => setTTrade(e.target.value)} />
+            <input style={{ ...styles.addInput, flex: 2, minWidth: 0 }} placeholder="Scope of work being tendered" value={tTitle} onChange={(e) => setTTitle(e.target.value)} />
+            <select style={{ ...styles.addInput, flex: 1.4, minWidth: 0 }} value={tLineItemId} onChange={(e) => setTLineItemId(e.target.value)}>
+              <option value="">No line item</option>
+              {items.map((i) => (
+                <option key={i.id} value={i.id}>{i.name}</option>
+              ))}
+            </select>
+            <button style={{ ...styles.addBtn, flex: "1.4 0 auto" }} onClick={addTender}>+ New tender</button>
+          </div>
+
+          {tenders.length === 0 && (
+            <div style={{ ...styles.ledger, padding: 20, fontSize: 13, color: "#6E6E73" }}>
+              No tenders yet. Raise one above to start collecting and comparing subcontractor bids before appointing anyone.
+            </div>
+          )}
+
+          {tenders.map((tender) => {
+            const bids = tenderBids.filter((b) => b.tender_id === tender.id).sort((a, b) => Number(a.amount) - Number(b.amount));
+            const linkedItem = items.find((i) => i.id === tender.line_item_id);
+            const draft = bidDrafts[tender.id] || { bidderName: "", subcontractorId: "", amount: "", notes: "" };
+            const tenderStatusColor = tender.status === "awarded" ? "#4C7A5C" : tender.status === "cancelled" ? "#C1462B" : "#B85C2C";
+            return (
+              <div key={tender.id} style={{ ...styles.scoreCard, marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 4 }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#B85C2C", background: "rgba(184,92,44,0.1)", borderRadius: 100, padding: "3px 10px" }}>{tender.trade || "Trade"}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: tenderStatusColor }}>{tender.status}</span>
+                    </div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#1D1D1F" }}>{tender.title}</div>
+                    {linkedItem && <div style={{ fontSize: 12.5, color: "#6E6E73", marginTop: 2 }}>Against: {linkedItem.name}</div>}
+                  </div>
+                  <button className="no-print" style={styles.removeBtn} onClick={() => removeTender(tender.id)}>✕</button>
+                </div>
+
+                <div style={{ borderTop: "1px solid #F2F2F5", marginTop: 10, paddingTop: 10 }}>
+                  {bids.length === 0 && <div style={{ fontSize: 13, color: "#6E6E73", padding: "4px 0" }}>No bids logged yet.</div>}
+                  {bids.map((bid) => {
+                    const bidStatusColor = bid.status === "awarded" ? "#4C7A5C" : bid.status === "declined" ? "#C1462B" : bid.status === "shortlisted" ? "#B8862F" : "#6E6E73";
+                    return (
+                      <div key={bid.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #F7F7F8" }}>
+                        <div style={{ flex: 1.6, fontSize: 13.5, color: "#1D1D1F" }}>{bid.bidder_name}</div>
+                        <div style={{ flex: 1, fontSize: 13.5, fontFamily: "'IBM Plex Mono', monospace", textAlign: "right" }}>{fmt(bid.amount)}</div>
+                        <div style={{ flex: 1.6, fontSize: 12.5, color: "#6E6E73" }}>{bid.notes}</div>
+                        <div style={{ flex: 0.9, fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: bidStatusColor, textAlign: "center" }}>{bid.status}</div>
+                        <div className="no-print" style={{ flex: 1.2, textAlign: "right", display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                          {tender.status === "open" && bid.status !== "awarded" && bid.status !== "declined" && (
+                            <button style={{ ...styles.addBtn, padding: "5px 10px", fontSize: 11.5 }} onClick={() => awardBid(tender, bid)}>Award</button>
+                          )}
+                          <button style={styles.removeBtn} onClick={() => removeBid(bid.id)}>✕</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {tender.status === "open" && (
+                  <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "nowrap", marginTop: 12 }}>
+                    <input style={{ ...styles.addInput, flex: 1.4, minWidth: 0 }} placeholder="Bidder / company name"
+                      value={draft.bidderName} onChange={(e) => updateBidDraft(tender.id, { bidderName: e.target.value })} />
+                    <select style={{ ...styles.addInput, flex: 1.4, minWidth: 0 }}
+                      value={draft.subcontractorId} onChange={(e) => updateBidDraft(tender.id, { subcontractorId: e.target.value })}>
+                      <option value="">Not yet in Subcontractors</option>
+                      {subs.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                    <input style={{ ...styles.addInput, flex: 1, minWidth: 0, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Amount" type="number"
+                      value={draft.amount} onChange={(e) => updateBidDraft(tender.id, { amount: e.target.value })} />
+                    <input style={{ ...styles.addInput, flex: 1.6, minWidth: 0 }} placeholder="Notes (optional)"
+                      value={draft.notes} onChange={(e) => updateBidDraft(tender.id, { notes: e.target.value })} />
+                    <button style={{ ...styles.addBtn, flex: "1.1 0 auto" }} onClick={() => addBid(tender.id)}>+ Add bid</button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
