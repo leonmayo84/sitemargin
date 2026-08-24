@@ -1866,6 +1866,11 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const [tTitle, setTTitle] = useState("");
   const [tLineItemId, setTLineItemId] = useState("");
   const [bidDrafts, setBidDrafts] = useState({}); // { [tenderId]: { bidderName, subcontractorId, amount, notes } }
+  const [scheduleTasks, setScheduleTasks] = useState([]);
+  const [taskName, setTaskName] = useState("");
+  const [taskLineItemId, setTaskLineItemId] = useState("");
+  const [taskStart, setTaskStart] = useState(() => new Date().toISOString().slice(0, 10));
+  const [taskEnd, setTaskEnd] = useState(() => new Date().toISOString().slice(0, 10));
   const fileInputRef = useRef(null);
   const attachInputRef = useRef(null);
   const attachTargetItem = useRef(null);
@@ -1873,7 +1878,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const saveTimers = useRef({});
 
   async function loadAll() {
-    const [{ data: proj }, { data: lineItems }, { data: cos }, { data: snaps }, { data: subsData }, { data: temps }, { data: pos }, { data: tends }] =
+    const [{ data: proj }, { data: lineItems }, { data: cos }, { data: snaps }, { data: subsData }, { data: temps }, { data: pos }, { data: tends }, { data: tasks }] =
       await Promise.all([
         supabase.from("projects_v2").select("*").eq("id", projectId).single(),
         supabase.from("line_items").select("*").eq("project_id", projectId).order("created_at", { ascending: true }),
@@ -1883,6 +1888,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         supabase.from("templates").select("*").order("created_at", { ascending: false }),
         supabase.from("purchase_orders").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
         supabase.from("tenders").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
+        supabase.from("schedule_tasks").select("*").eq("project_id", projectId).order("start_date", { ascending: true }),
       ]);
     setProject(proj);
     setItems(lineItems || []);
@@ -1892,6 +1898,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     setTemplates(temps || []);
     setPurchaseOrders(pos || []);
     setTenders(tends || []);
+    setScheduleTasks(tasks || []);
     const tenderIds = (tends || []).map((t) => t.id);
     if (tenderIds.length) {
       const { data: bids } = await supabase.from("tender_bids").select("*").in("tender_id", tenderIds).order("amount", { ascending: true });
@@ -2387,6 +2394,38 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     }
   }
 
+  async function addScheduleTask() {
+    if (!taskName.trim() || !taskStart || !taskEnd) return;
+    if (new Date(taskEnd) < new Date(taskStart)) { alert("End date can't be before the start date."); return; }
+    const { data, error } = await supabase
+      .from("schedule_tasks")
+      .insert({
+        project_id: projectId,
+        name: taskName.trim(),
+        line_item_id: taskLineItemId || null,
+        start_date: taskStart,
+        end_date: taskEnd,
+        percent_complete: 0,
+        sort_order: scheduleTasks.length,
+      })
+      .select().single();
+    if (!error && data) {
+      setScheduleTasks((prev) => [...prev, data].sort((a, b) => new Date(a.start_date) - new Date(b.start_date)));
+      setTaskName(""); setTaskLineItemId("");
+    }
+  }
+
+  async function setTaskProgress(id, pct) {
+    const clamped = Math.max(0, Math.min(100, Number(pct) || 0));
+    setScheduleTasks((prev) => prev.map((t) => (t.id === id ? { ...t, percent_complete: clamped } : t)));
+    await supabase.from("schedule_tasks").update({ percent_complete: clamped }).eq("id", id);
+  }
+
+  async function removeScheduleTask(id) {
+    setScheduleTasks((prev) => prev.filter((t) => t.id !== id));
+    await supabase.from("schedule_tasks").delete().eq("id", id);
+  }
+
   async function logSnapshot() {
     const { data, error } = await supabase
       .from("snapshots")
@@ -2529,6 +2568,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           ["changeorders", `Change Orders${changeOrders.length ? ` (${changeOrders.length})` : ""}`],
           ["purchaseorders", `Purchase Orders${purchaseOrders.length ? ` (${purchaseOrders.length})` : ""}`],
           ["tenders", `Tenders${tenders.length ? ` (${tenders.length})` : ""}`],
+          ["schedule", `Schedule${scheduleTasks.length ? ` (${scheduleTasks.length})` : ""}`],
           ["plans", `Plans${(project?.plans || []).length ? ` (${(project.plans || []).length})` : ""}`],
           ["trend", "Trend"],
         ].map(([key, label]) => (
@@ -3101,6 +3141,85 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           })}
         </div>
       )}
+
+      {view === "schedule" && (() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dates = scheduleTasks.flatMap((t) => [new Date(t.start_date + "T00:00:00"), new Date(t.end_date + "T00:00:00")]);
+        const rangeStart = dates.length ? new Date(Math.min(...dates)) : today;
+        const rangeEnd = dates.length ? new Date(Math.max(...dates)) : today;
+        const totalDays = Math.max(1, Math.round((rangeEnd - rangeStart) / 86400000) + 1);
+        const dfmt = (d) => d.toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" });
+        return (
+          <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+            <div className="no-print" style={{ ...styles.addRow, flexWrap: "nowrap", borderRadius: 18, marginBottom: 16 }}>
+              <input style={{ ...styles.addInput, flex: 1.6, minWidth: 0 }} placeholder="Task name (e.g. Roof trusses)" value={taskName} onChange={(e) => setTaskName(e.target.value)} />
+              <select style={{ ...styles.addInput, flex: 1.4, minWidth: 0 }} value={taskLineItemId} onChange={(e) => setTaskLineItemId(e.target.value)}>
+                <option value="">No line item</option>
+                {items.map((i) => (
+                  <option key={i.id} value={i.id}>{i.name}</option>
+                ))}
+              </select>
+              <input style={{ ...styles.addInput, flex: 1, minWidth: 0 }} type="date" value={taskStart} onChange={(e) => setTaskStart(e.target.value)} />
+              <input style={{ ...styles.addInput, flex: 1, minWidth: 0 }} type="date" value={taskEnd} onChange={(e) => setTaskEnd(e.target.value)} />
+              <button style={{ ...styles.addBtn, flex: "1.2 0 auto" }} onClick={addScheduleTask}>+ Add task</button>
+            </div>
+
+            {scheduleTasks.length === 0 ? (
+              <div style={{ ...styles.ledger, padding: 20, fontSize: 13, color: "#6E6E73" }}>
+                No tasks scheduled yet. Add one above to start building the project timeline.
+              </div>
+            ) : (
+              <div style={styles.ledger}>
+                <div style={{ padding: "10px 16px", fontSize: 12, color: "#6E6E73", borderBottom: "1px solid #E8E8ED", display: "flex", justifyContent: "space-between" }}>
+                  <span>{dfmt(rangeStart)}</span>
+                  <span>{dfmt(rangeEnd)}</span>
+                </div>
+                {scheduleTasks.map((task) => {
+                  const start = new Date(task.start_date + "T00:00:00");
+                  const end = new Date(task.end_date + "T00:00:00");
+                  const leftPct = ((start - rangeStart) / 86400000 / totalDays) * 100;
+                  const widthPct = Math.max((((end - start) / 86400000) + 1) / totalDays * 100, 100 / totalDays);
+                  const linkedItem = items.find((i) => i.id === task.line_item_id);
+                  const pct = Number(task.percent_complete || 0);
+                  let statusColor = "#6E6E73"; // not started
+                  let statusLabel = "Not started";
+                  if (pct >= 100) { statusColor = "#4C7A5C"; statusLabel = "Done"; }
+                  else if (end < today) { statusColor = "#C1462B"; statusLabel = "Overdue"; }
+                  else if (start <= today && today <= end) { statusColor = "#B85C2C"; statusLabel = "In progress"; }
+                  return (
+                    <div key={task.id} style={{ padding: "12px 16px", borderBottom: "1px solid #F2F2F5" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 14, fontWeight: 600, color: "#1D1D1F" }}>{task.name}</span>
+                          {linkedItem && <span style={{ fontSize: 12, color: "#6E6E73" }}>· {linkedItem.name}</span>}
+                          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: statusColor }}>{statusLabel}</span>
+                        </div>
+                        <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <input type="number" min="0" max="100" value={pct}
+                            onChange={(e) => setTaskProgress(task.id, e.target.value)}
+                            style={{ ...styles.addInput, width: 56, padding: "4px 6px", fontSize: 12, textAlign: "right" }} />
+                          <span style={{ fontSize: 12, color: "#6E6E73" }}>%</span>
+                          <button style={styles.removeBtn} onClick={() => removeScheduleTask(task.id)}>✕</button>
+                        </div>
+                      </div>
+                      <div style={{ position: "relative", height: 14, background: "#F2F2F5", borderRadius: 4 }}>
+                        <div style={{ position: "absolute", top: 0, bottom: 0, left: `${leftPct}%`, width: `${widthPct}%`, minWidth: 6, background: "rgba(184,92,44,0.16)", border: `1.5px solid ${statusColor}`, borderRadius: 4, overflow: "hidden" }}>
+                          <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: statusColor, opacity: 0.6 }} />
+                        </div>
+                        {today >= rangeStart && today <= rangeEnd && (
+                          <div style={{ position: "absolute", top: -2, bottom: -2, left: `${((today - rangeStart) / 86400000 / totalDays) * 100}%`, width: 1, background: "#1D1D1F" }} title="Today" />
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#6E6E73", marginTop: 4 }}>{dfmt(start)} → {dfmt(end)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {view === "plans" && (
         <div style={styles.ledger}>
