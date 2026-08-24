@@ -583,7 +583,7 @@ function GlobalStyles() {
   );
 }
 
-function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl }) {
+function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl, hideTitle }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const tabs = [
     ["dashboard", "Projects"],
@@ -610,15 +610,17 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl 
           </button>
         </div>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        {logoUrl && (
-          // Deliberately not "no-print" — the company logo should appear on
-          // printed/exported output (change order sheets, cost reports etc.),
-          // not just on screen.
-          <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />
-        )}
-        <h1 style={styles.dashTitle}>{title}</h1>
-      </div>
+      {!hideTitle && (
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {logoUrl && (
+            // Deliberately not "no-print" — the company logo should appear on
+            // printed/exported output (change order sheets, cost reports etc.),
+            // not just on screen.
+            <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />
+          )}
+          <h1 style={styles.dashTitle}>{title}</h1>
+        </div>
+      )}
 
       {menuOpen && (
         <div id="appMenuPanel" className="no-print" style={styles.menuPanel}>
@@ -658,29 +660,25 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl 
   );
 }
 
-function TopNav({ current, onNavigate, userEmail, onSignOut }) {
-  const tabs = [
-    ["dashboard", "Projects"],
-    ["subcontractors", "Subcontractors"],
-    ["templates", "Templates"],
-    ["apptools", "App Tools"],
-  ];
+/* Footer, matching sitemargin.co.za's own footer exactly (same text, same
+   six links back to the marketing site's pages) — rendered at the bottom of
+   every app page for the "all aspects, uniform" header/footer request. */
+function AppFooter() {
   return (
-    <div className="no-print sm-top-nav" style={styles.topNav}>
-      {tabs.map(([key, label]) => (
-        <button
-          key={key}
-          style={{ ...styles.topNavBtn, ...(current === key ? styles.topNavBtnActive : {}) }}
-          onClick={() => onNavigate(key)}
-        >
-          {label}
-        </button>
-      ))}
-      {onSignOut && (
-        <div style={styles.topNavRight}>
-          <button style={styles.exportBtn} onClick={() => window.print()}>Print</button>
-          {userEmail && <span style={styles.topNavEmail}>{userEmail}</span>}
-          <button style={styles.topNavSignOut} onClick={onSignOut}>Sign out</button>
+    <div className="no-print" style={styles.siteFooter}>
+      <span>SiteMargin — built for contractors, not accountants.</span>
+      {/* Same reasoning as the hamburger menu's marketing-site link: on the
+          native app these would hijack the app's own webview to show an
+          external page. They're shown on the web build, where linking out
+          to the marketing site's pages is a normal, expected action. */}
+      {!Capacitor.isNativePlatform() && (
+        <div style={styles.siteFooterLinks}>
+          <a href="https://sitemargin.co.za/whats-inside.html" target="_blank" rel="noopener noreferrer" style={styles.siteFooterLink}>What's inside</a>
+          <a href="https://sitemargin.co.za/pricing.html" target="_blank" rel="noopener noreferrer" style={styles.siteFooterLink}>Pricing</a>
+          <a href="https://sitemargin.co.za/about.html" target="_blank" rel="noopener noreferrer" style={styles.siteFooterLink}>About</a>
+          <a href="https://sitemargin.co.za/contact.html" target="_blank" rel="noopener noreferrer" style={styles.siteFooterLink}>Contact</a>
+          <a href="https://sitemargin.co.za/terms.html" target="_blank" rel="noopener noreferrer" style={styles.siteFooterLink}>Terms</a>
+          <a href="https://sitemargin.co.za/privacy.html" target="_blank" rel="noopener noreferrer" style={styles.siteFooterLink}>Privacy</a>
         </div>
       )}
     </div>
@@ -696,15 +694,23 @@ function AppShell({ userEmail, onSignOut }) {
   // block). Lives in its own table keyed by owner_email rather than on
   // each project, since it's one logo per account, not per project.
   const [companyLogoUrl, setCompanyLogoUrl] = useState(null);
+  // Client-chosen account/display name, set on App Tools. Used for the
+  // dashboard title ("[name]'s projects") instead of defaulting to
+  // something derived from the sign-in email — clients should be able to
+  // name their own account freely.
+  const [companyDisplayName, setCompanyDisplayName] = useState(null);
 
   useEffect(() => {
     if (!userEmail) return;
     supabase
       .from("company_settings")
-      .select("logo_data_url")
+      .select("logo_data_url, display_name")
       .eq("owner_email", userEmail)
       .maybeSingle()
-      .then(({ data }) => setCompanyLogoUrl(data?.logo_data_url || null));
+      .then(({ data }) => {
+        setCompanyLogoUrl(data?.logo_data_url || null);
+        setCompanyDisplayName(data?.display_name || null);
+      });
   }, [userEmail]);
 
   const navigate = (page) => setRoute({ page, projectId: null });
@@ -714,6 +720,9 @@ function AppShell({ userEmail, onSignOut }) {
       <ProjectView
         projectId={route.projectId}
         onBack={() => setRoute({ page: "dashboard", projectId: null })}
+        onNavigate={navigate}
+        userEmail={userEmail}
+        onSignOut={onSignOut}
         logoUrl={companyLogoUrl}
       />
     );
@@ -732,6 +741,8 @@ function AppShell({ userEmail, onSignOut }) {
         onSignOut={onSignOut}
         logoUrl={companyLogoUrl}
         onLogoChange={setCompanyLogoUrl}
+        displayName={companyDisplayName}
+        onDisplayNameChange={setCompanyDisplayName}
       />
     );
   }
@@ -742,6 +753,7 @@ function AppShell({ userEmail, onSignOut }) {
       userEmail={userEmail}
       onSignOut={onSignOut}
       logoUrl={companyLogoUrl}
+      displayName={companyDisplayName}
     />
   );
 }
@@ -753,10 +765,28 @@ function AppShell({ userEmail, onSignOut }) {
    a storage bucket — logos are small, and this avoids standing up bucket
    RLS for a single per-account image. */
 
-function AppToolsPage({ onNavigate, userEmail, onSignOut, logoUrl, onLogoChange }) {
+function AppToolsPage({ onNavigate, userEmail, onSignOut, logoUrl, onLogoChange, displayName, onDisplayNameChange }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const logoInputRef = useRef(null);
+  const [nameDraft, setNameDraft] = useState(displayName || "");
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameSaved, setNameSaved] = useState(false);
+
+  useEffect(() => { setNameDraft(displayName || ""); }, [displayName]);
+
+  async function saveDisplayName() {
+    const trimmed = nameDraft.trim();
+    setNameSaving(true);
+    const { error: upsertError } = await supabase
+      .from("company_settings")
+      .upsert({ owner_email: userEmail, display_name: trimmed || null, updated_at: new Date().toISOString() });
+    setNameSaving(false);
+    if (upsertError) { setError("Couldn't save the account name — please try again."); return; }
+    onDisplayNameChange(trimmed || null);
+    setNameSaved(true);
+    setTimeout(() => setNameSaved(false), 2500);
+  }
 
   async function handleLogoFile(e) {
     const file = e.target.files?.[0];
@@ -796,9 +826,29 @@ function AppToolsPage({ onNavigate, userEmail, onSignOut, logoUrl, onLogoChange 
     <div style={styles.page}>
       <GlobalStyles />
       <PageHeader title="App Tools" current="apptools" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
-      <TopNav current="apptools" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
+        <div style={styles.apptoolsPanel}>
+          <div style={styles.apptoolsTitle}>Account name</div>
+          <p style={{ fontSize: 13, color: "#8A8072", lineHeight: 1.55, margin: "0 0 16px" }}>
+            Used for the "[name]'s projects" title on your dashboard. Defaults to a name guessed from your
+            sign-in email until you set one here.
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <input
+              style={{ ...styles.addInput, flex: "1 1 220px" }}
+              placeholder={friendlyFirstName(userEmail)}
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && saveDisplayName()}
+            />
+            <button style={styles.addBtn} onClick={saveDisplayName} disabled={nameSaving}>
+              {nameSaving ? "Saving…" : "Save name"}
+            </button>
+            {nameSaved && <span style={{ fontSize: 12.5, color: "#4C7A5C" }}>Saved</span>}
+          </div>
+        </div>
+
         <div style={styles.apptoolsPanel}>
           <div style={styles.apptoolsTitle}>Company logo</div>
           <p style={{ fontSize: 13, color: "#8A8072", lineHeight: 1.55, margin: "0 0 16px" }}>
@@ -819,6 +869,7 @@ function AppToolsPage({ onNavigate, userEmail, onSignOut, logoUrl, onLogoChange 
           {error && <div style={{ ...styles.gateError, marginTop: 12 }}>{error}</div>}
         </div>
       </div>
+      <AppFooter />
     </div>
   );
 }
@@ -1220,6 +1271,7 @@ function AuthGate() {
           </>
         )}
       </div>
+      <AppFooter />
     </div>
   );
 }
@@ -1285,7 +1337,7 @@ export default function SiteMargin() {
 
 const FREE_PROJECT_LIMIT = 1;
 
-function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl }) {
+function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, displayName }) {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
@@ -1375,9 +1427,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl }) {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <PageHeader title={`${friendlyFirstName(userEmail)}'s projects`} current="dashboard" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
-
-      <TopNav current="dashboard" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
+      <PageHeader title={`${(displayName || "").trim() || friendlyFirstName(userEmail)}'s projects`} current="dashboard" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
 
       {projects.length > 0 && (
         <div style={styles.summaryStrip}>
@@ -1454,6 +1504,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl }) {
           })}
         </div>
       )}
+      <AppFooter />
     </div>
   );
 }
@@ -1513,8 +1564,6 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
     <div style={styles.page}>
       <GlobalStyles />
       <PageHeader title="Subcontractor scorecards" current="subcontractors" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
-
-      <TopNav current="subcontractors" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
 
       <div style={styles.explainer}>
         Scores build up automatically from the line items you assign to each sub. <b>Budget</b> comes from how close
@@ -1613,6 +1662,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
           })}
         </div>
       )}
+      <AppFooter />
     </div>
   );
 }
@@ -1693,8 +1743,6 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
       <GlobalStyles />
       <PageHeader title="Templates" current="templates" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
 
-      <TopNav current="templates" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} />
-
       <div style={styles.explainer}>
         Build a standard line-item set once — a typical residential build, a shopfit, whatever you repeat — then apply it
         to any new project in one click instead of retyping it. You can also save an existing project's line items
@@ -1771,13 +1819,14 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
           })}
         </div>
       )}
+      <AppFooter />
     </div>
   );
 }
 
 /* ============================== PROJECT VIEW ============================== */
 
-function ProjectView({ projectId, onBack, logoUrl }) {
+function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logoUrl }) {
   const [project, setProject] = useState(null);
   const [items, setItems] = useState([]);
   const [changeOrders, setChangeOrders] = useState([]);
@@ -2209,6 +2258,7 @@ function ProjectView({ projectId, onBack, logoUrl }) {
     return (
       <div style={styles.page}>
         <GlobalStyles />
+        <PageHeader current={null} onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} hideTitle />
         <div style={{ ...styles.footer, textAlign: "center", padding: 60 }}>Loading project…</div>
       </div>
     );
@@ -2219,6 +2269,13 @@ function ProjectView({ projectId, onBack, logoUrl }) {
       <GlobalStyles />
       <input ref={fileInputRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.pdf,application/pdf" onChange={handleImportFile} style={{ display: "none" }} />
       <input ref={attachInputRef} type="file" onChange={handleAttachFile} style={{ display: "none" }} />
+
+      {/* Shared app nav (logo, hamburger, full-screen menu overlay), same
+          component every other page uses — this page previously had none of
+          its own, which was the main inconsistency. Its own title block
+          (eyebrow, editable project name, logo) still renders below, so the
+          shared header's title row is hidden here. */}
+      <PageHeader current={null} onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} hideTitle />
 
       <div className="no-print" style={styles.backRow}>
         <button style={styles.backBtn} onClick={onBack}>← All projects</button>
@@ -2844,6 +2901,8 @@ function ProjectView({ projectId, onBack, logoUrl }) {
         Click Actual to log spend, or "Details" on any line to set the subcontractor, dates, quality rating, notes and files.
       </div>
 
+      <AppFooter />
+
       {importPreviewItems && (
         <div className="no-print" style={styles.modalOverlay} onClick={() => setImportPreviewItems(null)}>
           <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
@@ -3075,6 +3134,9 @@ const styles = {
   addInput: { background: "#EFE9D9", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontSize: 14, padding: "8px 10px" },
   addBtn: { background: "#B85C2C", border: "none", borderRadius: 3, color: "#FFFFFF", fontWeight: 600, fontSize: 13, padding: "9px 14px", cursor: "pointer", whiteSpace: "nowrap" },
   footer: { maxWidth: 1180, margin: "16px auto 0", fontSize: 12, color: "#8A8072" },
+  siteFooter: { maxWidth: 1180, margin: "40px auto 0", padding: "24px 0", borderTop: "1px solid #E4DCC8", fontSize: 13, color: "#8A8072", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 14 },
+  siteFooterLinks: { display: "flex", gap: 20, flexWrap: "wrap" },
+  siteFooterLink: { color: "#8A8072", textDecoration: "none" },
   docFooter: { maxWidth: 1180, margin: "30px auto 0", paddingTop: 14, borderTop: "1px solid #D8CFB8" },
   dfRow: { display: "flex", justifyContent: "space-between", alignItems: "center" },
   dfBrand: { display: "flex", alignItems: "center", gap: 6, fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 14, color: "#1C1712" },
