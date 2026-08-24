@@ -618,13 +618,15 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
       </div>
       {!hideTitle && (
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {logoUrl && (
-            // Deliberately not "no-print" — the company logo should appear on
-            // printed/exported output (change order sheets, cost reports etc.),
-            // not just on screen.
-            <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />
+          {logoNode !== undefined ? logoNode : (
+            logoUrl && (
+              // Deliberately not "no-print" — the company logo should appear on
+              // printed/exported output (change order sheets, cost reports etc.),
+              // not just on screen.
+              <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />
+            )
           )}
-          <h1 style={styles.dashTitle}>{title}</h1>
+          {titleNode !== undefined ? titleNode : <h1 style={styles.dashTitle}>{title}</h1>}
         </div>
       )}
 
@@ -640,6 +642,51 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                 {label}
               </button>
             ))}
+            {/* The marketing site's own menu, one level down, lists its
+                other pages (What's inside, Pricing, About, Contact, Terms,
+                Privacy) below its app-equivalent links. Mirroring that here
+                — same items, same reduced Terms/Privacy treatment — so the
+                two menus match in contents, not just in style. Web-only,
+                same native-webview-hijack reasoning as the footer. */}
+            {!Capacitor.isNativePlatform() && (
+              <>
+                {[
+                  { label: "What's inside", href: "https://sitemargin.co.za/whats-inside.html" },
+                  { label: "Pricing", href: "https://sitemargin.co.za/pricing.html" },
+                  { label: "About", href: "https://sitemargin.co.za/about.html" },
+                  { label: "Contact", href: "https://sitemargin.co.za/contact.html" },
+                ].map((item) => (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={styles.menuPanelLink}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+                <a
+                  href="https://sitemargin.co.za/terms.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ ...styles.menuPanelLink, fontSize: 15, opacity: 0.7, paddingTop: 8, paddingBottom: 8, borderBottom: "none" }}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Terms
+                </a>
+                <a
+                  href="https://sitemargin.co.za/privacy.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ ...styles.menuPanelLink, fontSize: 15, opacity: 0.7, paddingTop: 0 }}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Privacy
+                </a>
+              </>
+            )}
             <div style={styles.menuPanelActions}>
               <button style={styles.menuPanelGhost} onClick={closeAnd(() => window.print())}>Print</button>
               {onSignOut && <button style={styles.menuPanelSolid} onClick={closeAnd(onSignOut)}>Sign out</button>}
@@ -2969,13 +3016,19 @@ const styles = {
   menuBtnBarMidOpen: { opacity: 0 },
   menuBtnBar3Open: { transform: "translateY(-7px) rotate(-45deg)" },
 
-  menuPanel: { position: "fixed", inset: 0, background: "#F5EFE2", zIndex: 200, display: "flex", flexDirection: "column", padding: "170px 16px 40px", overflowY: "auto" },
-  menuPanelInner: { maxWidth: 1180, margin: "0 auto", width: "100%" },
+  // Every value below is copied 1:1 from sitemargin.co.za's own
+  // .menu-panel / .menu-inner / .menu-link / .menu-actions rules in
+  // styles.css — not approximated. menuPanelInner previously used 1180
+  // (the app's wider content-page width) instead of the marketing site's
+  // actual 980, and menuPanelActions was a side-by-side row instead of
+  // marketing's stacked, full-width column — both fixed here.
+  menuPanel: { position: "fixed", inset: 0, background: "#F5EFE2", zIndex: 200, display: "flex", flexDirection: "column", padding: "150px 20px 40px", overflowY: "auto" },
+  menuPanelInner: { maxWidth: 980, margin: "0 auto", width: "100%" },
   menuPanelLink: { display: "block", width: "100%", textAlign: "left", background: "none", fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 600, color: "#1C1712", border: "none", borderBottom: "1px solid #E4DCC8", padding: "18px 0", cursor: "pointer" },
   menuPanelLinkActive: { color: "#B85C2C" },
-  menuPanelActions: { marginTop: 24, display: "flex", flexWrap: "wrap", gap: 12 },
-  menuPanelGhost: { textAlign: "center", padding: "13px 22px", borderRadius: 4, fontWeight: 600, fontSize: 15, border: "1px solid #1C1712", color: "#1C1712", background: "none", cursor: "pointer" },
-  menuPanelSolid: { textAlign: "center", padding: "13px 22px", borderRadius: 4, fontWeight: 600, fontSize: 15, border: "none", color: "#F5EFE2", background: "#1C1712", cursor: "pointer" },
+  menuPanelActions: { marginTop: 30, display: "flex", flexDirection: "column", gap: 12 },
+  menuPanelGhost: { textAlign: "center", padding: 15, borderRadius: 4, fontWeight: 600, fontSize: 15, border: "1px solid #1C1712", color: "#1C1712", background: "none", cursor: "pointer" },
+  menuPanelSolid: { textAlign: "center", padding: 15, borderRadius: 4, fontWeight: 600, fontSize: 15, border: "none", color: "#F5EFE2", background: "#1C1712", cursor: "pointer" },
   menuPanelEmail: { marginTop: 22, fontSize: 12, color: "#8A8072", fontFamily: "'IBM Plex Mono', monospace" },
 
   topNav: { maxWidth: 1180, margin: "0 auto 20px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #E4DCC8", paddingBottom: 12 },
@@ -3120,25 +3173,4 @@ const styles = {
 
   trendRow: { display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #EFE9D9" },
 
-  quoteSheet: { maxWidth: 800, margin: "0 auto", background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "36px 40px", boxShadow: "0 4px 16px rgba(28,23,18,0.05)" },
-  quoteHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #1C1712", paddingBottom: 20, marginBottom: 28 },
-  quoteEyebrow: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, marginBottom: 6 },
-  quoteProjectName: { fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 500, color: "#1C1712" },
-  quoteMeta: { textAlign: "right", fontSize: 12.5, color: "#6B6258", lineHeight: 1.7 },
-  quoteCatHeading: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, letterSpacing: "0.06em", color: "#8A8072", textTransform: "uppercase", marginBottom: 8, paddingBottom: 6, borderBottom: "1px solid #EFE9D9" },
-  quoteRow: { display: "flex", padding: "6px 0", fontSize: 14, color: "#1C1712" },
-  quoteTotalRow: { display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 600, color: "#1C1712", borderTop: "2px solid #1C1712", paddingTop: 14, marginTop: 10 },
-  quoteFootnote: { fontSize: 11.5, color: "#8A8072", marginTop: 30, lineHeight: 1.6, borderTop: "1px solid #EFE9D9", paddingTop: 16 },
-
-  modalOverlay: { position: "fixed", inset: 0, background: "rgba(28,23,18,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 },
-  modalCard: { background: "#FFFFFF", borderRadius: 8, maxWidth: 760, width: "100%", maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 50px rgba(28,23,18,0.25)" },
-  modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "20px 24px", borderBottom: "1px solid #E4DCC8" },
-  modalTitle: { fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 600, color: "#1C1712" },
-  modalSub: { fontSize: 12.5, color: "#6B6258", marginTop: 4, maxWidth: 480 },
-  modalBody: { padding: "12px 24px", overflowY: "auto", flex: 1 },
-  modalFooter: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderTop: "1px solid #E4DCC8" },
-  previewHeaderRow: { display: "flex", gap: 10, fontSize: 11, letterSpacing: "0.06em", color: "#8A8072", textTransform: "uppercase", padding: "8px 0", borderBottom: "1px solid #E4DCC8" },
-  previewRow: { display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 0", borderBottom: "1px solid #EFE9D9" },
-  previewInput: { width: "100%", background: "#FAF6EC", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontSize: 13, padding: "6px 8px" },
-  previewNote: { fontSize: 10.5, color: "#8A8072", marginTop: 3 },
-};
+  quoteSheet: { maxWidth: 800, margin: "0 auto", background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "36px 40px",
