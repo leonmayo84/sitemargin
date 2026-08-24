@@ -1823,6 +1823,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const [coPriority, setCoPriority] = useState("Normal");
   const [coPoNumber, setCoPoNumber] = useState("");
   const [coDate, setCoDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [poSupplier, setPoSupplier] = useState("");
+  const [poNumber, setPoNumber] = useState("");
+  const [poDescription, setPoDescription] = useState("");
+  const [poAmount, setPoAmount] = useState("");
+  const [poLineItemId, setPoLineItemId] = useState("");
+  const [poOrderDate, setPoOrderDate] = useState(() => new Date().toISOString().slice(0, 10));
   const fileInputRef = useRef(null);
   const attachInputRef = useRef(null);
   const attachTargetItem = useRef(null);
@@ -1830,7 +1837,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const saveTimers = useRef({});
 
   async function loadAll() {
-    const [{ data: proj }, { data: lineItems }, { data: cos }, { data: snaps }, { data: subsData }, { data: temps }] =
+    const [{ data: proj }, { data: lineItems }, { data: cos }, { data: snaps }, { data: subsData }, { data: temps }, { data: pos }] =
       await Promise.all([
         supabase.from("projects_v2").select("*").eq("id", projectId).single(),
         supabase.from("line_items").select("*").eq("project_id", projectId).order("created_at", { ascending: true }),
@@ -1838,6 +1845,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         supabase.from("snapshots").select("*").eq("project_id", projectId).order("created_at", { ascending: true }),
         supabase.from("subcontractors").select("*").order("name"),
         supabase.from("templates").select("*").order("created_at", { ascending: false }),
+        supabase.from("purchase_orders").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
       ]);
     setProject(proj);
     setItems(lineItems || []);
@@ -1845,6 +1853,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     setSnapshots(snaps || []);
     setSubs(subsData || []);
     setTemplates(temps || []);
+    setPurchaseOrders(pos || []);
     setLoaded(true);
   }
 
@@ -2220,6 +2229,45 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     await supabase.from("change_orders").delete().eq("id", id);
   }
 
+  async function addPurchaseOrder() {
+    if (!poSupplier.trim() || !poAmount) return;
+    const { data, error } = await supabase
+      .from("purchase_orders")
+      .insert({
+        project_id: projectId,
+        supplier_name: poSupplier.trim(),
+        po_number: poNumber.trim() || null,
+        description: poDescription.trim(),
+        amount: Number(poAmount),
+        line_item_id: poLineItemId || null,
+        status: "draft",
+        order_date: poOrderDate || new Date().toISOString().slice(0, 10),
+      })
+      .select().single();
+    if (!error && data) {
+      setPurchaseOrders((prev) => [data, ...prev]);
+      setPoSupplier(""); setPoNumber(""); setPoDescription(""); setPoAmount(""); setPoLineItemId("");
+      setPoOrderDate(new Date().toISOString().slice(0, 10));
+    }
+  }
+
+  async function setPoStatus(id, status) {
+    const patch = { status };
+    if (status === "received") patch.received_date = new Date().toISOString().slice(0, 10);
+    setPurchaseOrders((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+    await supabase.from("purchase_orders").update(patch).eq("id", id);
+  }
+
+  async function removePurchaseOrder(id) {
+    setPurchaseOrders((prev) => prev.filter((p) => p.id !== id));
+    await supabase.from("purchase_orders").delete().eq("id", id);
+  }
+
+  const poOutstandingTotal = useMemo(
+    () => purchaseOrders.filter((p) => p.status !== "received" && p.status !== "cancelled").reduce((s, p) => s + Number(p.amount || 0), 0),
+    [purchaseOrders]
+  );
+
   async function logSnapshot() {
     const { data, error } = await supabase
       .from("snapshots")
@@ -2359,6 +2407,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           ["charts", "Charts"],
           ["payments", "Payments & Retention"],
           ["changeorders", `Change Orders${changeOrders.length ? ` (${changeOrders.length})` : ""}`],
+          ["purchaseorders", `Purchase Orders${purchaseOrders.length ? ` (${purchaseOrders.length})` : ""}`],
           ["plans", `Plans${(project?.plans || []).length ? ` (${(project.plans || []).length})` : ""}`],
           ["trend", "Trend"],
         ].map(([key, label]) => (
@@ -2777,6 +2826,73 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             <input style={{ ...styles.addInput, flex: 1 }} type="date" value={coDate} onChange={(e) => setCoDate(e.target.value)} />
             <input style={{ ...styles.addInput, flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Amount" type="number" value={coAmount} onChange={(e) => setCoAmount(e.target.value)} />
             <button style={styles.addBtn} onClick={addChangeOrder}>+ Add change order</button>
+          </div>
+        </div>
+      )}
+
+      {view === "purchaseorders" && (
+        <div style={{ ...styles.ledger, overflowX: "auto" }}>
+          <div style={{ padding: "12px 16px", fontSize: 13, color: "#6E6E73", borderBottom: "1px solid #E8E8ED" }}>
+            Outstanding (not yet received): <strong style={{ color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(poOutstandingTotal)}</strong>
+          </div>
+          <div style={{ ...styles.ledgerHeaderRow, minWidth: 980 }}>
+            <span style={{ ...styles.thCell, flex: 1.4 }}>Supplier</span>
+            <span style={{ ...styles.thCell, flex: 1 }}>PO #</span>
+            <span style={{ ...styles.thCell, flex: 1.8 }}>Description</span>
+            <span style={{ ...styles.thCell, flex: 1.4 }}>Against line item</span>
+            <span style={{ ...styles.thCell, flex: 1, textAlign: "center" }}>Order date</span>
+            <span style={{ ...styles.thCell, flex: 1, textAlign: "right" }}>Amount</span>
+            <span style={{ ...styles.thCell, flex: 1.2, textAlign: "center" }}>Status</span>
+            <span style={{ ...styles.thCell, flex: 0.6 }}></span>
+          </div>
+          {purchaseOrders.map((po) => {
+            const linkedItem = items.find((i) => i.id === po.line_item_id);
+            const poStatusColor = po.status === "received" ? "#4C7A5C" : po.status === "cancelled" ? "#C1462B" : po.status === "confirmed" ? "#1D1D1F" : po.status === "sent" ? "#B8862F" : "#6E6E73";
+            return (
+              <div key={po.id} style={{ ...styles.row, minWidth: 980 }}>
+                <span style={{ ...styles.tdCell, flex: 1.4 }}>{po.supplier_name}</span>
+                <span style={{ ...styles.tdCell, flex: 1, fontFamily: "'IBM Plex Mono', monospace" }}>{po.po_number || "—"}</span>
+                <span style={{ ...styles.tdCell, flex: 1.8 }}>{po.description || "—"}</span>
+                <span style={{ ...styles.tdCell, flex: 1.4, color: "#6E6E73" }}>{linkedItem ? linkedItem.name : "—"}</span>
+                <span style={{ ...styles.tdCell, flex: 1, textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }}>
+                  {po.order_date ? new Date(po.order_date + "T00:00:00").toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                </span>
+                <span style={{ ...styles.tdCell, flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(po.amount)}</span>
+                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "center" }} className="no-print">
+                  <select value={po.status} onChange={(e) => setPoStatus(po.id, e.target.value)}
+                    style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: poStatusColor }}>
+                    <option value="draft">Draft</option>
+                    <option value="sent">Sent</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="received">Received</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </span>
+                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "center", color: poStatusColor }} className="print-only-status">{po.status}</span>
+                <span style={{ ...styles.tdCell, flex: 0.6, textAlign: "right" }} className="no-print">
+                  <button style={styles.removeBtn} onClick={() => removePurchaseOrder(po.id)}>✕</button>
+                </span>
+              </div>
+            );
+          })}
+          {purchaseOrders.length === 0 && (
+            <div style={{ padding: 20, fontSize: 13, color: "#6E6E73" }}>
+              No purchase orders yet. Log a supplier order below to track it against this project's budget.
+            </div>
+          )}
+          <div className="no-print" style={{ ...styles.addRow, minWidth: 980, flexWrap: "wrap" }}>
+            <input style={{ ...styles.addInput, flex: 1.4 }} placeholder="Supplier name" value={poSupplier} onChange={(e) => setPoSupplier(e.target.value)} />
+            <input style={{ ...styles.addInput, flex: 1 }} placeholder="PO # (optional)" value={poNumber} onChange={(e) => setPoNumber(e.target.value)} />
+            <input style={{ ...styles.addInput, flex: 1.8 }} placeholder="Description / materials" value={poDescription} onChange={(e) => setPoDescription(e.target.value)} />
+            <select style={{ ...styles.addInput, flex: 1.4 }} value={poLineItemId} onChange={(e) => setPoLineItemId(e.target.value)}>
+              <option value="">No line item</option>
+              {items.map((i) => (
+                <option key={i.id} value={i.id}>{i.name}</option>
+              ))}
+            </select>
+            <input style={{ ...styles.addInput, flex: 1 }} type="date" value={poOrderDate} onChange={(e) => setPoOrderDate(e.target.value)} />
+            <input style={{ ...styles.addInput, flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Amount" type="number" value={poAmount} onChange={(e) => setPoAmount(e.target.value)} />
+            <button style={styles.addBtn} onClick={addPurchaseOrder}>+ Add purchase order</button>
           </div>
         </div>
       )}
