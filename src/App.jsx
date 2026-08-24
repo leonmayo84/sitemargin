@@ -2993,7 +2993,12 @@ const styles = {
   appLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 30, letterSpacing: "-0.01em", color: "#1C1712" },
   eyebrowLink: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, textTransform: "uppercase", textDecoration: "none", display: "inline-block" },
 
-  dashHeader: { maxWidth: 1180, margin: "0 auto 20px", position: "relative" },
+  // zIndex 201 keeps the logo + hamburger button visible ABOVE the full-screen
+  // menu overlay (zIndex 200) when the menu is open — otherwise the overlay
+  // covers the close (✕) button and there's no way to see it's open or close
+  // it, which is what the marketing site avoids via the same nav-above-panel
+  // stacking (nav z-index 200 > .menu-panel z-index 150 on sitemargin.co.za).
+  dashHeader: { maxWidth: 1180, margin: "0 auto 20px", position: "relative", zIndex: 201 },
   dashNavBar: { display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #E4DCC8", paddingBottom: 16, marginBottom: 22, gap: 16, flexWrap: "wrap" },
   dashNavRight: { display: "flex", alignItems: "center", gap: 14 },
   dashTitle: { fontFamily: "'Fraunces', serif", fontSize: "clamp(36px, 6vw, 58px)", fontWeight: 500, letterSpacing: "-0.01em" },
@@ -3008,7 +3013,7 @@ const styles = {
   menuBtnBarMidOpen: { opacity: 0 },
   menuBtnBar3Open: { transform: "translateY(-7px) rotate(-45deg)" },
 
-  menuPanel: { position: "fixed", inset: 0, background: "#F5EFE2", zIndex: 200, display: "flex", flexDirection: "column", padding: "24px 16px 40px", overflowY: "auto" },
+  menuPanel: { position: "fixed", inset: 0, background: "#F5EFE2", zIndex: 200, display: "flex", flexDirection: "column", padding: "170px 16px 40px", overflowY: "auto" },
   menuPanelInner: { maxWidth: 1180, margin: "0 auto", width: "100%" },
   menuPanelLink: { display: "block", width: "100%", textAlign: "left", background: "none", fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 600, color: "#1C1712", border: "none", borderBottom: "1px solid #E4DCC8", padding: "18px 0", cursor: "pointer" },
   menuPanelLinkActive: { color: "#B85C2C" },
