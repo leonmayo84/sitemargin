@@ -42,7 +42,7 @@ const STATUS = {
 };
 
 const CATEGORIES = ["Labour", "Materials", "Labour & Materials", "Subcontractors", "Other"];
-const CATEGORY_COLOR = { Labour: "#3D6FA6", Materials: "#B8862F", "Labour & Materials": "#4FA8A0", Subcontractors: "#8B5FA3", Other: "#8A8072" };
+const CATEGORY_COLOR = { Labour: "#3D6FA6", Materials: "#B8862F", "Labour & Materials": "#4FA8A0", Subcontractors: "#8B5FA3", Other: "#6E6E73" };
 
 function statusFor(budget, actual) {
   if (budget <= 0) return "ok";
@@ -108,7 +108,7 @@ function scoreSubcontractor(items) {
 }
 
 function scoreColor(score) {
-  if (score == null) return "#8A8072";
+  if (score == null) return "#6E6E73";
   if (score >= 75) return "#4C7A5C";
   if (score >= 50) return "#B8862F";
   return "#C1462B";
@@ -360,20 +360,20 @@ function BarChartBudgetVsActual({ items }) {
         return (
           <div key={item.id}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-              <span style={{ fontSize: 12.5, color: "#4A443B" }}>{item.name}</span>
+              <span style={{ fontSize: 12.5, color: "#4A4A4F" }}>{item.name}</span>
               <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: over ? "#C1462B" : "#4C7A5C" }}>
                 {fmtShort(item.actual)} / {fmtShort(item.budget)}
               </span>
             </div>
             <div style={{ position: "relative", height: 16 }}>
-              <div style={{ position: "absolute", top: 0, left: 0, width: `${bPct}%`, height: 7, background: "#C9BFA6", borderRadius: 3 }} />
+              <div style={{ position: "absolute", top: 0, left: 0, width: `${bPct}%`, height: 7, background: "#C7C7CE", borderRadius: 3 }} />
               <div style={{ position: "absolute", top: 9, left: 0, width: `${aPct}%`, height: 7, background: over ? "#C1462B" : "#4C7A5C", borderRadius: 3 }} />
             </div>
           </div>
         );
       })}
       <div style={{ display: "flex", gap: 16, marginTop: 4, flexWrap: "wrap" }}>
-        <LegendDot color="#C9BFA6" label="Budget" />
+        <LegendDot color="#C7C7CE" label="Budget" />
         <LegendDot color="#4C7A5C" label="Actual (within)" />
         <LegendDot color="#C1462B" label="Actual (over)" />
       </div>
@@ -405,8 +405,8 @@ function DonutCategorySplit({ rollup }) {
             return el;
           })}
         </g>
-        <text x="70" y="66" textAnchor="middle" fill="#8A8072" fontSize="10" fontFamily="'IBM Plex Mono', monospace">SPENT</text>
-        <text x="70" y="82" textAnchor="middle" fill="#1C1712" fontSize="14" fontWeight="600" fontFamily="'IBM Plex Mono', monospace">
+        <text x="70" y="66" textAnchor="middle" fill="#6E6E73" fontSize="10" fontFamily="'IBM Plex Mono', monospace">SPENT</text>
+        <text x="70" y="82" textAnchor="middle" fill="#1D1D1F" fontSize="14" fontWeight="600" fontFamily="'IBM Plex Mono', monospace">
           {fmtShort(total)}
         </text>
       </svg>
@@ -414,8 +414,8 @@ function DonutCategorySplit({ rollup }) {
         {rollup.map((c) => (
           <div key={c.category} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
             <span style={{ width: 9, height: 9, borderRadius: "50%", background: CATEGORY_COLOR[c.category] }} />
-            <span style={{ color: "#4A443B" }}>{c.category}</span>
-            <span style={{ marginLeft: "auto", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#6B6258" }}>
+            <span style={{ color: "#4A4A4F" }}>{c.category}</span>
+            <span style={{ marginLeft: "auto", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#6E6E73" }}>
               {((c.actual / total) * 100).toFixed(0)}%
             </span>
           </div>
@@ -434,9 +434,9 @@ function ProgressScatter({ items }) {
   return (
     <div>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", maxWidth: 420, display: "block" }}>
-        <rect x={pad} y={10} width={W - pad - 10} height={H - pad - 10} fill="#FAF6EC" stroke="#E4DCC8" />
-        <line x1={pad} y1={H - pad} x2={W - 10} y2={10} stroke="#C9BFA6" strokeWidth="1" strokeDasharray="3,3" />
-        <text x={W - 14} y={22} textAnchor="end" fill="#A69C89" fontSize="8" fontFamily="'IBM Plex Mono', monospace">on parity</text>
+        <rect x={pad} y={10} width={W - pad - 10} height={H - pad - 10} fill="#F5F5F7" stroke="#E8E8ED" />
+        <line x1={pad} y1={H - pad} x2={W - 10} y2={10} stroke="#C7C7CE" strokeWidth="1" strokeDasharray="3,3" />
+        <text x={W - 14} y={22} textAnchor="end" fill="#A0A0A6" fontSize="8" fontFamily="'IBM Plex Mono', monospace">on parity</text>
         {plotted.map((item) => {
           const prog = Math.min(Number(item.percent_complete), 100);
           const spent = Math.min((Number(item.actual) / Number(item.budget)) * 100, 130);
@@ -446,10 +446,10 @@ function ProgressScatter({ items }) {
           const color = gap > 15 ? "#C1462B" : gap > 5 ? "#B8862F" : "#4C7A5C";
           return <circle key={item.id} cx={x} cy={Math.max(y, 12)} r="4.5" fill={color} opacity="0.85" />;
         })}
-        <text x={pad} y={H - 12} fill="#8A8072" fontSize="9" fontFamily="'IBM Plex Mono', monospace">0%</text>
-        <text x={W - 10} y={H - 12} textAnchor="end" fill="#8A8072" fontSize="9" fontFamily="'IBM Plex Mono', monospace">100% complete →</text>
+        <text x={pad} y={H - 12} fill="#6E6E73" fontSize="9" fontFamily="'IBM Plex Mono', monospace">0%</text>
+        <text x={W - 10} y={H - 12} textAnchor="end" fill="#6E6E73" fontSize="9" fontFamily="'IBM Plex Mono', monospace">100% complete →</text>
       </svg>
-      <p style={{ fontSize: 12, color: "#8A8072", marginTop: 10, maxWidth: 420 }}>
+      <p style={{ fontSize: 12, color: "#6E6E73", marginTop: 10, maxWidth: 420 }}>
         Anything above the dashed line is spending faster than it's progressing. The further above, the more urgent.
       </p>
     </div>
@@ -471,7 +471,7 @@ function TrendChart({ snapshots }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 80, display: "block" }} preserveAspectRatio="none">
-      <line x1="0" y1={zeroY} x2={W} y2={zeroY} stroke="#E4DCC8" strokeWidth="0.5" strokeDasharray="1,1" />
+      <line x1="0" y1={zeroY} x2={W} y2={zeroY} stroke="#E8E8ED" strokeWidth="0.5" strokeDasharray="1,1" />
       <polyline points={points} fill="none" stroke="#B85C2C" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
     </svg>
   );
@@ -479,7 +479,7 @@ function TrendChart({ snapshots }) {
 
 function LegendDot({ color, label }) {
   return (
-    <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#6B6258" }}>
+    <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#6E6E73" }}>
       <span style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
       {label}
     </span>
@@ -487,7 +487,7 @@ function LegendDot({ color, label }) {
 }
 
 function EmptyChart({ label }) {
-  return <div style={{ fontSize: 13, color: "#8A8072", padding: "24px 0" }}>{label}</div>;
+  return <div style={{ fontSize: 13, color: "#6E6E73", padding: "24px 0" }}>{label}</div>;
 }
 
 function ScoreBar({ label, score, detail }) {
@@ -495,15 +495,15 @@ function ScoreBar({ label, score, detail }) {
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-        <span style={{ fontSize: 12, color: "#4A443B" }}>{label}</span>
+        <span style={{ fontSize: 12, color: "#4A4A4F" }}>{label}</span>
         <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", color }}>
           {score == null ? "—" : Math.round(score)}
         </span>
       </div>
-      <div style={{ height: 6, background: "#EFE9D9", borderRadius: 3, overflow: "hidden" }}>
+      <div style={{ height: 6, background: "#F2F2F5", borderRadius: 3, overflow: "hidden" }}>
         <div style={{ width: `${score ?? 0}%`, height: "100%", background: color, borderRadius: 3, transition: "width 0.3s ease" }} />
       </div>
-      {detail && <div style={{ fontSize: 10.5, color: "#8A8072", marginTop: 3 }}>{detail}</div>}
+      {detail && <div style={{ fontSize: 10.5, color: "#6E6E73", marginTop: 3 }}>{detail}</div>}
     </div>
   );
 }
@@ -512,7 +512,7 @@ function SummaryCard({ label, value, accent }) {
   return (
     <div style={styles.summaryCard}>
       <div style={styles.summaryLabel}>{label}</div>
-      <div style={{ ...styles.summaryValue, color: accent || "#1C1712" }}>{value}</div>
+      <div style={{ ...styles.summaryValue, color: accent || "#1D1D1F" }}>{value}</div>
     </div>
   );
 }
@@ -538,7 +538,7 @@ function AppLogo() {
   return (
     <div style={styles.appLogoRow}>
       <svg className="sm-app-logo-mark" style={styles.appLogoMark} viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg">
-        <text x="150" y="90" fontFamily="'Fraunces', serif" fontStyle="italic" fontWeight="600" fill="#1C1712" textAnchor="middle">
+        <text x="150" y="90" fontFamily="'Fraunces', serif" fontStyle="italic" fontWeight="600" fill="#1D1D1F" textAnchor="middle">
           <tspan fontSize="70">s</tspan>
           <tspan ref={mRef} fontSize="108" fill="#C1633A">m</tspan>
         </text>
@@ -576,8 +576,8 @@ function GlobalStyles() {
            it doesn't fit in one row and was overflowing off-screen, so hide
            it rather than trying to cram it in. */
         .sm-top-nav { display: none !important; }
-        .sm-app-logo-mark { height: 56px !important; }
-        .sm-app-logo-text { font-size: 22px !important; }
+        .sm-app-logo-mark { height: 40px !important; }
+        .sm-app-logo-text { font-size: 17px !important; }
       }
     `}</style>
   );
@@ -671,7 +671,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                   href="https://sitemargin.co.za/terms.html"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ ...styles.menuPanelLink, fontSize: 15, opacity: 0.7, paddingTop: 8, paddingBottom: 8, borderBottom: "none" }}
+                  style={{ ...styles.menuPanelDim, ...styles.menuPanelDimFirst }}
                   onClick={() => setMenuOpen(false)}
                 >
                   Terms
@@ -680,7 +680,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                   href="https://sitemargin.co.za/privacy.html"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ ...styles.menuPanelLink, fontSize: 15, opacity: 0.7, paddingTop: 0 }}
+                  style={styles.menuPanelDim}
                   onClick={() => setMenuOpen(false)}
                 >
                   Privacy
@@ -994,14 +994,7 @@ function AuthGate() {
             ].map((item, i) => (
               <button
                 key={item.label}
-                style={{
-                  ...styles.menuPanelLink,
-                  fontSize: 15,
-                  opacity: 0.7,
-                  paddingTop: i === 0 ? 8 : 0,
-                  paddingBottom: i === 0 ? 8 : 18,
-                  borderBottom: i === 0 ? "none" : styles.menuPanelLink.borderBottom,
-                }}
+                style={{ ...styles.menuPanelDim, ...(i === 0 ? styles.menuPanelDimFirst : null) }}
                 onClick={() => { setGateMenuOpen(false); window.location.href = item.href; }}
               >
                 {item.label}
@@ -1488,7 +1481,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
                   <div style={styles.projectName}>{p.name}</div>
                   <button style={styles.deleteProjectBtn} className="no-print" onClick={(e) => { e.stopPropagation(); deleteProject(p.id, p.name); }}>✕</button>
                 </div>
-                <div style={{ height: 5, background: "#EFE9D9", borderRadius: 3, marginBottom: 10 }}>
+                <div style={{ height: 5, background: "#F2F2F5", borderRadius: 3, marginBottom: 10 }}>
                   <div style={{ width: `${spentPct}%`, height: "100%", background: color, borderRadius: 3 }} />
                 </div>
                 <div style={styles.projectNums}>
@@ -1592,11 +1585,11 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                 <div style={styles.projectCardTop}>
                   <div>
                     <div style={styles.projectName}>{sub.name}</div>
-                    {sub.trade && <div style={{ fontSize: 11.5, color: "#6B6258", marginTop: 2 }}>{sub.trade}</div>}
+                    {sub.trade && <div style={{ fontSize: 11.5, color: "#6E6E73", marginTop: 2 }}>{sub.trade}</div>}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 10, color: "#8A8072", letterSpacing: "0.08em" }}>OVERALL</div>
+                      <div style={{ fontSize: 10, color: "#6E6E73", letterSpacing: "0.08em" }}>OVERALL</div>
                       <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 600, color: scoreColor(score.overall) }}>
                         {score.overall == null ? "—" : Math.round(score.overall)}
                       </div>
@@ -1632,9 +1625,9 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                 </button>
 
                 {isOpen && (
-                  <div style={{ marginTop: 10, borderTop: "1px solid #EFE9D9", paddingTop: 10 }}>
+                  <div style={{ marginTop: 10, borderTop: "1px solid #F2F2F5", paddingTop: 10 }}>
                     {(itemsBySub[sub.id] || []).length === 0 ? (
-                      <div style={{ fontSize: 12, color: "#8A8072" }}>No line items assigned to this sub yet.</div>
+                      <div style={{ fontSize: 12, color: "#6E6E73" }}>No line items assigned to this sub yet.</div>
                     ) : (
                       (itemsBySub[sub.id] || []).map((i) => {
                         const late = daysBetween(i.due_date, i.completed_date);
@@ -1644,7 +1637,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                             <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: Number(i.actual) > Number(i.budget) ? "#C1462B" : "#4C7A5C", flex: 1, textAlign: "right" }}>
                               {fmtShort(i.actual)} / {fmtShort(i.budget)}
                             </span>
-                            <span style={{ fontSize: 11, color: "#6B6258", flex: 0.8, textAlign: "right" }}>
+                            <span style={{ fontSize: 11, color: "#6E6E73", flex: 0.8, textAlign: "right" }}>
                               {late == null ? "—" : late > 0 ? `${late}d late` : `${Math.abs(late)}d early`}
                             </span>
                             <span style={{ fontSize: 11, color: "#B8862F", flex: 0.5, textAlign: "right" }}>
@@ -1777,8 +1770,8 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                 <div style={styles.projectCardTop}>
                   <div>
                     <div style={styles.projectName}>{t.name}</div>
-                    {t.description && <div style={{ fontSize: 12, color: "#6B6258", marginTop: 3 }}>{t.description}</div>}
-                    <div style={{ fontSize: 11.5, color: "#8A8072", marginTop: 6, fontFamily: "'IBM Plex Mono', monospace" }}>
+                    {t.description && <div style={{ fontSize: 12, color: "#6E6E73", marginTop: 3 }}>{t.description}</div>}
+                    <div style={{ fontSize: 11.5, color: "#6E6E73", marginTop: 6, fontFamily: "'IBM Plex Mono', monospace" }}>
                       {tItems.length} line item{tItems.length === 1 ? "" : "s"} · {fmt(total)}
                     </div>
                   </div>
@@ -1791,14 +1784,14 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                 </div>
 
                 {isOpen && (
-                  <div style={{ marginTop: 12, borderTop: "1px solid #EFE9D9", paddingTop: 12 }}>
+                  <div style={{ marginTop: 12, borderTop: "1px solid #F2F2F5", paddingTop: 12 }}>
                     {tItems.map((i) => (
                       <div key={i.id} style={styles.subItemRow}>
                         <span style={{ display: "flex", alignItems: "center", gap: 6, flex: 2 }}>
-                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: CATEGORY_COLOR[i.category] || "#8A8072" }} />
+                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: CATEGORY_COLOR[i.category] || "#6E6E73" }} />
                           <span style={{ fontSize: 12.5 }}>{i.name}</span>
                         </span>
-                        <span style={{ fontSize: 11.5, color: "#6B6258", flex: 0.8 }}>{i.category}</span>
+                        <span style={{ fontSize: 11.5, color: "#6E6E73", flex: 0.8 }}>{i.category}</span>
                         <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", flex: 0.8, textAlign: "right" }}>{fmt(i.budget)}</span>
                         <button style={{ ...styles.removeBtn, flex: 0.2, textAlign: "right" }} className="no-print" onClick={() => removeTemplateItem(t.id, i.id)}>✕</button>
                       </div>
@@ -2424,8 +2417,8 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                     <div style={{ fontWeight: 500 }}>{item.name}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3, flexWrap: "wrap" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: CATEGORY_COLOR[item.category] || "#8A8072" }} />
-                        <span style={{ fontSize: 11, color: "#6B6258" }}>{item.category || "Other"}</span>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: CATEGORY_COLOR[item.category] || "#6E6E73" }} />
+                        <span style={{ fontSize: 11, color: "#6E6E73" }}>{item.category || "Other"}</span>
                       </span>
                       {subName && <span style={{ fontSize: 11, color: "#8B5FA3" }}>· {subName}</span>}
                       <button className="no-print" style={styles.miniLink} onClick={() => { setExpandedRow(isOpen ? null : item.id); setNoteDraft(item.notes || ""); }}>
@@ -2581,13 +2574,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   return (
                     <div key={c.category}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                        <span style={{ fontSize: 12.5, color: "#4A443B" }}>{c.category}</span>
+                        <span style={{ fontSize: 12.5, color: "#4A4A4F" }}>{c.category}</span>
                         <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: over ? "#C1462B" : "#4C7A5C" }}>
                           {over ? "+" : ""}{fmtShort(c.variance)}
                         </span>
                       </div>
-                      <div style={{ position: "relative", height: 8, background: "#EFE9D9", borderRadius: 3 }}>
-                        <div style={{ position: "absolute", left: "50%", top: -2, width: 1, height: 12, background: "#C9BFA6" }} />
+                      <div style={{ position: "relative", height: 8, background: "#F2F2F5", borderRadius: 3 }}>
+                        <div style={{ position: "absolute", left: "50%", top: -2, width: 1, height: 12, background: "#C7C7CE" }} />
                         <div style={{
                           position: "absolute", top: 0, height: "100%", borderRadius: 3,
                           left: over ? "50%" : `${50 - w}%`, width: `${w}%`,
@@ -2627,7 +2620,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                     <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(item.budget)}</span>
                   </div>
                 ))}
-                <div style={{ ...styles.quoteRow, borderTop: "1px solid #E4DCC8", fontWeight: 600 }}>
+                <div style={{ ...styles.quoteRow, borderTop: "1px solid #E8E8ED", fontWeight: 600 }}>
                   <span style={{ flex: 3 }}>Subtotal — {cat.category}</span>
                   <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(cat.budget)}</span>
                 </div>
@@ -2696,7 +2689,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                 </span>
                 <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#B8862F" }}>{fmt(retentionHeld)}</span>
                 <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#4C7A5C" }}>{fmt(certified - retentionHeld)}</span>
-                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: uncertified > 0 ? "#C1462B" : "#8A8072" }}>{fmt(uncertified)}</span>
+                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: uncertified > 0 ? "#C1462B" : "#6E6E73" }}>{fmt(uncertified)}</span>
                 <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "center" }} className="no-print">
                   <input
                     type="date"
@@ -2722,13 +2715,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               </div>
             );
           })}
-          <div style={{ ...styles.row, background: "#FAF6EC", fontWeight: 600, minWidth: 980 }}>
+          <div style={{ ...styles.row, background: "#F5F5F7", fontWeight: 600, minWidth: 980 }}>
             <span style={{ ...styles.tdCell, flex: 2.4 }}>Totals</span>
             <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.claimed)}</span>
             <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.certified)}</span>
             <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#B8862F" }}>{fmt(totals.retentionHeld)}</span>
             <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#4C7A5C" }}>{fmt(totals.paidToDate)}</span>
-            <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: totals.uncertified > 0 ? "#C1462B" : "#8A8072" }}>{fmt(totals.uncertified)}</span>
+            <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: totals.uncertified > 0 ? "#C1462B" : "#6E6E73" }}>{fmt(totals.uncertified)}</span>
             <span style={{ ...styles.tdCell, flex: 1.1 }}></span>
             <span style={{ ...styles.tdCell, flex: 1.3 }}></span>
           </div>
@@ -2751,7 +2744,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               <span style={{ ...styles.tdCell, flex: 2.2 }}>{co.description}</span>
               <span style={{ ...styles.tdCell, flex: 1, textAlign: "center" }} className="no-print">
                 <select value={co.priority || "Normal"} onChange={(e) => setCoPriorityValue(co.id, e.target.value)}
-                  style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: co.priority === "High" ? "#C1462B" : co.priority === "Low" ? "#8A8072" : "#B8862F" }}>
+                  style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: co.priority === "High" ? "#C1462B" : co.priority === "Low" ? "#6E6E73" : "#B8862F" }}>
                   <option value="High">High</option>
                   <option value="Normal">Normal</option>
                   <option value="Low">Low</option>
@@ -2787,7 +2780,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             </div>
           ))}
           {changeOrders.length === 0 && (
-            <div style={{ padding: 20, fontSize: 13, color: "#8A8072" }}>
+            <div style={{ padding: 20, fontSize: 13, color: "#6E6E73" }}>
               No change orders yet. Add one below when a client approves a variation to the original budget.
             </div>
           )}
@@ -2816,13 +2809,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             style={{ display: "none" }}
             onChange={handlePlanUpload}
           />
-          <div style={{ padding: "16px 20px 4px", fontSize: 13, color: "#8A8072", lineHeight: 1.5 }}>
+          <div style={{ padding: "16px 20px 4px", fontSize: 13, color: "#6E6E73", lineHeight: 1.5 }}>
             Reference documents for this project — drawings, CAD exports, quotes, contracts. Uploaded here so
             they're on hand for quick reference; not tied to any single line item. PDF, CAD (DWG/DXF/DWF), Excel,
             and Word files are supported.
           </div>
           {(project?.plans || []).length === 0 ? (
-            <div style={{ padding: "8px 20px 20px", fontSize: 13, color: "#8A8072" }}>No documents uploaded yet.</div>
+            <div style={{ padding: "8px 20px 20px", fontSize: 13, color: "#6E6E73" }}>No documents uploaded yet.</div>
           ) : (
             <div style={{ padding: "8px 20px 4px" }}>
               {(project.plans || []).map((p) => (
@@ -2830,7 +2823,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   <button onClick={() => openPlan(p)} style={{ ...styles.attachmentLink, background: "none", border: "none", cursor: "pointer", padding: 0, flex: 1, textAlign: "left" }}>
                     📄 {p.name}
                   </button>
-                  <span style={{ fontSize: 11.5, color: "#8A8072", fontFamily: "'IBM Plex Mono', monospace" }}>
+                  <span style={{ fontSize: 11.5, color: "#6E6E73", fontFamily: "'IBM Plex Mono', monospace" }}>
                     {p.size ? `${(p.size / 1024).toFixed(0)} KB` : ""}
                   </span>
                   <button className="no-print" style={styles.removeBtn} onClick={() => removePlan(p.path)}>✕</button>
@@ -2848,20 +2841,20 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         <div style={styles.ledger}>
           <div className="no-print" style={{ padding: 20 }}>
             <button style={styles.addBtn} onClick={logSnapshot}>+ Log snapshot now</button>
-            <p style={{ fontSize: 12.5, color: "#8A8072", marginTop: 10 }}>
+            <p style={{ fontSize: 12.5, color: "#6E6E73", marginTop: 10 }}>
               Click this weekly (or before each client meeting) to record where budget vs actual stand right now.
               Over time this builds a trend you can point to instead of a single snapshot.
             </p>
           </div>
           {snapshots.length === 0 ? (
-            <div style={{ padding: "0 20px 20px", fontSize: 13, color: "#8A8072" }}>No snapshots logged yet.</div>
+            <div style={{ padding: "0 20px 20px", fontSize: 13, color: "#6E6E73" }}>No snapshots logged yet.</div>
           ) : (
             <div style={{ padding: "0 20px 20px" }}>
               <TrendChart snapshots={snapshots} />
               <div style={{ marginTop: 16 }}>
                 {[...snapshots].reverse().map((s) => (
                   <div key={s.id} style={styles.trendRow}>
-                    <span style={{ fontSize: 12, color: "#6B6258", fontFamily: "'IBM Plex Mono', monospace" }}>
+                    <span style={{ fontSize: 12, color: "#6E6E73", fontFamily: "'IBM Plex Mono', monospace" }}>
                       {new Date(s.created_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })}
                     </span>
                     <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(s.actual)}</span>
@@ -2880,7 +2873,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         <div style={styles.dfRow}>
           <div style={styles.dfBrand}>
             <svg style={styles.dfMark} viewBox="0 0 300 140" xmlns="http://www.w3.org/2000/svg">
-              <text x="150" y="90" fontFamily="'Fraunces', serif" fontStyle="italic" fontWeight="600" fill="#1C1712" textAnchor="middle">
+              <text x="150" y="90" fontFamily="'Fraunces', serif" fontStyle="italic" fontWeight="600" fill="#1D1D1F" textAnchor="middle">
                 <tspan fontSize="70">s</tspan>
                 <tspan fontSize="108" fill="#C1633A">m</tspan>
               </text>
@@ -2981,16 +2974,16 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#F5EFE2",
-    color: "#1C1712",
+    background: "#F5F5F7",
+    color: "#1D1D1F",
     fontFamily: "'Inter', sans-serif",
     padding: "20px 16px 48px",
   },
-  eyebrow: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, textTransform: "uppercase" },
-  appLogoRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 14 },
-  appLogoMark: { height: 92, width: "auto", display: "block" },
-  appLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 30, letterSpacing: "-0.01em", color: "#1C1712" },
-  eyebrowLink: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, textTransform: "uppercase", textDecoration: "none", display: "inline-block" },
+  eyebrow: { fontSize: 12, letterSpacing: "0.1em", color: "#6E6E73", fontWeight: 600, textTransform: "uppercase" },
+  appLogoRow: { display: "flex", alignItems: "center", gap: 8 },
+  appLogoMark: { height: 64, width: "auto", display: "block" },
+  appLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 22, letterSpacing: "-0.01em", color: "#1D1D1F" },
+  eyebrowLink: { fontSize: 12, letterSpacing: "0.1em", color: "#6E6E73", fontWeight: 600, textTransform: "uppercase", textDecoration: "none", display: "inline-block" },
 
   // zIndex 201 keeps the logo + hamburger button visible ABOVE the full-screen
   // menu overlay (zIndex 200) when the menu is open — otherwise the overlay
@@ -2998,23 +2991,23 @@ const styles = {
   // it, which is what the marketing site avoids via the same nav-above-panel
   // stacking (nav z-index 200 > .menu-panel z-index 150 on sitemargin.co.za).
   dashHeader: { maxWidth: 1180, margin: "0 auto 20px", position: "relative", zIndex: 201 },
-  dashNavBar: { display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #E4DCC8", paddingBottom: 16, marginBottom: 22, gap: 16, flexWrap: "wrap" },
+  dashNavBar: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF", borderRadius: 18, padding: "10px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 22, gap: 16, flexWrap: "wrap" },
   dashNavRight: { display: "flex", alignItems: "center", gap: 14 },
   // Matches sitemargin.co.za's own .nav-app-link exactly (same font, size,
   // color, padding, radius) — the app's mirror-image equivalent, pointing
   // back to the marketing site instead of into the app.
-  navHomeLink: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: "#FFFFFF", textDecoration: "none", letterSpacing: "0.01em", whiteSpace: "nowrap", background: "#B85C2C", padding: "11px 20px", borderRadius: 4, display: "inline-block" },
-  dashTitle: { fontFamily: "'Fraunces', serif", fontSize: "clamp(36px, 6vw, 58px)", fontWeight: 500, letterSpacing: "-0.01em" },
-  dashTitleInput: { fontFamily: "'Fraunces', serif", fontSize: "clamp(36px, 6vw, 58px)", fontWeight: 500, letterSpacing: "-0.01em", color: "#1C1712", background: "none", border: "none", borderBottom: "1px dashed #D8CFB8", padding: 0, width: "100%", minWidth: 0 },
+  navHomeLink: { fontSize: 13.5, fontWeight: 600, color: "#FFFFFF", textDecoration: "none", whiteSpace: "nowrap", background: "#B85C2C", padding: "8px 16px", borderRadius: 100, display: "inline-block" },
+  dashTitle: { fontSize: "clamp(30px, 4.5vw, 42px)", fontWeight: 700, letterSpacing: "-0.02em" },
+  dashTitleInput: { fontSize: "clamp(30px, 4.5vw, 42px)", fontWeight: 700, letterSpacing: "-0.02em", color: "#1D1D1F", background: "none", border: "none", borderBottom: "1px dashed #D9D9DE", padding: 0, width: "100%", minWidth: 0 },
   companyLogoMark: { height: "clamp(28px, 4.5vw, 44px)", width: "auto", maxWidth: 140, objectFit: "contain", borderRadius: 6 },
   logoTextBtn: { background: "none", border: "none", color: "#B85C2C", fontSize: 11.5, fontWeight: 600, textAlign: "left", padding: 0, cursor: "pointer" },
-  logoTextBtnMuted: { background: "none", border: "none", color: "#8A8072", fontSize: 11, textAlign: "left", padding: 0, cursor: "pointer" },
+  logoTextBtnMuted: { background: "none", border: "none", color: "#6E6E73", fontSize: 11, textAlign: "left", padding: 0, cursor: "pointer" },
 
-  menuBtn: { width: 46, height: 46, border: "1px solid #D8CFB8", borderRadius: 6, background: "#FFFFFF", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, padding: 0, flexShrink: 0 },
-  menuBtnBar: { display: "block", width: 20, height: 2, background: "#1C1712", borderRadius: 2, transition: "transform 0.25s ease, opacity 0.2s ease" },
-  menuBtnBar1Open: { transform: "translateY(7px) rotate(45deg)" },
+  menuBtn: { width: 40, height: 40, border: "none", borderRadius: "50%", background: "#F5F5F7", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, padding: 0, flexShrink: 0 },
+  menuBtnBar: { display: "block", width: 15, height: 1.5, background: "#1D1D1F", borderRadius: 2, transition: "transform 0.25s ease, opacity 0.2s ease" },
+  menuBtnBar1Open: { transform: "translateY(5.5px) rotate(45deg)" },
   menuBtnBarMidOpen: { opacity: 0 },
-  menuBtnBar3Open: { transform: "translateY(-7px) rotate(-45deg)" },
+  menuBtnBar3Open: { transform: "translateY(-5.5px) rotate(-45deg)" },
 
   // Every value below is copied 1:1 from sitemargin.co.za's own
   // .menu-panel / .menu-inner / .menu-link / .menu-actions rules in
@@ -3022,176 +3015,178 @@ const styles = {
   // (the app's wider content-page width) instead of the marketing site's
   // actual 980, and menuPanelActions was a side-by-side row instead of
   // marketing's stacked, full-width column — both fixed here.
-  menuPanel: { position: "fixed", inset: 0, background: "#F5EFE2", zIndex: 200, display: "flex", flexDirection: "column", padding: "150px 20px 40px", overflowY: "auto" },
+  menuPanel: { position: "fixed", inset: 0, background: "rgba(255,255,255,0.94)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", zIndex: 200, display: "flex", flexDirection: "column", padding: "120px 20px 40px", overflowY: "auto" },
   menuPanelInner: { maxWidth: 980, margin: "0 auto", width: "100%" },
-  menuPanelLink: { display: "block", width: "100%", textAlign: "left", background: "none", fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 600, color: "#1C1712", border: "none", borderBottom: "1px solid #E4DCC8", padding: "18px 0", cursor: "pointer" },
+  menuPanelLink: { display: "block", width: "100%", textAlign: "left", background: "none", fontSize: 29, fontWeight: 700, letterSpacing: "-0.018em", color: "#1D1D1F", border: "none", padding: "9px 0", cursor: "pointer" },
   menuPanelLinkActive: { color: "#B85C2C" },
-  menuPanelActions: { marginTop: 30, display: "flex", flexDirection: "column", gap: 12 },
-  menuPanelGhost: { textAlign: "center", padding: 15, borderRadius: 4, fontWeight: 600, fontSize: 15, border: "1px solid #1C1712", color: "#1C1712", background: "none", cursor: "pointer" },
-  menuPanelSolid: { textAlign: "center", padding: 15, borderRadius: 4, fontWeight: 600, fontSize: 15, border: "none", color: "#F5EFE2", background: "#1C1712", cursor: "pointer" },
-  menuPanelEmail: { marginTop: 22, fontSize: 12, color: "#8A8072", fontFamily: "'IBM Plex Mono', monospace" },
+  menuPanelDim: { display: "block", width: "100%", textAlign: "left", background: "none", border: "none", fontSize: 15, fontWeight: 500, color: "#6E6E73", padding: "5px 0", cursor: "pointer", textDecoration: "none" },
+  menuPanelDimFirst: { marginTop: 18, paddingTop: 16, borderTop: "1px solid #E8E8ED" },
+  menuPanelActions: { marginTop: 28, display: "flex", flexDirection: "column", gap: 10, maxWidth: 340 },
+  menuPanelGhost: { textAlign: "center", padding: 13, borderRadius: 100, fontWeight: 600, fontSize: 14.5, border: "1px solid #1D1D1F", color: "#1D1D1F", background: "none", cursor: "pointer" },
+  menuPanelSolid: { textAlign: "center", padding: 13, borderRadius: 100, fontWeight: 600, fontSize: 14.5, border: "none", color: "#FFFFFF", background: "#1D1D1F", cursor: "pointer" },
+  menuPanelEmail: { marginTop: 22, fontSize: 12, color: "#6E6E73", fontFamily: "'IBM Plex Mono', monospace" },
 
-  topNav: { maxWidth: 1180, margin: "0 auto 20px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #E4DCC8", paddingBottom: 12 },
+  topNav: { maxWidth: 1180, margin: "0 auto 20px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #E8E8ED", paddingBottom: 12 },
   topNavRight: { marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 },
-  topNavEmail: { fontSize: 12, color: "#8A8072", fontFamily: "'IBM Plex Mono', monospace" },
-  topNavSignOut: { background: "none", border: "1px solid #E4DCC8", borderRadius: 3, color: "#6B6258", fontSize: 12, padding: "6px 12px", cursor: "pointer" },
+  topNavEmail: { fontSize: 12, color: "#6E6E73", fontFamily: "'IBM Plex Mono', monospace" },
+  topNavSignOut: { background: "none", border: "1px solid #E8E8ED", borderRadius: 100, color: "#6E6E73", fontSize: 12, padding: "6px 12px", cursor: "pointer" },
 
-  gateNavOuter: { position: "relative", zIndex: 201, background: "#F5EFE2" },
+  gateNavOuter: { position: "relative", zIndex: 201, background: "#F5F5F7" },
   gateNavWrap: { maxWidth: 980, margin: "0 auto", padding: "0 20px" },
-  gateNav: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 0", borderBottom: "1px solid #E4DCC8" },
+  gateNav: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF", borderRadius: 18, padding: "10px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", margin: "14px 0 0" },
   gateWrap: { maxWidth: 640, margin: "48px auto 0", padding: "0 16px" },
-  heroWrap: { marginBottom: 36, paddingBottom: 32, borderBottom: "1px solid #E4DCC8" },
-  heroEm: { fontStyle: "italic", color: "#B85C2C" },
-  heroSub: { fontSize: 16, color: "#5C544A", lineHeight: 1.6, marginBottom: 26 },
-  mockSheet: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 8, padding: "16px 18px", boxShadow: "0 2px 10px rgba(28,23,18,0.05)", marginBottom: 28 },
-  mockHead: { display: "flex", justifyContent: "space-between", fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: "0.08em", color: "#8A8072", textTransform: "uppercase", fontWeight: 600, paddingBottom: 10, marginBottom: 10, borderBottom: "1px solid #EFE9D9" },
-  mockRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 0", borderBottom: "1px solid #F3EEE0", flexWrap: "wrap" },
-  mockName: { fontSize: 13.5, fontWeight: 600, color: "#1C1712", flex: "1 1 150px" },
-  mockNums: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#6B6258", flex: "0 0 auto" },
+  heroWrap: { marginBottom: 36, paddingBottom: 32, borderBottom: "1px solid #E8E8ED" },
+  heroEm: { fontStyle: "normal", color: "#B85C2C" },
+  heroSub: { fontSize: 16, color: "#4A4A4F", lineHeight: 1.6, marginBottom: 26 },
+  mockSheet: { background: "#FFFFFF", borderRadius: 18, padding: "16px 18px", boxShadow: "0 12px 34px rgba(0,0,0,0.08)", marginBottom: 28 },
+  mockHead: { display: "flex", justifyContent: "space-between", fontSize: 11, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase", fontWeight: 600, paddingBottom: 10, marginBottom: 10, borderBottom: "1px solid #F2F2F5" },
+  mockRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 0", borderBottom: "1px solid #F2F2F5", flexWrap: "wrap" },
+  mockName: { fontSize: 13.5, fontWeight: 600, color: "#1D1D1F", flex: "1 1 150px" },
+  mockNums: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#6E6E73", flex: "0 0 auto" },
   mockGauge: { display: "flex", alignItems: "center", gap: 8, flex: "0 0 auto" },
-  gaugeTrack: { position: "relative", width: 60, height: 6, background: "#EFE9D9", borderRadius: 4, overflow: "hidden" },
+  gaugeTrack: { position: "relative", width: 60, height: 6, background: "#F2F2F5", borderRadius: 4, overflow: "hidden" },
   gaugeFill: { position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: 4 },
   gaugeLabel: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 11.5, fontWeight: 600, width: 44 },
-  pill: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", padding: "4px 9px", borderRadius: 20, flex: "0 0 auto" },
+  pill: { fontSize: 10.5, fontWeight: 600, letterSpacing: "0.04em", padding: "4px 10px", borderRadius: 100, flex: "0 0 auto" },
   problemBlock: { marginTop: 4 },
-  pricingHead: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12.5, letterSpacing: "0.1em", color: "#8A8072", textTransform: "uppercase", fontWeight: 600, margin: "34px 0 12px" },
+  pricingHead: { fontSize: 12.5, letterSpacing: "0.1em", color: "#6E6E73", textTransform: "uppercase", fontWeight: 600, margin: "34px 0 12px" },
   checkoutGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginTop: 8 },
-  checkoutCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "20px 18px", boxShadow: "0 2px 8px rgba(28,23,18,0.04)" },
-  checkoutTier: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12.5, letterSpacing: "0.08em", color: "#8A8072", textTransform: "uppercase", fontWeight: 600, marginBottom: 10 },
-  checkoutPrice: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 26, fontWeight: 600, color: "#1C1712", marginBottom: 8 },
-  checkoutPriceUnit: { fontSize: 13, color: "#8A8072", fontWeight: 400 },
-  checkoutDesc: { fontSize: 13, color: "#6B6258", marginBottom: 16, lineHeight: 1.5 },
-  checkoutCardSelected: { borderColor: "#B85C2C", boxShadow: "0 2px 10px rgba(184,92,44,0.14)" },
-  tierCta: { background: "transparent", border: "1px solid #D8CFB8", borderRadius: 6, padding: "9px 14px", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12.5, fontWeight: 600, color: "#1C1712", cursor: "pointer" },
+  checkoutCard: { background: "#FFFFFF", borderRadius: 18, padding: "22px 20px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
+  checkoutTier: { fontSize: 12.5, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase", fontWeight: 600, marginBottom: 10 },
+  checkoutPrice: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 26, fontWeight: 600, color: "#1D1D1F", marginBottom: 8 },
+  checkoutPriceUnit: { fontSize: 13, color: "#6E6E73", fontWeight: 400 },
+  checkoutDesc: { fontSize: 13, color: "#6E6E73", marginBottom: 16, lineHeight: 1.5 },
+  checkoutCardSelected: { boxShadow: "0 0 0 1.5px #B85C2C, 0 12px 34px rgba(0,0,0,0.08)" },
+  tierCta: { background: "transparent", border: "1px solid #1D1D1F", borderRadius: 100, padding: "9px 16px", fontSize: 12.5, fontWeight: 600, color: "#1D1D1F", cursor: "pointer" },
   tierNote: { fontSize: 12.5, color: "#B85C2C", fontWeight: 600, marginBottom: 10 },
-  gateText: { fontSize: 15, color: "#5C544A", lineHeight: 1.6, marginBottom: 20 },
+  gateText: { fontSize: 15, color: "#4A4A4F", lineHeight: 1.6, marginBottom: 20 },
   gateForm: { display: "flex", flexDirection: "column", gap: 10 },
-  gateNotice: { background: "#FBF1E7", border: "1px solid #B85C2C", borderRadius: 4, padding: "14px 16px", fontSize: 14, color: "#4A443B" },
+  gateNotice: { background: "rgba(184,92,44,0.07)", border: "1px solid #B85C2C", borderRadius: 14, padding: "14px 16px", fontSize: 14, color: "#4A4A4F" },
   gateError: { color: "#C1462B", fontSize: 13, marginTop: 10 },
-  gateFootnote: { fontSize: 13, color: "#8A8072", marginTop: 22 },
-  topNavBtn: { background: "none", border: "none", color: "#6B6258", fontSize: 14, fontWeight: 500, padding: "6px 12px", cursor: "pointer", borderRadius: 3 },
-  topNavBtnActive: { background: "#1C1712", color: "#F5EFE2", fontWeight: 600 },
+  gateFootnote: { fontSize: 13, color: "#6E6E73", marginTop: 22 },
+  topNavBtn: { background: "none", border: "none", color: "#6E6E73", fontSize: 14, fontWeight: 500, padding: "6px 12px", cursor: "pointer", borderRadius: 3 },
+  topNavBtnActive: { background: "#1D1D1F", color: "#FFFFFF", fontWeight: 600 },
 
-  explainer: { maxWidth: 1180, margin: "0 auto 18px", fontSize: 13, color: "#6B6258", lineHeight: 1.6, background: "#FAF6EC", border: "1px solid #EFE9D9", borderRadius: 4, padding: "12px 16px" },
+  explainer: { maxWidth: 1180, margin: "0 auto 18px", fontSize: 13, color: "#6E6E73", lineHeight: 1.6, background: "#FFFFFF", borderRadius: 12, padding: "12px 16px", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
   explainerLink: { color: "#B85C2C", fontWeight: 600 },
 
   newProjectRow: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", gap: 10 },
-  freeLimitBanner: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, background: "#FBF1E7", border: "1px solid #B85C2C", borderRadius: 6, padding: "14px 16px", fontSize: 13.5, color: "#4A443B", flexWrap: "wrap" },
+  freeLimitBanner: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, background: "rgba(184,92,44,0.07)", border: "1px solid #B85C2C", borderRadius: 14, padding: "14px 16px", fontSize: 13.5, color: "#4A4A4F", flexWrap: "wrap" },
   freeLimitLink: { color: "#B85C2C", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" },
   addRowStandalone: { maxWidth: 1180, margin: "0 auto 22px", display: "flex", gap: 10, flexWrap: "wrap" },
   projectGrid: { maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 },
-  projectCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "18px 20px", cursor: "pointer", boxShadow: "0 2px 8px rgba(28,23,18,0.04)" },
-  scoreCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 4, padding: "18px 20px" },
-  templateCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 4, padding: "18px 20px", marginBottom: 12 },
+  projectCard: { background: "#FFFFFF", borderRadius: 18, padding: "20px 22px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
+  scoreCard: { background: "#FFFFFF", borderRadius: 18, padding: "20px 22px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
+  templateCard: { background: "#FFFFFF", borderRadius: 18, padding: "20px 22px", marginBottom: 12, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
   projectCardTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 },
-  projectName: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 600 },
-  deleteProjectBtn: { background: "none", border: "none", color: "#8A8072", cursor: "pointer", fontSize: 14 },
-  projectNums: { display: "flex", justifyContent: "space-between", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", color: "#4A443B" },
-  projectMeta: { fontSize: 12, color: "#8A8072", marginTop: 8 },
-  subItemRow: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #EFE9D9" },
+  projectName: { fontSize: 20, fontWeight: 600 },
+  deleteProjectBtn: { background: "none", border: "none", color: "#6E6E73", cursor: "pointer", fontSize: 14 },
+  projectNums: { display: "flex", justifyContent: "space-between", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", color: "#4A4A4F" },
+  projectMeta: { fontSize: 12, color: "#6E6E73", marginTop: 8 },
+  subItemRow: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #F2F2F5" },
 
   backRow: { maxWidth: 1180, margin: "0 auto 12px", display: "flex", justifyContent: "space-between" },
-  backBtn: { background: "none", border: "none", color: "#6B6258", fontSize: 13, cursor: "pointer" },
-  exportBtn: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontSize: 13, fontWeight: 500, padding: "8px 16px", cursor: "pointer" },
+  backBtn: { background: "none", border: "none", color: "#6E6E73", fontSize: 13, cursor: "pointer" },
+  exportBtn: { background: "#FFFFFF", border: "none", borderRadius: 100, color: "#1D1D1F", fontSize: 13, fontWeight: 600, padding: "8px 16px", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" },
 
-  titleBlock: { display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-end", gap: 16, borderBottom: "2px solid #E4DCC8", paddingBottom: 14, maxWidth: 1180, margin: "0 auto 20px" },
+  titleBlock: { display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-end", gap: 16, borderBottom: "2px solid #E8E8ED", paddingBottom: 14, maxWidth: 1180, margin: "0 auto 20px" },
   titleBlockLeft: { display: "flex", flexDirection: "column", gap: 6, flex: 1, minWidth: 240 },
-  projectInput: { background: "transparent", border: "none", color: "#1C1712", fontFamily: "'Fraunces', serif", fontSize: 30, fontWeight: 500, padding: 0, width: "100%", letterSpacing: "-0.01em" },
+  projectInput: { background: "transparent", border: "none", color: "#1D1D1F", fontSize: 26, fontWeight: 700, padding: 0, width: "100%", letterSpacing: "-0.02em" },
   titleBlockRight: { display: "flex", gap: 22 },
   tbCell: { display: "flex", flexDirection: "column", alignItems: "flex-end" },
-  tbLabel: { fontSize: 10, letterSpacing: "0.1em", color: "#8A8072" },
-  tbValue: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, color: "#1C1712", display: "flex", alignItems: "center", gap: 2 },
-  retentionInput: { width: 34, background: "#EFE9D9", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, padding: "1px 4px", textAlign: "right" },
+  tbLabel: { fontSize: 10, letterSpacing: "0.1em", color: "#6E6E73" },
+  tbValue: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, color: "#1D1D1F", display: "flex", alignItems: "center", gap: 2 },
+  retentionInput: { width: 34, background: "#F5F5F7", border: "1px solid transparent", borderRadius: 6, color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, padding: "1px 4px", textAlign: "right" },
 
   summaryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, maxWidth: 1180, margin: "0 auto 16px" },
-  summaryCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "14px 16px", boxShadow: "0 2px 8px rgba(28,23,18,0.04)" },
-  summaryLabel: { fontSize: 11, letterSpacing: "0.08em", color: "#8A8072", marginBottom: 6, textTransform: "uppercase" },
+  summaryCard: { background: "#FFFFFF", borderRadius: 16, padding: "14px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
+  summaryLabel: { fontSize: 11, letterSpacing: "0.08em", color: "#6E6E73", marginBottom: 6, textTransform: "uppercase" },
   summaryValue: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 17, fontWeight: 600 },
 
-  warningBanner: { maxWidth: 1180, margin: "0 auto 12px", background: "rgba(193,70,43,0.08)", border: "1px solid #C1462B", borderRadius: 4, padding: "12px 16px", fontSize: 14, color: "#8A3D1E" },
+  warningBanner: { maxWidth: 1180, margin: "0 auto 12px", background: "rgba(193,70,43,0.07)", border: "1px solid #C1462B", borderRadius: 14, padding: "12px 16px", fontSize: 14, color: "#8A3D1E" },
 
   categoryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, maxWidth: 1180, margin: "0 auto 16px" },
-  categoryCard: { background: "#FAF6EC", border: "1px solid #EFE9D9", borderRadius: 4, padding: "10px 14px" },
+  categoryCard: { background: "#FFFFFF", borderRadius: 12, padding: "10px 14px", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
   categoryHead: { display: "flex", alignItems: "center", gap: 6, marginBottom: 4 },
   categoryDot: { width: 8, height: 8, borderRadius: "50%" },
-  categoryName: { fontSize: 12, color: "#4A443B", fontWeight: 500 },
+  categoryName: { fontSize: 12, color: "#4A4A4F", fontWeight: 500 },
   categoryNums: { display: "flex", justifyContent: "space-between", fontFamily: "'IBM Plex Mono', monospace", fontSize: 13 },
-  categoryBudget: { color: "#6B6258" },
+  categoryBudget: { color: "#6E6E73" },
   categoryVariance: { fontWeight: 600 },
 
   importRow: { maxWidth: 1180, margin: "0 auto 14px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" },
-  importBtn: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontSize: 13, fontWeight: 500, padding: "8px 16px", cursor: "pointer" },
-  templateLink: { background: "none", border: "none", color: "#6B6258", fontSize: 12.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
+  importBtn: { background: "#FFFFFF", border: "none", borderRadius: 100, color: "#1D1D1F", fontSize: 13, fontWeight: 600, padding: "8px 16px", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" },
+  templateLink: { background: "none", border: "none", color: "#6E6E73", fontSize: 12.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
 
   viewToggle: { maxWidth: 1180, margin: "0 auto 12px", display: "flex", gap: 8, flexWrap: "wrap" },
-  toggleBtn: { background: "#FAF6EC", border: "1px solid #E4DCC8", borderRadius: 3, color: "#6B6258", fontSize: 13, fontWeight: 500, padding: "8px 16px", cursor: "pointer" },
-  toggleBtnActive: { background: "#1C1712", borderColor: "#1C1712", color: "#F5EFE2", fontWeight: 600 },
+  toggleBtn: { background: "#FFFFFF", border: "none", borderRadius: 100, color: "#6E6E73", fontSize: 13, fontWeight: 500, padding: "8px 16px", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
+  toggleBtnActive: { background: "#1D1D1F", color: "#FFFFFF", fontWeight: 600 },
 
-  ledger: { maxWidth: 1180, margin: "0 auto", background: "#FFFFFF", borderRadius: 6, overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch", border: "1px solid #E4DCC8", boxShadow: "0 4px 16px rgba(28,23,18,0.05)" },
-  ledgerHeaderRow: { display: "flex", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid #E4DCC8", background: "#FAF6EC", minWidth: 640 },
-  thCell: { fontSize: 11, letterSpacing: "0.08em", color: "#8A8072", textTransform: "uppercase" },
-  row: { display: "flex", alignItems: "center", padding: "12px 14px", borderBottom: "1px solid #EFE9D9", minWidth: 640 },
+  ledger: { maxWidth: 1180, margin: "0 auto", background: "#FFFFFF", borderRadius: 18, overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" },
+  ledgerHeaderRow: { display: "flex", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid #E8E8ED", background: "#F5F5F7", minWidth: 640 },
+  thCell: { fontSize: 11, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase" },
+  row: { display: "flex", alignItems: "center", padding: "12px 14px", borderBottom: "1px solid #F2F2F5", minWidth: 640 },
   tdCell: { fontSize: 14, paddingRight: 8 },
-  actualButton: { background: "none", border: "none", color: "#1C1712", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, cursor: "pointer", borderBottom: "1px dashed #8A8072", padding: 0 },
-  inlineInput: { width: "100%", background: "#EFE9D9", border: "1px solid #B85C2C", borderRadius: 3, color: "#1C1712", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, padding: "2px 6px", textAlign: "right" },
-  miniLink: { background: "none", border: "none", color: "#8A8072", fontSize: 10.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
+  actualButton: { background: "none", border: "none", color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, cursor: "pointer", borderBottom: "1px dashed #6E6E73", padding: 0 },
+  inlineInput: { width: "100%", background: "#FFFFFF", border: "1px solid #B85C2C", borderRadius: 8, color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, padding: "2px 6px", textAlign: "right" },
+  miniLink: { background: "none", border: "none", color: "#6E6E73", fontSize: 10.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
   miniLinkBlock: { background: "none", border: "none", color: "#3D6FA6", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginTop: 4 },
-  gaugeTrack: { position: "relative", height: 6, background: "#EFE9D9", borderRadius: 3, overflow: "visible", marginBottom: 4 },
+  gaugeTrack: { position: "relative", height: 6, background: "#F2F2F5", borderRadius: 3, overflow: "visible", marginBottom: 4 },
   gaugeFill: { height: "100%", borderRadius: 3, transition: "width 0.3s ease" },
-  gaugeTolMark: { position: "absolute", left: "71.4%", top: -2, width: 1, height: 10, background: "#8A8072" },
+  gaugeTolMark: { position: "absolute", left: "71.4%", top: -2, width: 1, height: 10, background: "#6E6E73" },
   gaugeLabel: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 11 },
-  dualBarTrack: { position: "relative", height: 16, background: "#EFE9D9", borderRadius: 3 },
+  dualBarTrack: { position: "relative", height: 16, background: "#F2F2F5", borderRadius: 3 },
   dualBarFill: { position: "absolute", left: 0, height: 6, borderRadius: 3, transition: "width 0.3s ease" },
-  statusPill: { display: "inline-block", fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", padding: "4px 8px", borderRadius: 3 },
-  removeBtn: { background: "none", border: "none", color: "#8A8072", cursor: "pointer", fontSize: 13 },
-  addRow: { display: "flex", gap: 10, alignItems: "center", padding: "14px", background: "#FAF6EC", flexWrap: "wrap" },
-  addInput: { background: "#EFE9D9", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontSize: 14, padding: "8px 10px" },
-  addBtn: { background: "#B85C2C", border: "none", borderRadius: 3, color: "#FFFFFF", fontWeight: 600, fontSize: 13, padding: "9px 14px", cursor: "pointer", whiteSpace: "nowrap" },
-  footer: { maxWidth: 1180, margin: "16px auto 0", fontSize: 12, color: "#8A8072" },
-  siteFooter: { maxWidth: 1180, margin: "40px auto 0", padding: "24px 0", borderTop: "1px solid #E4DCC8", fontSize: 13, color: "#8A8072", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 14 },
+  statusPill: { display: "inline-block", fontSize: 10, fontWeight: 600, letterSpacing: "0.05em", padding: "4px 10px", borderRadius: 100 },
+  removeBtn: { background: "none", border: "none", color: "#6E6E73", cursor: "pointer", fontSize: 13 },
+  addRow: { display: "flex", gap: 10, alignItems: "center", padding: "14px", background: "#F5F5F7", flexWrap: "wrap" },
+  addInput: { background: "#F5F5F7", border: "1px solid transparent", borderRadius: 10, color: "#1D1D1F", fontSize: 14, padding: "8px 12px" },
+  addBtn: { background: "#B85C2C", border: "none", borderRadius: 100, color: "#FFFFFF", fontWeight: 600, fontSize: 13, padding: "9px 16px", cursor: "pointer", whiteSpace: "nowrap" },
+  footer: { maxWidth: 1180, margin: "16px auto 0", fontSize: 12, color: "#6E6E73" },
+  siteFooter: { maxWidth: 1180, margin: "40px auto 0", padding: "24px 0", borderTop: "1px solid #E8E8ED", fontSize: 13, color: "#6E6E73", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 14 },
   siteFooterLinks: { display: "flex", gap: 20, flexWrap: "wrap" },
-  siteFooterLink: { color: "#8A8072", textDecoration: "none" },
-  docFooter: { maxWidth: 1180, margin: "30px auto 0", paddingTop: 14, borderTop: "1px solid #D8CFB8" },
+  siteFooterLink: { color: "#6E6E73", textDecoration: "none" },
+  docFooter: { maxWidth: 1180, margin: "30px auto 0", paddingTop: 14, borderTop: "1px solid #D9D9DE" },
   dfRow: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  dfBrand: { display: "flex", alignItems: "center", gap: 6, fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 14, color: "#1C1712" },
+  dfBrand: { display: "flex", alignItems: "center", gap: 6, fontFamily: "'Fraunces', serif", fontStyle: "italic", fontWeight: 600, fontSize: 14, color: "#1D1D1F" },
   dfMark: { height: 20, width: "auto", display: "block" },
   dfText: { fontStyle: "normal" },
-  dfMeta: { fontSize: 11, color: "#8A8072", fontFamily: "Arial, sans-serif" },
-  dfDisclaimer: { fontSize: 10, color: "#9C9384", marginTop: 4, fontFamily: "Arial, sans-serif" },
+  dfMeta: { fontSize: 11, color: "#6E6E73", fontFamily: "Arial, sans-serif" },
+  dfDisclaimer: { fontSize: 10, color: "#A0A0A6", marginTop: 4, fontFamily: "Arial, sans-serif" },
 
-  detailPanel: { background: "#FAF6EC", padding: "16px 18px", borderBottom: "1px solid #EFE9D9" },
+  detailPanel: { background: "#F5F5F7", padding: "16px 18px", borderBottom: "1px solid #F2F2F5" },
   detailGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 },
   detailField: { display: "flex", flexDirection: "column", gap: 5 },
-  detailLabel: { fontSize: 10.5, letterSpacing: "0.08em", color: "#8A8072", textTransform: "uppercase" },
-  notesTextarea: { width: "100%", minHeight: 60, background: "#EFE9D9", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontSize: 13, padding: "8px 10px", fontFamily: "'Inter', sans-serif", resize: "vertical", marginTop: 5 },
+  detailLabel: { fontSize: 10.5, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase" },
+  notesTextarea: { width: "100%", minHeight: 60, background: "#F5F5F7", border: "1px solid transparent", borderRadius: 10, color: "#1D1D1F", fontSize: 13, padding: "8px 10px", fontFamily: "'Inter', sans-serif", resize: "vertical", marginTop: 5 },
   attachmentLink: { fontSize: 12, color: "#3D6FA6", textDecoration: "none" },
 
   chartGrid: { maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 14 },
-  chartCard: { background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 4, padding: "20px 22px" },
-  chartTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 2 },
-  chartSub: { fontSize: 12, color: "#8A8072", marginBottom: 16 },
+  chartCard: { background: "#FFFFFF", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
+  chartTitle: { fontSize: 18, fontWeight: 600, marginBottom: 2 },
+  chartSub: { fontSize: 12, color: "#6E6E73", marginBottom: 16 },
 
-  trendRow: { display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #EFE9D9" },
+  trendRow: { display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #F2F2F5" },
 
-  quoteSheet: { maxWidth: 800, margin: "0 auto", background: "#FFFFFF", border: "1px solid #E4DCC8", borderRadius: 6, padding: "36px 40px", boxShadow: "0 4px 16px rgba(28,23,18,0.05)" },
-  quoteHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #1C1712", paddingBottom: 20, marginBottom: 28 },
-  quoteEyebrow: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, marginBottom: 6 },
-  quoteProjectName: { fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 500, color: "#1C1712" },
-  quoteMeta: { textAlign: "right", fontSize: 12.5, color: "#6B6258", lineHeight: 1.7 },
-  quoteCatHeading: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, letterSpacing: "0.06em", color: "#8A8072", textTransform: "uppercase", marginBottom: 8, paddingBottom: 6, borderBottom: "1px solid #EFE9D9" },
-  quoteRow: { display: "flex", padding: "6px 0", fontSize: 14, color: "#1C1712" },
-  quoteTotalRow: { display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 600, color: "#1C1712", borderTop: "2px solid #1C1712", paddingTop: 14, marginTop: 10 },
-  quoteFootnote: { fontSize: 11.5, color: "#8A8072", marginTop: 30, lineHeight: 1.6, borderTop: "1px solid #EFE9D9", paddingTop: 16 },
+  quoteSheet: { maxWidth: 800, margin: "0 auto", background: "#FFFFFF", borderRadius: 18, padding: "36px 40px", boxShadow: "0 12px 34px rgba(0,0,0,0.08)" },
+  quoteHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #1D1D1F", paddingBottom: 20, marginBottom: 28 },
+  quoteEyebrow: { fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, marginBottom: 6 },
+  quoteProjectName: { fontSize: 24, fontWeight: 700, letterSpacing: "-0.015em", color: "#1D1D1F" },
+  quoteMeta: { textAlign: "right", fontSize: 12.5, color: "#6E6E73", lineHeight: 1.7 },
+  quoteCatHeading: { fontSize: 13, letterSpacing: "0.06em", color: "#6E6E73", textTransform: "uppercase", marginBottom: 8, paddingBottom: 6, borderBottom: "1px solid #F2F2F5" },
+  quoteRow: { display: "flex", padding: "6px 0", fontSize: 14, color: "#1D1D1F" },
+  quoteTotalRow: { display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 600, color: "#1D1D1F", borderTop: "2px solid #1D1D1F", paddingTop: 14, marginTop: 10 },
+  quoteFootnote: { fontSize: 11.5, color: "#6E6E73", marginTop: 30, lineHeight: 1.6, borderTop: "1px solid #F2F2F5", paddingTop: 16 },
 
-  modalOverlay: { position: "fixed", inset: 0, background: "rgba(28,23,18,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 },
-  modalCard: { background: "#FFFFFF", borderRadius: 8, maxWidth: 760, width: "100%", maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 50px rgba(28,23,18,0.25)" },
-  modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "20px 24px", borderBottom: "1px solid #E4DCC8" },
-  modalTitle: { fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 600, color: "#1C1712" },
-  modalSub: { fontSize: 12.5, color: "#6B6258", marginTop: 4, maxWidth: 480 },
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 },
+  modalCard: { background: "#FFFFFF", borderRadius: 18, maxWidth: 760, width: "100%", maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 50px rgba(0,0,0,0.25)" },
+  modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "20px 24px", borderBottom: "1px solid #E8E8ED" },
+  modalTitle: { fontSize: 19, fontWeight: 700, letterSpacing: "-0.01em", color: "#1D1D1F" },
+  modalSub: { fontSize: 12.5, color: "#6E6E73", marginTop: 4, maxWidth: 480 },
   modalBody: { padding: "12px 24px", overflowY: "auto", flex: 1 },
-  modalFooter: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderTop: "1px solid #E4DCC8" },
-  previewHeaderRow: { display: "flex", gap: 10, fontSize: 11, letterSpacing: "0.06em", color: "#8A8072", textTransform: "uppercase", padding: "8px 0", borderBottom: "1px solid #E4DCC8" },
-  previewRow: { display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 0", borderBottom: "1px solid #EFE9D9" },
-  previewInput: { width: "100%", background: "#FAF6EC", border: "1px solid #E4DCC8", borderRadius: 3, color: "#1C1712", fontSize: 13, padding: "6px 8px" },
-  previewNote: { fontSize: 10.5, color: "#8A8072", marginTop: 3 },
+  modalFooter: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderTop: "1px solid #E8E8ED" },
+  previewHeaderRow: { display: "flex", gap: 10, fontSize: 11, letterSpacing: "0.06em", color: "#6E6E73", textTransform: "uppercase", padding: "8px 0", borderBottom: "1px solid #E8E8ED" },
+  previewRow: { display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 0", borderBottom: "1px solid #F2F2F5" },
+  previewInput: { width: "100%", background: "#F5F5F7", border: "1px solid transparent", borderRadius: 8, color: "#1D1D1F", fontSize: 13, padding: "6px 8px" },
+  previewNote: { fontSize: 10.5, color: "#6E6E73", marginTop: 3 },
 };
