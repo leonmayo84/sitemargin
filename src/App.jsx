@@ -617,8 +617,8 @@ function GlobalStyles() {
          SiteMargin" links; .sm-menu-item-dim covers the smaller Terms/
          Privacy row, which gets a colour-only hover (no background) since
          it has no horizontal padding to hold one. */
-      .sm-menu-item:hover { background: #E9F1F6; color: #1D5C8A; }
-      .sm-menu-item-dim:hover { color: #1D5C8A; }
+      .sm-menu-item:hover { background: #E9F1F6 !important; color: #1D5C8A !important; }
+      .sm-menu-item-dim:hover { color: #1D5C8A !important; }
       /* Lets the hamburger's drawer pop open on hover, but only on devices
          that have a real hover-capable pointer (a mouse/trackpad) — gated
          behind (hover: hover) and (pointer: fine) so touchscreens (the
