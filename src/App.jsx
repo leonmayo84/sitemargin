@@ -12,8 +12,53 @@ const SUPABASE_FUNCTIONS_URL = "https://mcxmtnlhqubaljvnwmzc.supabase.co/functio
 
 /* ============================== HELPERS ============================== */
 
+// Opens an https:// URL without ever handing the visit off to a separate
+// browser app. On the web build a plain new tab is fine and expected. On
+// the native Android/iOS build, a plain target="_blank" anchor (or
+// window.open) gets handed to the OS, which launches Chrome/Safari as a
+// completely separate app — exactly the "kicked out of the app" bug this
+// fixes. @capacitor/browser's Browser.open() instead shows the page in a
+// Custom Tab / SFSafariViewController that overlays the app itself, so the
+// user never leaves SiteMargin. Falls back to window.open if the plugin
+// isn't installed yet (e.g. before `npm install` + `npx cap sync` has been
+// run), so this never hard-crashes the native build.
+async function openExternalLink(url) {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const { Browser } = await import("@capacitor/browser");
+      await Browser.open({ url });
+      return;
+    } catch {
+      // Plugin not installed/synced yet — fall through to window.open below
+      // rather than silently doing nothing.
+    }
+  }
+  window.open(url, "_blank", "noopener");
+}
+
 const fmt = (n) =>
   new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(n || 0);
+
+// A plain-looking reference link (JBCC, CIDB, SANS, etc.) that routes
+// through openExternalLink on native so it opens in an in-app browser tab
+// instead of kicking the user out to a separate browser app.
+function ExplainerRefLink({ href, children }) {
+  return (
+    <a
+      href={href}
+      {...(!Capacitor.isNativePlatform() && { target: "_blank", rel: "noopener noreferrer" })}
+      style={styles.explainerLink}
+      onClick={(e) => {
+        if (Capacitor.isNativePlatform()) {
+          e.preventDefault();
+          openExternalLink(href);
+        }
+      }}
+    >
+      {children}
+    </a>
+  );
+}
 
 // #8: "Your projects" -> "[name]'s projects". There's no separate display-name
 // field anywhere yet, only the sign-in email, so this derives a reasonable
@@ -750,6 +795,7 @@ function ReferralQr({ size = 112 }) {
 
 function ReferralRow() {
   const [copied, setCopied] = useState(false);
+  const referralText = "Check out SiteMargin — cost variance tracking built for contractors: https://www.sitemargin.co.za";
   async function copyLink() {
     try {
       await navigator.clipboard.writeText("https://www.sitemargin.co.za");
@@ -759,6 +805,17 @@ function ReferralRow() {
       /* clipboard permission denied — link is still visible via the other share options */
     }
   }
+  // On native, wa.me is an https:// link — inside a WebView that gets handed
+  // to a separate browser app rather than to WhatsApp itself. The
+  // whatsapp://send scheme instead hands off straight to the WhatsApp app
+  // (same as tapping a share button anywhere else), so the user never sees
+  // a browser at all. On the web build wa.me is correct as-is.
+  function shareWhatsapp(e) {
+    if (Capacitor.isNativePlatform()) {
+      e.preventDefault();
+      window.location.href = `whatsapp://send?text=${encodeURIComponent(referralText)}`;
+    }
+  }
   return (
     <div className="no-print" style={styles.referralRow}>
       <div style={styles.referralText}>
@@ -766,7 +823,14 @@ function ReferralRow() {
         <div style={styles.referralHeading}>Know a contractor or homeowner who'd love this?</div>
         <div style={styles.referralSub}>Share SiteMargin with friends and family — no referral code needed, just send the link.</div>
         <div style={styles.referralActions}>
-          <a style={{ ...styles.referralBtn, ...styles.referralBtnWhatsapp }} href="https://wa.me/?text=Check%20out%20SiteMargin%20%E2%80%94%20cost%20variance%20tracking%20built%20for%20contractors%3A%20https%3A%2F%2Fwww.sitemargin.co.za" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+          <a
+            style={{ ...styles.referralBtn, ...styles.referralBtnWhatsapp }}
+            href={`https://wa.me/?text=${encodeURIComponent(referralText)}`}
+            {...(!Capacitor.isNativePlatform() && { target: "_blank", rel: "noopener noreferrer" })}
+            onClick={shareWhatsapp}
+          >
+            WhatsApp
+          </a>
           <a style={styles.referralBtn} href="mailto:?subject=Take%20a%20look%20at%20SiteMargin&body=Thought%20you%27d%20find%20this%20useful%20%E2%80%94%20https%3A%2F%2Fwww.sitemargin.co.za">Email</a>
           <button type="button" style={styles.referralBtn} onClick={copyLink}>{copied ? "Copied!" : "Copy link"}</button>
         </div>
@@ -1558,7 +1622,17 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
       {atFreeLimit ? (
         <div className="no-print" style={styles.freeLimitBanner}>
           <span>You've used your Free plan's {FREE_PROJECT_LIMIT} project. Upgrade to Contractor or Company for unlimited projects.</span>
-          <a href="https://sitemargin.co.za/pricing.html" target="_blank" rel="noopener noreferrer" style={styles.freeLimitLink}>
+          <a
+            href="https://sitemargin.co.za/pricing.html"
+            {...(!Capacitor.isNativePlatform() && { target: "_blank", rel: "noopener noreferrer" })}
+            style={styles.freeLimitLink}
+            onClick={(e) => {
+              if (Capacitor.isNativePlatform()) {
+                e.preventDefault();
+                openExternalLink("https://sitemargin.co.za/pricing.html");
+              }
+            }}
+          >
             See plans ↗
           </a>
         </div>
@@ -1852,10 +1926,10 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
         to any new project in one click instead of retyping it. You can also save an existing project's line items
         straight back out as a new template from inside that project.
         <div style={{ marginTop: 10 }}>
-          Need a starting point? <a href="https://jbcc.co.za/free-forms/" target="_blank" rel="noopener noreferrer" style={styles.explainerLink}>JBCC's free standard forms ↗</a>
-          {" · "}<a href="https://www.cidb.org.za/about-us/our-construction-mandate/" target="_blank" rel="noopener noreferrer" style={styles.explainerLink}>CIDB registration ↗</a>
-          {" · "}<a href="https://www.sans10400.co.za/nhbrc-2/" target="_blank" rel="noopener noreferrer" style={styles.explainerLink}>NHBRC ↗</a>
-          {" · "}<a href="https://www.sans10400.co.za/" target="_blank" rel="noopener noreferrer" style={styles.explainerLink}>SANS 10400 ↗</a>
+          Need a starting point? <ExplainerRefLink href="https://jbcc.co.za/free-forms/">JBCC's free standard forms ↗</ExplainerRefLink>
+          {" · "}<ExplainerRefLink href="https://www.cidb.org.za/about-us/our-construction-mandate/">CIDB registration ↗</ExplainerRefLink>
+          {" · "}<ExplainerRefLink href="https://www.sans10400.co.za/nhbrc-2/">NHBRC ↗</ExplainerRefLink>
+          {" · "}<ExplainerRefLink href="https://www.sans10400.co.za/">SANS 10400 ↗</ExplainerRefLink>
         </div>
       </div>
 
@@ -2222,7 +2296,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     if (!attachment.path) {
       // Backward compatibility for attachments uploaded before the bucket
       // was locked down, which stored a direct URL instead of a path.
-      if (attachment.url) window.open(attachment.url, "_blank", "noopener");
+      if (attachment.url) openExternalLink(attachment.url);
       return;
     }
     const { data, error } = await supabase.storage.from("attachments").createSignedUrl(attachment.path, 60);
@@ -2231,7 +2305,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       setTimeout(() => setImportMessage(null), 6000);
       return;
     }
-    window.open(data.signedUrl, "_blank", "noopener");
+    openExternalLink(data.signedUrl);
   }
 
   async function handleAttachFile(e) {
@@ -2264,7 +2338,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       setTimeout(() => setImportMessage(null), 6000);
       return;
     }
-    window.open(data.signedUrl, "_blank", "noopener");
+    openExternalLink(data.signedUrl);
   }
 
   async function handlePlanUpload(e) {
@@ -2320,7 +2394,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     if (!item.payment_doc_path) return;
     const { data, error } = await supabase.storage.from("attachments").createSignedUrl(item.payment_doc_path, 60);
     if (error || !data?.signedUrl) return;
-    window.open(data.signedUrl, "_blank", "noopener");
+    openExternalLink(data.signedUrl);
   }
 
   async function setPaymentDate(itemId, date) {
@@ -2563,7 +2637,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       setTimeout(() => setImportMessage(null), 6000);
       return;
     }
-    window.open(data.signedUrl, "_blank", "noopener");
+    openExternalLink(data.signedUrl);
   }
 
   async function removeDocument(doc) {
