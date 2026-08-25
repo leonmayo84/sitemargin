@@ -629,6 +629,13 @@ function GlobalStyles() {
          it has no horizontal padding to hold one. */
       .sm-menu-item:hover { background: #E9F1F6 !important; color: #1D5C8A !important; }
       .sm-menu-item-dim:hover { color: #1D5C8A !important; }
+      /* Full marketing-style footer shown on the public sign-up/log-in
+         screen (see PublicSiteFooter below) — hover states mirror the
+         marketing site's styles.css .footer-social/.footer-col/.footer-bottom
+         rules exactly, since inline styles can't express :hover. */
+      .sm-pub-footer-social:hover { background: #ECECEF !important; color: #1D1D1F !important; }
+      .sm-pub-footer-col a:hover { color: #1D5C8A !important; }
+      .sm-pub-footer-bottom a:hover { color: #1D1D1F !important; }
       /* Lets the hamburger's drawer pop open on hover, but only on devices
          that have a real hover-capable pointer (a mouse/trackpad) — gated
          behind (hover: hover) and (pointer: fine) so touchscreens (the
@@ -916,30 +923,86 @@ function ReferralRow() {
   );
 }
 
-/* Footer, matching sitemargin.co.za's own footer exactly (same text, same
-   six links back to the marketing site's pages) — rendered at the bottom of
-   every app page for the "all aspects, uniform" header/footer request. */
+/* Footer, matching sitemargin.co.za's own footer exactly (same logo, tagline,
+   social icons, three link columns, and copyright bar) — rendered at the
+   bottom of every app page, the public sign-up/log-in screen included, so
+   the footer stays universal across the whole site and not just the
+   marketing pages. Previously this was a stripped-down single line; that
+   drifted out of sync the same way the hamburger menu once did once the
+   marketing site's footer grew into the fuller design below. */
 function AppFooter() {
+  // Same reasoning as the hamburger menu's marketing-site links: on the
+  // native app these would hijack the app's own webview to show an external
+  // page, and "Get the app" store badges make no sense from inside the app
+  // you already installed. Hidden on native; shown on the web build, where
+  // linking out to the marketing site is a normal, expected action.
+  const showExternalLinks = !Capacitor.isNativePlatform();
   return (
     <>
       <ReferralRow />
-      <div className="no-print" style={styles.siteFooter}>
-      <span>SiteMargin — built for contractors, not accountants.</span>
-      {/* Same reasoning as the hamburger menu's marketing-site link: on the
-          native app these would hijack the app's own webview to show an
-          external page. They're shown on the web build, where linking out
-          to the marketing site's pages is a normal, expected action. */}
-      {!Capacitor.isNativePlatform() && (
-        <div style={styles.siteFooterLinks}>
-          <a href="https://sitemargin.co.za/whats-inside.html" style={styles.siteFooterLink}>What's inside</a>
-          <a href="https://sitemargin.co.za/pricing.html" style={styles.siteFooterLink}>Pricing</a>
-          <a href="https://sitemargin.co.za/about.html" style={styles.siteFooterLink}>About</a>
-          <a href="https://sitemargin.co.za/contact.html" style={styles.siteFooterLink}>Contact</a>
-          <a href="https://sitemargin.co.za/terms.html" style={styles.siteFooterLink}>Terms</a>
-          <a href="https://sitemargin.co.za/privacy.html" style={styles.siteFooterLink}>Privacy</a>
+      <footer className="no-print" style={styles.pubFooter}>
+        <div style={styles.pubFooterTop}>
+          <div style={styles.pubFooterBrand}>
+            <div style={styles.pubFooterLogoRow}>
+              <svg style={styles.pubFooterLogoMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                <rect x="4" y="8" width="28" height="8" fill="#3C2E1E" />
+                <rect x="34" y="8" width="10" height="8" fill="#1D5C8A" />
+                <rect x="4" y="20" width="40" height="8" fill="#3C2E1E" />
+                <rect x="4" y="32" width="40" height="8" fill="#3C2E1E" />
+              </svg>
+              <div style={styles.pubFooterLogoText}>site<span style={{ color: "#1D5C8A" }}>Margin</span></div>
+            </div>
+            <p style={styles.pubFooterTagline}>Cost variance tracking built for contractors, not accountants.</p>
+            {showExternalLinks && (
+              <div style={styles.pubFooterSocial}>
+                <a className="sm-pub-footer-social" href="#" aria-label="LinkedIn" style={styles.pubFooterSocialLink}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 11-.02 5.001A2.5 2.5 0 014.98 3.5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.78 2.65 4.78 6.1V21h-4v-5.6c0-1.34-.02-3.06-1.87-3.06-1.87 0-2.16 1.46-2.16 2.96V21H9z"/></svg>
+                </a>
+                <a className="sm-pub-footer-social" href="https://www.instagram.com/sitemargin/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" style={styles.pubFooterSocialLink}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.2" cy="6.8" r="1" /></svg>
+                </a>
+              </div>
+            )}
+          </div>
+          {showExternalLinks && (
+            <div style={styles.pubFooterCols}>
+              <div className="sm-pub-footer-col" style={styles.pubFooterCol}>
+                <h5 style={styles.pubFooterColHead}>Get started</h5>
+                <a href="https://sitemargin.co.za/whats-inside.html" style={styles.pubFooterColLink}>What's inside</a>
+                <a href="https://sitemargin.co.za/pricing.html" style={styles.pubFooterColLink}>Pricing</a>
+                <a href="https://app.sitemargin.co.za" style={styles.pubFooterColLink}>Start free</a>
+              </div>
+              <div className="sm-pub-footer-col" style={styles.pubFooterCol}>
+                <h5 style={styles.pubFooterColHead}>Company</h5>
+                <a href="https://sitemargin.co.za/about.html" style={styles.pubFooterColLink}>About</a>
+                <a href="https://sitemargin.co.za/contact.html" style={styles.pubFooterColLink}>Contact</a>
+                <a href="https://sitemargin.co.za/terms.html" style={styles.pubFooterColLink}>Terms</a>
+                <a href="https://sitemargin.co.za/privacy.html" style={styles.pubFooterColLink}>Privacy</a>
+              </div>
+              <div className="sm-pub-footer-col" style={styles.pubFooterCol}>
+                <h5 style={styles.pubFooterColHead}>Get the app</h5>
+                <a style={styles.pubFooterStoreLink} href="https://app.sitemargin.co.za">
+                  <svg viewBox="0 0 24 24" fill="currentColor" style={styles.pubFooterStoreIcon}><path d="M3 2.6v18.8a1 1 0 001.5.87l16-9.4a1 1 0 000-1.74l-16-9.4A1 1 0 003 2.6z" /></svg>
+                  Google Play
+                </a>
+                <span style={{ ...styles.pubFooterStoreLink, ...styles.pubFooterStoreLinkSoon }}>
+                  <svg viewBox="0 0 24 24" fill="currentColor" style={styles.pubFooterStoreIcon}><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.24-1.68.03.13.05.28.06.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.95 1.34-1.94 2.71-3.44 2.71-1.53 0-1.98-.9-3.72-.9-1.7 0-2.35.93-3.72.93-1.5 0-2.5-1.24-3.5-2.6C1.55 18.24.66 15.25.66 12.4c0-4.24 2.75-6.53 5.5-6.53 1.5 0 2.75.98 3.68.98.9 0 2.28-1.03 3.87-1.03.63 0 2.86.06 4.34 2.14-.11.07-2.58 1.5-2.58 4.58 0 3.67 3.24 4.98 3.29 5.01z" /></svg>
+                  Apple App Store — coming soon
+                </span>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-      </div>
+        <div className="sm-pub-footer-bottom" style={styles.pubFooterBottom}>
+          <span>© 2026 SiteMargin</span>
+          {showExternalLinks && (
+            <div style={styles.pubFooterBottomLinks}>
+              <a href="https://sitemargin.co.za/terms.html" style={styles.pubFooterColLink}>Terms</a>
+              <a href="https://sitemargin.co.za/privacy.html" style={styles.pubFooterColLink}>Privacy</a>
+            </div>
+          )}
+        </div>
+      </footer>
     </>
   );
 }
@@ -1021,6 +1084,12 @@ function AuthGate() {
   const [checkoutTier, setCheckoutTier] = useState(null); // which plan button is loading
   const [selectedTier, setSelectedTier] = useState(() => {
     try { return localStorage.getItem("sm_selected_tier") || null; } catch { return null; }
+  });
+  // "Log in" (marketing site + app menu) links here with ?login=1 so
+  // returning users land on a plain sign-in screen instead of the full
+  // marketing pitch + pricing grid meant for new sign-ups.
+  const [isLoginIntent] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get("login") === "1"; } catch { return false; }
   });
   const [gateMenuOpen, setGateMenuOpen] = useState(false);
   const gateMenuWrapRef = useRef(null);
@@ -1254,7 +1323,7 @@ function AuthGate() {
         </div>
       </div>
       <div style={styles.gateWrap}>
-        {status === "signedout" && sendState !== "sent" && (
+        {status === "signedout" && sendState !== "sent" && !isLoginIntent && (
           <div style={styles.heroWrap}>
             <div style={styles.eyebrow}>COST VARIANCE INTELLIGENCE · FOR SOUTH AFRICAN CONTRACTORS</div>
             <h1 style={{ ...styles.dashTitle, margin: "10px 0 14px" }}>
@@ -1301,7 +1370,13 @@ function AuthGate() {
         )}
 
         <h1 style={{ ...styles.dashTitle, marginBottom: 10 }}>
-          {status === "pending" ? "Almost there" : status === "denied" ? "Something went wrong" : "Try it for free"}
+          {status === "pending"
+            ? "Almost there"
+            : status === "denied"
+            ? "Something went wrong"
+            : isLoginIntent
+            ? "Log in"
+            : "Try it for free"}
         </h1>
 
         {status === "signedout" && (
@@ -1313,9 +1388,11 @@ function AuthGate() {
             ) : (
               <>
                 <p style={styles.gateText}>
-                  Enter your email and we'll send you a one-click sign-in link — no password needed.
+                  {isLoginIntent
+                    ? "Enter the email you signed up with and we'll send you a one-click link to log in — no password needed."
+                    : "Enter your email and we'll send you a one-click sign-in link — no password needed."}
                 </p>
-                {selectedTier && (
+                {selectedTier && !isLoginIntent && (
                   <div style={styles.tierNote}>
                     {selectedTier === "free"
                       ? "Starting on the Free plan."
@@ -1336,42 +1413,53 @@ function AuthGate() {
                     {sendState === "sending" ? "Sending…" : "Send sign-in link"}
                   </button>
                 </form>
+                <p style={styles.gateSwitchText}>
+                  {isLoginIntent ? (
+                    <>New here? <a href="https://sitemargin.co.za/pricing.html" style={styles.gateSwitchLink}>See pricing &amp; sign up</a></>
+                  ) : (
+                    <>Already have an account? <a href="?login=1" style={styles.gateSwitchLink}>Log in</a></>
+                  )}
+                </p>
               </>
             )}
             {sendState === "error" && <div style={styles.gateError}>{errorMsg}</div>}
-            <div style={styles.pricingHead}>Pricing</div>
-            <div style={styles.checkoutGrid}>
-              <div style={{ ...styles.checkoutCard, ...(selectedTier === "free" ? styles.checkoutCardSelected : {}) }}>
-                <div style={styles.checkoutTier}>Free</div>
-                <div style={styles.checkoutPrice}>R0</div>
-                <div style={styles.checkoutDesc}>For trying it out on a single job. 1 active project, unlimited line items.</div>
-                <button type="button" style={styles.tierCta} onClick={() => chooseTier("free")}>Get started</button>
-              </div>
-              <div style={{ ...styles.checkoutCard, ...(selectedTier === "contractor" ? styles.checkoutCardSelected : {}) }}>
-                <div style={styles.checkoutTier}>Contractor</div>
-                <div style={styles.checkoutPrice}>
-                  R199<span style={styles.checkoutPriceUnit}>/month</span>
+            {!isLoginIntent && (
+              <>
+                <div style={styles.pricingHead}>Pricing</div>
+                <div style={styles.checkoutGrid}>
+                  <div style={{ ...styles.checkoutCard, ...(selectedTier === "free" ? styles.checkoutCardSelected : {}) }}>
+                    <div style={styles.checkoutTier}>Free</div>
+                    <div style={styles.checkoutPrice}>R0</div>
+                    <div style={styles.checkoutDesc}>For trying it out on a single job. 1 active project, unlimited line items.</div>
+                    <button type="button" style={styles.tierCta} onClick={() => chooseTier("free")}>Get started</button>
+                  </div>
+                  <div style={{ ...styles.checkoutCard, ...(selectedTier === "contractor" ? styles.checkoutCardSelected : {}) }}>
+                    <div style={styles.checkoutTier}>Contractor</div>
+                    <div style={styles.checkoutPrice}>
+                      R199<span style={styles.checkoutPriceUnit}>/month</span>
+                    </div>
+                    <div style={styles.checkoutDesc}>Unlimited projects, change orders, payments &amp; retention, PDF export.</div>
+                    <button type="button" style={styles.tierCta} onClick={() => chooseTier("contractor")}>Get started</button>
+                  </div>
+                  <div style={{ ...styles.checkoutCard, ...(selectedTier === "firm" ? styles.checkoutCardSelected : {}) }}>
+                    <div style={styles.checkoutTier}>Company</div>
+                    <div style={styles.checkoutPrice}>
+                      R599<span style={styles.checkoutPriceUnit}>/month</span>
+                    </div>
+                    <div style={styles.checkoutDesc}>Everything in Contractor, plus unlimited attachments and priority support.</div>
+                    <button type="button" style={styles.tierCta} onClick={() => chooseTier("firm")}>Get started</button>
+                  </div>
+                  <div style={{ ...styles.checkoutCard, ...(selectedTier === "homeowner" ? styles.checkoutCardSelected : {}) }}>
+                    <div style={styles.checkoutTier}>Home Owner</div>
+                    <div style={styles.checkoutPrice}>
+                      R899<span style={styles.checkoutPriceUnit}>/project</span>
+                    </div>
+                    <div style={styles.checkoutDesc}>Once-off, for managing your own build. Payments &amp; retention tracking, document register, PDF export.</div>
+                    <button type="button" style={styles.tierCta} onClick={() => chooseTier("homeowner")}>Get started</button>
+                  </div>
                 </div>
-                <div style={styles.checkoutDesc}>Unlimited projects, change orders, payments &amp; retention, PDF export.</div>
-                <button type="button" style={styles.tierCta} onClick={() => chooseTier("contractor")}>Get started</button>
-              </div>
-              <div style={{ ...styles.checkoutCard, ...(selectedTier === "firm" ? styles.checkoutCardSelected : {}) }}>
-                <div style={styles.checkoutTier}>Company</div>
-                <div style={styles.checkoutPrice}>
-                  R599<span style={styles.checkoutPriceUnit}>/month</span>
-                </div>
-                <div style={styles.checkoutDesc}>Everything in Contractor, plus unlimited attachments and priority support.</div>
-                <button type="button" style={styles.tierCta} onClick={() => chooseTier("firm")}>Get started</button>
-              </div>
-              <div style={{ ...styles.checkoutCard, ...(selectedTier === "homeowner" ? styles.checkoutCardSelected : {}) }}>
-                <div style={styles.checkoutTier}>Home Owner</div>
-                <div style={styles.checkoutPrice}>
-                  R899<span style={styles.checkoutPriceUnit}>/project</span>
-                </div>
-                <div style={styles.checkoutDesc}>Once-off, for managing your own build. Payments &amp; retention tracking, document register, PDF export.</div>
-                <button type="button" style={styles.tierCta} onClick={() => chooseTier("homeowner")}>Get started</button>
-              </div>
-            </div>
+              </>
+            )}
           </>
         )}
 
@@ -1406,6 +1494,18 @@ function AuthGate() {
                 <div style={styles.checkoutDesc}>Everything in Contractor, plus unlimited attachments and priority support.</div>
                 <button style={styles.addBtn} onClick={() => startCheckout("firm")} disabled={checkoutTier !== null}>
                   {checkoutTier === "firm" ? "Redirecting…" : "Subscribe"}
+                </button>
+              </div>
+              <div style={{ ...styles.checkoutCard, ...(selectedTier === "homeowner" ? styles.checkoutCardSelected : {}) }}>
+                <div style={styles.checkoutTier}>Home Owner</div>
+                <div style={styles.checkoutPrice}>
+                  R899<span style={styles.checkoutPriceUnit}>/project</span>
+                </div>
+                <div style={styles.checkoutDesc}>Once-off, for managing your own build. Payments &amp; retention tracking, document register, PDF export.</div>
+                {/* Once-off charge, not a recurring plan — "Pay once" rather
+                    than "Subscribe" so this doesn't read as a monthly cost. */}
+                <button style={styles.addBtn} onClick={() => startCheckout("homeowner")} disabled={checkoutTier !== null}>
+                  {checkoutTier === "homeowner" ? "Redirecting…" : "Pay once"}
                 </button>
               </div>
             </div>
@@ -4033,6 +4133,8 @@ const styles = {
   gateNotice: { background: "rgba(29,92,138,0.07)", border: "1px solid #1D5C8A", borderRadius: 14, padding: "14px 16px", fontSize: 14, color: "#4A4A4F" },
   gateError: { color: "#C1462B", fontSize: 13, marginTop: 10 },
   gateFootnote: { fontSize: 13, color: "#6E6E73", marginTop: 22 },
+  gateSwitchText: { fontSize: 13.5, color: "#6E6E73", marginTop: 14 },
+  gateSwitchLink: { color: "#1D5C8A", fontWeight: 600, textDecoration: "none" },
   topNavBtn: { background: "none", border: "none", color: "#6E6E73", fontSize: 14, fontWeight: 500, padding: "6px 12px", cursor: "pointer", borderRadius: 3 },
   topNavBtnActive: { background: "#1D1D1F", color: "#FFFFFF", fontWeight: 600 },
 
@@ -4114,9 +4216,29 @@ const styles = {
   addInput: { background: "#F5F5F7", border: "1px solid transparent", borderRadius: 10, color: "#1D1D1F", fontSize: 14, padding: "8px 12px" },
   addBtn: { background: "#1D5C8A", border: "none", borderRadius: 100, color: "#FFFFFF", fontWeight: 600, fontSize: 13, padding: "9px 16px", cursor: "pointer", whiteSpace: "nowrap" },
   footer: { maxWidth: 1180, margin: "16px auto 0", fontSize: 12, color: "#6E6E73" },
-  siteFooter: { maxWidth: 1180, margin: "0 auto", padding: "24px 0", borderTop: "1px solid #E8E8ED", fontSize: 13, color: "#6E6E73", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 14 },
-  siteFooterLinks: { display: "flex", gap: 20, flexWrap: "wrap" },
-  siteFooterLink: { color: "#6E6E73", textDecoration: "none" },
+  // Full marketing-style footer (AppFooter, above) — mirrors sitemargin.co.za's
+  // .site-footer/.footer-* rules in styles.css. One deliberate departure: the
+  // social-icon circle background is white here instead of the marketing
+  // site's --stage (#F5F5F7) tint, because #F5F5F7 is this app's own page
+  // background — using it would make the icons invisible against the page.
+  pubFooter: { maxWidth: 1180, margin: "0 auto", padding: "40px 0 0", borderTop: "1px solid #E8E8ED" },
+  pubFooterTop: { display: "flex", flexWrap: "wrap", gap: 40, justifyContent: "space-between", paddingBottom: 30 },
+  pubFooterBrand: { maxWidth: 280 },
+  pubFooterLogoRow: { display: "flex", alignItems: "center", gap: 8, marginBottom: 12 },
+  pubFooterLogoMark: { height: 38, width: "auto", display: "block" },
+  pubFooterLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, letterSpacing: "-0.01em", color: "#1D1D1F" },
+  pubFooterTagline: { color: "#6E6E73", fontSize: 13.5, lineHeight: 1.6, margin: "0 0 16px" },
+  pubFooterSocial: { display: "flex", gap: 10 },
+  pubFooterSocialLink: { width: 32, height: 32, borderRadius: "50%", background: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", color: "#6E6E73", textDecoration: "none" },
+  pubFooterCols: { display: "flex", gap: 40, flexWrap: "wrap" },
+  pubFooterCol: { minWidth: 130 },
+  pubFooterColHead: { fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73", fontWeight: 600, marginBottom: 14 },
+  pubFooterColLink: { display: "block", fontSize: 13.5, color: "#1D1D1F", textDecoration: "none", marginBottom: 10 },
+  pubFooterStoreLink: { display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#1D1D1F", textDecoration: "none", marginBottom: 10 },
+  pubFooterStoreLinkSoon: { color: "#6E6E73" },
+  pubFooterStoreIcon: { width: 18, height: 18, flex: "none" },
+  pubFooterBottom: { borderTop: "1px solid #E8E8ED", marginTop: 8, padding: "18px 0 24px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, fontSize: 12, color: "#6E6E73" },
+  pubFooterBottomLinks: { display: "flex", gap: 18, flexWrap: "wrap" },
   referralRow: { maxWidth: 1180, margin: "40px auto 0", padding: "32px 0", borderTop: "1px solid #E8E8ED", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 32, flexWrap: "wrap" },
   referralText: { flex: 1, minWidth: 240 },
   referralEyebrow: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1D5C8A", marginBottom: 6 },
