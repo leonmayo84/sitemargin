@@ -739,8 +739,6 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                       <a
                         key={item.label}
                         href={item.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="sm-menu-item"
                         style={styles.menuSecondaryLink}
                         onClick={() => setMenuOpen(false)}
@@ -749,8 +747,8 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                       </a>
                     ))}
                     <div style={styles.menuPanelDimRow}>
-                      <a href="https://sitemargin.co.za/terms.html" target="_blank" rel="noopener noreferrer" className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => setMenuOpen(false)}>Terms</a>
-                      <a href="https://sitemargin.co.za/privacy.html" target="_blank" rel="noopener noreferrer" className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => setMenuOpen(false)}>Privacy</a>
+                      <a href="https://sitemargin.co.za/terms.html" className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => setMenuOpen(false)}>Terms</a>
+                      <a href="https://sitemargin.co.za/privacy.html" className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => setMenuOpen(false)}>Privacy</a>
                     </div>
                   </>
                 )}
@@ -923,12 +921,12 @@ function AppFooter() {
           to the marketing site's pages is a normal, expected action. */}
       {!Capacitor.isNativePlatform() && (
         <div style={styles.siteFooterLinks}>
-          <a href="https://sitemargin.co.za/whats-inside.html" target="_blank" rel="noopener noreferrer" style={styles.siteFooterLink}>What's inside</a>
-          <a href="https://sitemargin.co.za/pricing.html" target="_blank" rel="noopener noreferrer" style={styles.siteFooterLink}>Pricing</a>
-          <a href="https://sitemargin.co.za/about.html" target="_blank" rel="noopener noreferrer" style={styles.siteFooterLink}>About</a>
-          <a href="https://sitemargin.co.za/contact.html" target="_blank" rel="noopener noreferrer" style={styles.siteFooterLink}>Contact</a>
-          <a href="https://sitemargin.co.za/terms.html" target="_blank" rel="noopener noreferrer" style={styles.siteFooterLink}>Terms</a>
-          <a href="https://sitemargin.co.za/privacy.html" target="_blank" rel="noopener noreferrer" style={styles.siteFooterLink}>Privacy</a>
+          <a href="https://sitemargin.co.za/whats-inside.html" style={styles.siteFooterLink}>What's inside</a>
+          <a href="https://sitemargin.co.za/pricing.html" style={styles.siteFooterLink}>Pricing</a>
+          <a href="https://sitemargin.co.za/about.html" style={styles.siteFooterLink}>About</a>
+          <a href="https://sitemargin.co.za/contact.html" style={styles.siteFooterLink}>Contact</a>
+          <a href="https://sitemargin.co.za/terms.html" style={styles.siteFooterLink}>Terms</a>
+          <a href="https://sitemargin.co.za/privacy.html" style={styles.siteFooterLink}>Privacy</a>
         </div>
       )}
       </div>
