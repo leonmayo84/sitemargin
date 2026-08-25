@@ -601,7 +601,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
         </div>
       </div>
       {!hideTitle && (
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
           {logoNode !== undefined ? logoNode : (
             logoUrl && (
               // Deliberately not "no-print" — the company logo should appear on
@@ -2599,7 +2599,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                 exported/printed cost sheet, so the company logo needs to
                 pull through onto the PDF, not just show on screen. */}
             {logoUrl && <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />}
-            <div style={styles.eyebrowProminent}>COST VARIANCE SHEET</div>
+            <div style={{ ...styles.eyebrowProminent, marginLeft: 12 }}>COST VARIANCE SHEET</div>
             <span style={styles.titleDivider}>·</span>
             <input
               style={styles.projectInput}
@@ -3717,7 +3717,7 @@ const styles = {
 
   titleBlock: { display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-end", gap: 16, borderBottom: "2px solid #E8E8ED", paddingBottom: 14, maxWidth: 1180, margin: "0 auto 20px" },
   titleBlockLeft: { display: "flex", flexDirection: "column", gap: 6, flex: 1, minWidth: 240 },
-  projectInput: { background: "transparent", border: "none", color: "#1D1D1F", fontSize: 26, fontWeight: 700, padding: 0, flex: "1 1 auto", minWidth: 160, letterSpacing: "-0.02em", fontFamily: "'Inter', sans-serif" },
+  projectInput: { background: "transparent", border: "none", color: "#1D1D1F", fontSize: 17, fontWeight: 800, padding: 0, flex: "1 1 auto", minWidth: 160, letterSpacing: "0.02em", fontFamily: "'Inter', sans-serif", textTransform: "uppercase" },
   titleBlockRight: { display: "flex", gap: 22 },
   tbCell: { display: "flex", flexDirection: "column", alignItems: "flex-end" },
   tbLabel: { fontSize: 10, letterSpacing: "0.1em", color: "#6E6E73" },
