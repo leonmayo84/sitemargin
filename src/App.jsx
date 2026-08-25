@@ -1099,7 +1099,7 @@ function AuthGate() {
   // Password is an alternative to the magic link, not a replacement — most
   // people still get the one-click email link by default, but anyone who'd
   // rather not wait on email each time can switch to a password instead.
-  const [authMode, setAuthMode] = useState("magic"); // magic | password
+  const [authMode, setAuthMode] = useState("password"); // magic | password — password shown by default, magic link is the fallback toggle
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordState, setPasswordState] = useState("idle"); // idle | sending | error
