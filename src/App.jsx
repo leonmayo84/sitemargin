@@ -3919,14 +3919,20 @@ const styles = {
   // opened either by the onClick toggle (menuOpen state — works on touch,
   // where hover doesn't exist) or, on devices with a real hover-capable
   // pointer, by hovering .sm-menu-wrap (see GlobalStyles).
+  //
+  // top is flush at "100%" (zero gap) rather than offset a few px below the
+  // button — a gap there is dead space that belongs to neither the button
+  // nor the drawer, so the pointer loses :hover crossing it and the drawer
+  // snaps shut before it can be reached. No maxHeight/overflow either: the
+  // drawer just sizes to its content so it never scrolls internally.
   menuDrawer: {
-    position: "absolute", top: "calc(100% + 10px)", right: 0,
-    width: "min(320px, 86vw)", maxHeight: "min(560px, 78vh)",
+    position: "absolute", top: "100%", right: 0,
+    width: "min(320px, 86vw)",
     background: "#FFFFFF", borderRadius: 20,
     boxShadow: "0 20px 50px rgba(0,0,0,0.16), 0 4px 16px rgba(0,0,0,0.07)",
     zIndex: 200,
     display: "flex", flexDirection: "column",
-    padding: "18px 20px 18px", overflowY: "auto",
+    padding: "20px 20px 18px",
     transformOrigin: "top right",
     transform: "translateY(-6px) scale(0.97)", opacity: 0, visibility: "hidden", pointerEvents: "none",
     transition: "transform 0.2s ease, opacity 0.16s ease",
