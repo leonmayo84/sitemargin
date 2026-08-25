@@ -7,6 +7,7 @@
 
 import { createHash } from "node:crypto";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { TIERS } from "../_shared/tiers.ts";
 
 const PAYFAST_MERCHANT_ID = Deno.env.get("PAYFAST_MERCHANT_ID")!;
 const PAYFAST_MERCHANT_KEY = Deno.env.get("PAYFAST_MERCHANT_KEY")!;
@@ -15,11 +16,6 @@ const PAYFAST_MODE = Deno.env.get("PAYFAST_MODE") ?? "live"; // "live" | "sandbo
 const APP_URL = Deno.env.get("APP_URL") ?? "https://app.sitemargin.co.za";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-const TIERS: Record<string, { amount: string; label: string }> = {
-  contractor: { amount: "249.00", label: "SiteMargin — Contractor plan" },
-  firm: { amount: "599.00", label: "SiteMargin — Firm plan" },
-};
 
 // PayFast requires values urlencoded PHP-style (spaces as '+', not %20).
 function pfEncode(value: string): string {
@@ -84,9 +80,13 @@ Deno.serve(async (req) => {
       { onConflict: "email" }
     );
 
-    const { amount, label } = TIERS[tier];
+    const { amount, label, recurring } = TIERS[tier];
 
-    // Field order matters for PayFast's signature — this follows their documented order.
+    // Field order matters for PayFast's signature — this follows their
+    // documented order. The subscription fields (subscription_type onward)
+    // are what turns this into a recurring monthly charge; a once-off tier
+    // (e.g. homeowner) simply omits them and PayFast treats it as a normal
+    // single payment instead.
     const fields: [string, string][] = [
       ["merchant_id", PAYFAST_MERCHANT_ID],
       ["merchant_key", PAYFAST_MERCHANT_KEY],
@@ -97,10 +97,14 @@ Deno.serve(async (req) => {
       ["m_payment_id", mPaymentId],
       ["amount", amount],
       ["item_name", label],
-      ["subscription_type", "1"],
-      ["recurring_amount", amount],
-      ["frequency", "3"], // monthly
-      ["cycles", "0"], // 0 = indefinite, until cancelled
+      ...(recurring
+        ? ([
+            ["subscription_type", "1"],
+            ["recurring_amount", amount],
+            ["frequency", "3"], // monthly
+            ["cycles", "0"], // 0 = indefinite, until cancelled
+          ] as [string, string][])
+        : []),
     ];
 
     const signature = buildSignature(fields, PAYFAST_PASSPHRASE);

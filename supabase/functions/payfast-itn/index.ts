@@ -7,6 +7,7 @@
 
 import { createHash } from "node:crypto";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { TIERS } from "../_shared/tiers.ts";
 
 const PAYFAST_PASSPHRASE = Deno.env.get("PAYFAST_PASSPHRASE")!;
 const PAYFAST_MODE = Deno.env.get("PAYFAST_MODE") ?? "live";
@@ -76,15 +77,35 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
     if (paymentStatus === "COMPLETE") {
-      const periodEnd = new Date();
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
+      // A once-off tier (e.g. homeowner) has no monthly PayFast charge to
+      // track, so it shouldn't get a current_period_end implying access
+      // lapses after a month — look up which tier this row is for and only
+      // set an expiry when it's actually a recurring subscription. Default
+      // to recurring if the tier can't be found, since that reproduces the
+      // previous (safe, known-correct) behavior rather than guessing wrong
+      // in the direction that could grant permanent access to what should
+      // have been a monthly charge.
+      const { data: existing } = await supabase
+        .from("subscriptions")
+        .select("tier")
+        .eq("email", email)
+        .eq("m_payment_id", mPaymentId)
+        .maybeSingle();
+      const isRecurring = TIERS[existing?.tier ?? ""]?.recurring ?? true;
+
+      let periodEnd: string | null = null;
+      if (isRecurring) {
+        const d = new Date();
+        d.setMonth(d.getMonth() + 1);
+        periodEnd = d.toISOString();
+      }
 
       await supabase
         .from("subscriptions")
         .update({
           status: "active",
           payfast_token: token ?? null,
-          current_period_end: periodEnd.toISOString(),
+          current_period_end: periodEnd,
           updated_at: new Date().toISOString(),
         })
         .eq("email", email)
