@@ -4413,7 +4413,10 @@ const styles = {
 
   summaryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, maxWidth: 1180, margin: "0 auto 16px" },
   summaryCard: { background: "#FFFFFF", borderRadius: 16, padding: "14px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
-  summaryLabel: { fontSize: 11, letterSpacing: "0.08em", color: "#6E6E73", marginBottom: 6, textTransform: "uppercase" },
+  // lineHeight + minHeight reserve room for two lines of label text (e.g.
+  // "ORIGINAL QUOTE ALLOCATION" wraps, "ACTUAL SPEND" doesn't) so every
+  // card's value sits on the same baseline regardless of how its label wraps.
+  summaryLabel: { fontSize: 11, lineHeight: 1.3, minHeight: 29, letterSpacing: "0.08em", color: "#6E6E73", marginBottom: 6, textTransform: "uppercase" },
   summaryValue: { fontFamily: "'Inter', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 19, fontWeight: 500 },
 
   warningBanner: { maxWidth: 1180, margin: "0 auto 12px", background: "rgba(193,70,43,0.07)", border: "1px solid #C1462B", borderRadius: 14, padding: "12px 16px", fontSize: 14, color: "#8A3D1E" },
