@@ -89,6 +89,23 @@ const STATUS = {
 const CATEGORIES = ["Labour", "Materials", "Labour & Materials", "Subcontractors", "Other"];
 const CATEGORY_COLOR = { Labour: "#3D6FA6", Materials: "#B8862F", "Labour & Materials": "#4FA8A0", Subcontractors: "#8B5FA3", Other: "#6E6E73" };
 
+// Same six hues as the tool tiles on sitemargin.co.za's homepage ("Six tools,
+// six colours — so you always know which one you're in"), applied here to
+// the matching view-toggle tab so the app and marketing site read as one
+// system. Only the six tabs with a real marketing-site equivalent get a
+// colour — Purchase Orders, Tenders, Quote, Charts and Trend are sub-views
+// without their own tile there, so they stay on the neutral grey/black
+// toggle treatment rather than inventing colours the rest of the product
+// doesn't use.
+const MODULE_COLOR = {
+  ledger: { solid: "#C2571F", tint: "rgba(194,87,31,0.09)" },       // budget
+  schedule: { solid: "#3B6FA6", tint: "rgba(59,111,166,0.09)" },     // schedule
+  documents: { solid: "#7A5FBF", tint: "rgba(122,95,191,0.09)" },    // docs
+  payments: { solid: "#3F8A5D", tint: "rgba(63,138,93,0.09)" },      // payments
+  plans: { solid: "#2E8C82", tint: "rgba(46,140,130,0.09)" },        // plans
+  changeorders: { solid: "#C6902E", tint: "rgba(198,144,46,0.09)" }, // change orders
+};
+
 function statusFor(budget, actual) {
   if (budget <= 0) return "ok";
   const ratio = actual / budget;
@@ -517,7 +534,7 @@ function TrendChart({ snapshots }) {
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 80, display: "block" }} preserveAspectRatio="none">
       <line x1="0" y1={zeroY} x2={W} y2={zeroY} stroke="#E8E8ED" strokeWidth="0.5" strokeDasharray="1,1" />
-      <polyline points={points} fill="none" stroke="#B85C2C" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+      <polyline points={points} fill="none" stroke="#1D5C8A" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
     </svg>
   );
 }
@@ -567,12 +584,12 @@ function AppLogo() {
     <div style={styles.appLogoRow}>
       <svg className="sm-app-logo-mark" style={styles.appLogoMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
         <rect x="4" y="8" width="28" height="8" fill="#3C2E1E" />
-        <rect x="34" y="8" width="10" height="8" fill="#B85C2C" />
+        <rect x="34" y="8" width="10" height="8" fill="#1D5C8A" />
         <rect x="4" y="20" width="40" height="8" fill="#3C2E1E" />
         <rect x="4" y="32" width="40" height="8" fill="#3C2E1E" />
       </svg>
       <div className="sm-app-logo-text" style={styles.appLogoText}>
-        site<span style={{ color: "#B85C2C" }}>Margin</span>
+        site<span style={{ color: "#1D5C8A" }}>Margin</span>
       </div>
     </div>
   );
@@ -587,12 +604,31 @@ function GlobalStyles() {
     <style>{`
       * { box-sizing: border-box; }
       input, select, textarea, button { font-family: inherit; }
-      input:focus, select:focus, textarea:focus { outline: 2px solid #B85C2C; outline-offset: 1px; }
-      button:focus-visible { outline: 2px solid #B85C2C; outline-offset: 2px; }
+      input:focus, select:focus, textarea:focus { outline: 2px solid #1D5C8A; outline-offset: 1px; }
+      button:focus-visible { outline: 2px solid #1D5C8A; outline-offset: 2px; }
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
       .print-only-status { display: none; }
       .print-only-footer { display: none; }
       .sm-logo-menu-item:hover { background: #F5F5F7; }
+      /* Lets the hamburger's drawer pop open on hover, but only on devices
+         that have a real hover-capable pointer (a mouse/trackpad) — gated
+         behind (hover: hover) and (pointer: fine) so touchscreens (the
+         Android app included) never get a "stuck open" menu from a phantom
+         hover a tap can trigger. Touch and click-only devices still open it
+         via the button's own onClick, which sets menuOpen and applies
+         styles.menuDrawerOpen directly as an inline style further down —
+         this rule only adds hover as an extra way in on desktop, it's never
+         the only way in. !important is required to win over the drawer's
+         own inline closed-state styles, which inline styles otherwise
+         always beat regardless of this rule's specificity. */
+      @media (hover: hover) and (pointer: fine) {
+        .sm-menu-wrap:hover .sm-menu-drawer {
+          transform: translateX(0) !important;
+          opacity: 1 !important;
+          visibility: visible !important;
+          pointer-events: auto !important;
+        }
+      }
       @media print {
         .no-print { display: none !important; }
         body, html { background: #fff !important; }
@@ -614,12 +650,27 @@ function GlobalStyles() {
 
 function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl, hideTitle, titleNode, logoNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuWrapRef = useRef(null);
   const tabs = [
     ["dashboard", "Projects"],
     ["subcontractors", "Subcontractors"],
     ["templates", "Templates"],
   ];
   const closeAnd = (fn) => () => { setMenuOpen(false); if (fn) fn(); };
+
+  // Closes the drawer on an outside click/tap — same pattern used for the
+  // logo and download popovers elsewhere in this file. Only needed for the
+  // click-opened case; the hover-opened case already closes itself the
+  // moment the pointer leaves .sm-menu-wrap.
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleOutside(e) {
+      if (menuWrapRef.current && !menuWrapRef.current.contains(e.target)) setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [menuOpen]);
+
   return (
     <div style={styles.dashHeader}>
       <div style={styles.dashNavBar}>
@@ -632,17 +683,86 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
           {!Capacitor.isNativePlatform() && (
             <a href="https://sitemargin.co.za" style={styles.navHomeLink}>Home</a>
           )}
-          <button
-            style={styles.menuBtn}
-            aria-expanded={menuOpen}
-            aria-controls="appMenuPanel"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-            onClick={() => setMenuOpen((v) => !v)}
-          >
-            <span style={{ ...styles.menuBtnBar, ...(menuOpen ? styles.menuBtnBar1Open : {}) }} />
-            <span style={{ ...styles.menuBtnBar, ...(menuOpen ? styles.menuBtnBarMidOpen : {}) }} />
-            <span style={{ ...styles.menuBtnBar, ...(menuOpen ? styles.menuBtnBar3Open : {}) }} />
-          </button>
+          <div className="sm-menu-wrap" ref={menuWrapRef} style={styles.menuWrap}>
+            <button
+              style={styles.menuBtn}
+              aria-expanded={menuOpen}
+              aria-controls="appMenuPanel"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              onClick={() => setMenuOpen((v) => !v)}
+            >
+              <span style={{ ...styles.menuBtnBar, ...(menuOpen ? styles.menuBtnBar1Open : {}) }} />
+              <span style={{ ...styles.menuBtnBar, ...(menuOpen ? styles.menuBtnBarMidOpen : {}) }} />
+              <span style={{ ...styles.menuBtnBar, ...(menuOpen ? styles.menuBtnBar3Open : {}) }} />
+            </button>
+
+            {/* Always mounted (not menuOpen && …) so the CSS hover rule has
+                something to reveal — visibility/pointer-events keep it
+                non-interactive and untabbable while closed. */}
+            <div id="appMenuPanel" className="no-print sm-menu-drawer" style={{ ...styles.menuDrawer, ...(menuOpen ? styles.menuDrawerOpen : {}) }}>
+              <div style={styles.menuPanelInner}>
+                {onNavigate && tabs.map(([key, label]) => (
+                  <button
+                    key={key}
+                    style={{ ...styles.menuPanelLink, ...(current === key ? styles.menuPanelLinkActive : {}) }}
+                    onClick={closeAnd(() => onNavigate(key))}
+                  >
+                    {label}
+                  </button>
+                ))}
+                {/* The marketing site's own menu, one level down, lists its
+                    other pages (What's inside, Pricing, About, Contact, Terms,
+                    Privacy) below its app-equivalent links. Mirroring that here
+                    — same items, same reduced Terms/Privacy treatment — so the
+                    two menus match in contents, not just in style. Web-only,
+                    same native-webview-hijack reasoning as the footer. */}
+                {!Capacitor.isNativePlatform() && (
+                  <>
+                    {[
+                      { label: "What's inside", href: "https://sitemargin.co.za/whats-inside.html" },
+                      { label: "Pricing", href: "https://sitemargin.co.za/pricing.html" },
+                      { label: "About", href: "https://sitemargin.co.za/about.html" },
+                      { label: "Contact", href: "https://sitemargin.co.za/contact.html" },
+                    ].map((item) => (
+                      <a
+                        key={item.label}
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={styles.menuPanelLink}
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        {item.label}
+                      </a>
+                    ))}
+                    <a
+                      href="https://sitemargin.co.za/terms.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ ...styles.menuPanelDim, ...styles.menuPanelDimFirst }}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Terms
+                    </a>
+                    <a
+                      href="https://sitemargin.co.za/privacy.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={styles.menuPanelDim}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      Privacy
+                    </a>
+                  </>
+                )}
+                <div style={styles.menuPanelActions}>
+                  <button style={styles.menuPanelGhost} onClick={closeAnd(() => window.print())}>Print</button>
+                  {onSignOut && <button style={styles.menuPanelSolid} onClick={closeAnd(onSignOut)}>Sign out</button>}
+                </div>
+                {userEmail && <div style={styles.menuPanelEmail}>{userEmail}</div>}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       {!hideTitle && (
@@ -656,72 +776,6 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
             )
           )}
           {titleNode !== undefined ? titleNode : <h1 style={styles.pageHeaderEyebrow}>{title}</h1>}
-        </div>
-      )}
-
-      {menuOpen && (
-        <div id="appMenuPanel" className="no-print" style={styles.menuPanel}>
-          <div style={styles.menuPanelInner}>
-            {onNavigate && tabs.map(([key, label]) => (
-              <button
-                key={key}
-                style={{ ...styles.menuPanelLink, ...(current === key ? styles.menuPanelLinkActive : {}) }}
-                onClick={closeAnd(() => onNavigate(key))}
-              >
-                {label}
-              </button>
-            ))}
-            {/* The marketing site's own menu, one level down, lists its
-                other pages (What's inside, Pricing, About, Contact, Terms,
-                Privacy) below its app-equivalent links. Mirroring that here
-                — same items, same reduced Terms/Privacy treatment — so the
-                two menus match in contents, not just in style. Web-only,
-                same native-webview-hijack reasoning as the footer. */}
-            {!Capacitor.isNativePlatform() && (
-              <>
-                {[
-                  { label: "What's inside", href: "https://sitemargin.co.za/whats-inside.html" },
-                  { label: "Pricing", href: "https://sitemargin.co.za/pricing.html" },
-                  { label: "About", href: "https://sitemargin.co.za/about.html" },
-                  { label: "Contact", href: "https://sitemargin.co.za/contact.html" },
-                ].map((item) => (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={styles.menuPanelLink}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    {item.label}
-                  </a>
-                ))}
-                <a
-                  href="https://sitemargin.co.za/terms.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ ...styles.menuPanelDim, ...styles.menuPanelDimFirst }}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Terms
-                </a>
-                <a
-                  href="https://sitemargin.co.za/privacy.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={styles.menuPanelDim}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Privacy
-                </a>
-              </>
-            )}
-            <div style={styles.menuPanelActions}>
-              <button style={styles.menuPanelGhost} onClick={closeAnd(() => window.print())}>Print</button>
-              {onSignOut && <button style={styles.menuPanelSolid} onClick={closeAnd(onSignOut)}>Sign out</button>}
-            </div>
-            {userEmail && <div style={styles.menuPanelEmail}>{userEmail}</div>}
-          </div>
         </div>
       )}
     </div>
@@ -950,7 +1004,17 @@ function AuthGate() {
     try { return localStorage.getItem("sm_selected_tier") || null; } catch { return null; }
   });
   const [gateMenuOpen, setGateMenuOpen] = useState(false);
+  const gateMenuWrapRef = useRef(null);
   const emailInputRef = useRef(null);
+
+  useEffect(() => {
+    if (!gateMenuOpen) return;
+    function handleOutside(e) {
+      if (gateMenuWrapRef.current && !gateMenuWrapRef.current.contains(e.target)) setGateMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [gateMenuOpen]);
 
   function chooseTier(tier) {
     setSelectedTier(tier);
@@ -1102,68 +1166,69 @@ function AuthGate() {
         <div style={styles.gateNavWrap}>
           <div style={styles.gateNav}>
             <AppLogo />
-            <button
-              type="button"
-              style={styles.menuBtn}
-              aria-expanded={gateMenuOpen}
-              aria-controls="gateMenuPanel"
-              aria-label={gateMenuOpen ? "Close menu" : "Open menu"}
-              onClick={() => setGateMenuOpen((v) => !v)}
-            >
-              <span style={{ ...styles.menuBtnBar, ...(gateMenuOpen ? styles.menuBtnBar1Open : {}) }} />
-              <span style={{ ...styles.menuBtnBar, ...(gateMenuOpen ? styles.menuBtnBarMidOpen : {}) }} />
-              <span style={{ ...styles.menuBtnBar, ...(gateMenuOpen ? styles.menuBtnBar3Open : {}) }} />
-            </button>
-          </div>
-        </div>
-      </div>
-      {gateMenuOpen && (
-        <div id="gateMenuPanel" style={{ ...styles.menuPanel, paddingTop: 140 }}>
-          <div style={styles.menuPanelInner}>
-            {[
-              { label: "Home", href: "https://sitemargin.co.za/index.html" },
-              { label: "What's inside", href: "https://sitemargin.co.za/whats-inside.html" },
-              { label: "Pricing", href: "https://sitemargin.co.za/pricing.html" },
-              { label: "About", href: "https://sitemargin.co.za/about.html" },
-              { label: "Contact", href: "https://sitemargin.co.za/contact.html" },
-            ].map((item) => (
+            <div className="sm-menu-wrap" ref={gateMenuWrapRef} style={styles.menuWrap}>
               <button
-                key={item.label}
-                style={styles.menuPanelLink}
-                onClick={() => { setGateMenuOpen(false); window.location.href = item.href; }}
+                type="button"
+                style={styles.menuBtn}
+                aria-expanded={gateMenuOpen}
+                aria-controls="gateMenuPanel"
+                aria-label={gateMenuOpen ? "Close menu" : "Open menu"}
+                onClick={() => setGateMenuOpen((v) => !v)}
               >
-                {item.label}
+                <span style={{ ...styles.menuBtnBar, ...(gateMenuOpen ? styles.menuBtnBar1Open : {}) }} />
+                <span style={{ ...styles.menuBtnBar, ...(gateMenuOpen ? styles.menuBtnBarMidOpen : {}) }} />
+                <span style={{ ...styles.menuBtnBar, ...(gateMenuOpen ? styles.menuBtnBar3Open : {}) }} />
               </button>
-            ))}
-            {[
-              { label: "Terms", href: "https://sitemargin.co.za/terms.html" },
-              { label: "Privacy", href: "https://sitemargin.co.za/privacy.html" },
-            ].map((item, i) => (
-              <button
-                key={item.label}
-                style={{ ...styles.menuPanelDim, ...(i === 0 ? styles.menuPanelDimFirst : null) }}
-                onClick={() => { setGateMenuOpen(false); window.location.href = item.href; }}
-              >
-                {item.label}
-              </button>
-            ))}
-            <div style={{ ...styles.menuPanelActions, flexDirection: "column" }}>
-              <button
-                style={styles.menuPanelGhost}
-                onClick={() => { setGateMenuOpen(false); window.location.href = "https://app.sitemargin.co.za"; }}
-              >
-                Open the app
-              </button>
-              <button
-                style={styles.menuPanelSolid}
-                onClick={() => { setGateMenuOpen(false); window.location.href = "https://app.sitemargin.co.za"; }}
-              >
-                Sign up free
-              </button>
+
+              <div id="gateMenuPanel" className="sm-menu-drawer" style={{ ...styles.menuDrawer, ...(gateMenuOpen ? styles.menuDrawerOpen : {}) }}>
+                <div style={styles.menuPanelInner}>
+                  {[
+                    { label: "Home", href: "https://sitemargin.co.za/index.html" },
+                    { label: "What's inside", href: "https://sitemargin.co.za/whats-inside.html" },
+                    { label: "Pricing", href: "https://sitemargin.co.za/pricing.html" },
+                    { label: "About", href: "https://sitemargin.co.za/about.html" },
+                    { label: "Contact", href: "https://sitemargin.co.za/contact.html" },
+                  ].map((item) => (
+                    <button
+                      key={item.label}
+                      style={styles.menuPanelLink}
+                      onClick={() => { setGateMenuOpen(false); window.location.href = item.href; }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                  {[
+                    { label: "Terms", href: "https://sitemargin.co.za/terms.html" },
+                    { label: "Privacy", href: "https://sitemargin.co.za/privacy.html" },
+                  ].map((item, i) => (
+                    <button
+                      key={item.label}
+                      style={{ ...styles.menuPanelDim, ...(i === 0 ? styles.menuPanelDimFirst : null) }}
+                      onClick={() => { setGateMenuOpen(false); window.location.href = item.href; }}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                  <div style={{ ...styles.menuPanelActions, flexDirection: "column" }}>
+                    <button
+                      style={styles.menuPanelGhost}
+                      onClick={() => { setGateMenuOpen(false); window.location.href = "https://app.sitemargin.co.za"; }}
+                    >
+                      Open the app
+                    </button>
+                    <button
+                      style={styles.menuPanelSolid}
+                      onClick={() => { setGateMenuOpen(false); window.location.href = "https://app.sitemargin.co.za"; }}
+                    >
+                      Sign up free
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
       <div style={styles.gateWrap}>
         {status === "signedout" && sendState !== "sent" && (
           <div style={styles.heroWrap}>
@@ -2871,11 +2936,23 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             ["documents", `Documents${documents.length ? ` (${documents.length})` : ""}`],
             ["plans", `Plans${(project?.plans || []).length ? ` (${(project.plans || []).length})` : ""}`],
             ["changeorders", `Change Orders${changeOrders.length ? ` (${changeOrders.length})` : ""}`],
-          ].map(([key, label]) => (
-            <button key={key} style={{ ...styles.toggleBtn, ...(view === key ? styles.toggleBtnActive : {}) }} onClick={() => setView(key)}>
-              {label}
-            </button>
-          ))}
+          ].map(([key, label]) => {
+            const mc = MODULE_COLOR[key];
+            const active = view === key;
+            return (
+              <button
+                key={key}
+                style={{
+                  ...styles.toggleBtn,
+                  ...(mc ? { color: mc.solid, background: mc.tint } : {}),
+                  ...(active ? (mc ? { background: mc.solid, color: "#FFFFFF", fontWeight: 600 } : styles.toggleBtnActive) : {}),
+                }}
+                onClick={() => setView(key)}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -2888,11 +2965,23 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             ["payments", "Payments & Retention"],
             ["charts", "Charts"],
             ["trend", "Trend"],
-          ].map(([key, label]) => (
-            <button key={key} style={{ ...styles.toggleBtn, ...(view === key ? styles.toggleBtnActive : {}) }} onClick={() => setView(key)}>
-              {label}
-            </button>
-          ))}
+          ].map(([key, label]) => {
+            const mc = MODULE_COLOR[key];
+            const active = view === key;
+            return (
+              <button
+                key={key}
+                style={{
+                  ...styles.toggleBtn,
+                  ...(mc ? { color: mc.solid, background: mc.tint } : {}),
+                  ...(active ? (mc ? { background: mc.solid, color: "#FFFFFF", fontWeight: 600 } : styles.toggleBtnActive) : {}),
+                }}
+                onClick={() => setView(key)}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -3400,13 +3489,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             const bids = tenderBids.filter((b) => b.tender_id === tender.id).sort((a, b) => Number(a.amount) - Number(b.amount));
             const linkedItem = items.find((i) => i.id === tender.line_item_id);
             const draft = bidDrafts[tender.id] || { bidderName: "", subcontractorId: "", amount: "", notes: "" };
-            const tenderStatusColor = tender.status === "awarded" ? "#4C7A5C" : tender.status === "cancelled" ? "#C1462B" : "#B85C2C";
+            const tenderStatusColor = tender.status === "awarded" ? "#4C7A5C" : tender.status === "cancelled" ? "#C1462B" : "#1D5C8A";
             return (
               <div key={tender.id} style={{ ...styles.scoreCard, marginBottom: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 4 }}>
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#B85C2C", background: "rgba(184,92,44,0.1)", borderRadius: 100, padding: "3px 10px" }}>{tender.trade || "Trade"}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#1D5C8A", background: "rgba(29,92,138,0.1)", borderRadius: 100, padding: "3px 10px" }}>{tender.trade || "Trade"}</span>
                       <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: tenderStatusColor }}>{tender.status}</span>
                     </div>
                     <div style={{ fontSize: 16, fontWeight: 700, color: "#1D1D1F" }}>{tender.title}</div>
@@ -3504,7 +3593,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   let statusLabel = "Not started";
                   if (pct >= 100) { statusColor = "#4C7A5C"; statusLabel = "Done"; }
                   else if (end < today) { statusColor = "#C1462B"; statusLabel = "Overdue"; }
-                  else if (start <= today && today <= end) { statusColor = "#B85C2C"; statusLabel = "In progress"; }
+                  else if (start <= today && today <= end) { statusColor = "#1D5C8A"; statusLabel = "In progress"; }
                   return (
                     <div key={task.id} style={{ padding: "12px 16px", borderBottom: "1px solid #F2F2F5" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
@@ -3522,7 +3611,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                         </div>
                       </div>
                       <div style={{ position: "relative", height: 14, background: "#F2F2F5", borderRadius: 4 }}>
-                        <div style={{ position: "absolute", top: 0, bottom: 0, left: `${leftPct}%`, width: `${widthPct}%`, minWidth: 6, background: "rgba(184,92,44,0.16)", border: `1.5px solid ${statusColor}`, borderRadius: 4, overflow: "hidden" }}>
+                        <div style={{ position: "absolute", top: 0, bottom: 0, left: `${leftPct}%`, width: `${widthPct}%`, minWidth: 6, background: "rgba(29,92,138,0.16)", border: `1.5px solid ${statusColor}`, borderRadius: 4, overflow: "hidden" }}>
                           <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: statusColor, opacity: 0.6 }} />
                         </div>
                         {today >= rangeStart && today <= rangeEnd && (
@@ -3567,7 +3656,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             <div style={styles.ledger}>
               {DOC_CATEGORIES.filter((cat) => documents.some((d) => d.category === cat)).map((cat) => (
                 <div key={cat}>
-                  <div style={{ padding: "10px 16px", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#B85C2C", background: "#FAF7F2", borderBottom: "1px solid #E8E8ED" }}>
+                  <div style={{ padding: "10px 16px", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#1D5C8A", background: "#FAF7F2", borderBottom: "1px solid #E8E8ED" }}>
                     {cat}
                   </div>
                   {documents.filter((d) => d.category === cat).map((doc) => {
@@ -3578,7 +3667,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                           <button onClick={() => openDocument(doc)} style={{ background: "none", border: "none", padding: 0, color: "#1D1D1F", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>
                             {doc.name}
                           </button>
-                          {doc.version > 1 && <span style={{ fontSize: 11, fontWeight: 700, color: "#B85C2C", background: "rgba(184,92,44,0.1)", borderRadius: 100, padding: "2px 8px" }}>v{doc.version}</span>}
+                          {doc.version > 1 && <span style={{ fontSize: 11, fontWeight: 700, color: "#1D5C8A", background: "rgba(29,92,138,0.1)", borderRadius: 100, padding: "2px 8px" }}>v{doc.version}</span>}
                           {linkedItem && <span style={{ fontSize: 12, color: "#6E6E73" }}>· {linkedItem.name}</span>}
                           <span style={{ fontSize: 12, color: "#6E6E73" }}>{fmtFileSize(doc.file_size)}</span>
                         </div>
@@ -3668,12 +3757,12 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           <div style={styles.dfBrand}>
             <svg style={styles.dfMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
               <rect x="4" y="8" width="28" height="8" fill="#3C2E1E" />
-              <rect x="34" y="8" width="10" height="8" fill="#B85C2C" />
+              <rect x="34" y="8" width="10" height="8" fill="#1D5C8A" />
               <rect x="4" y="20" width="40" height="8" fill="#3C2E1E" />
               <rect x="4" y="32" width="40" height="8" fill="#3C2E1E" />
             </svg>
             <span style={styles.dfText}>
-              site<span style={{ color: "#B85C2C" }}>Margin</span> — Cost variance report for {project.name}
+              site<span style={{ color: "#1D5C8A" }}>Margin</span> — Cost variance report for {project.name}
             </span>
           </div>
           <div style={styles.dfMeta}>
@@ -3774,7 +3863,7 @@ const styles = {
     padding: "20px 16px 48px",
   },
   eyebrow: { fontSize: 12, letterSpacing: "0.1em", color: "#6E6E73", fontWeight: 600, textTransform: "uppercase" },
-  eyebrowProminent: { fontSize: 17, letterSpacing: "0.06em", color: "#B85C2C", fontWeight: 800, textTransform: "uppercase" },
+  eyebrowProminent: { fontSize: 17, letterSpacing: "0.06em", color: "#1D5C8A", fontWeight: 800, textTransform: "uppercase" },
   titleDivider: { fontSize: 22, color: "#C9C4B8", fontWeight: 400, lineHeight: 1 },
   appLogoRow: { display: "flex", alignItems: "center", gap: 8 },
   appLogoMark: { height: 64, width: "auto", display: "block" },
@@ -3792,36 +3881,54 @@ const styles = {
   // Matches sitemargin.co.za's own .nav-app-link exactly (same font, size,
   // color, padding, radius) — the app's mirror-image equivalent, pointing
   // back to the marketing site instead of into the app.
-  navHomeLink: { fontSize: 13.5, fontWeight: 600, color: "#FFFFFF", textDecoration: "none", whiteSpace: "nowrap", background: "#B85C2C", padding: "8px 16px", borderRadius: 100, display: "inline-block" },
+  navHomeLink: { fontSize: 13.5, fontWeight: 600, color: "#FFFFFF", textDecoration: "none", whiteSpace: "nowrap", background: "#1D5C8A", padding: "8px 16px", borderRadius: 100, display: "inline-block" },
   dashTitle: { fontSize: "clamp(30px, 4.5vw, 42px)", fontWeight: 700, letterSpacing: "-0.02em" },
-  pageHeaderEyebrow: { fontSize: 17, letterSpacing: "0.06em", color: "#B85C2C", fontWeight: 800, textTransform: "uppercase", margin: 0 },
+  pageHeaderEyebrow: { fontSize: 17, letterSpacing: "0.06em", color: "#1D5C8A", fontWeight: 800, textTransform: "uppercase", margin: 0 },
   dashTitleInput: { fontSize: "clamp(30px, 4.5vw, 42px)", fontWeight: 700, letterSpacing: "-0.02em", color: "#1D1D1F", background: "none", border: "none", borderBottom: "1px dashed #D9D9DE", padding: 0, width: "100%", minWidth: 0 },
   companyLogoMark: { height: "clamp(28px, 4.5vw, 44px)", width: "auto", maxWidth: 140, objectFit: "contain", borderRadius: 6 },
-  logoTextBtn: { background: "none", border: "none", color: "#B85C2C", fontSize: 11.5, fontWeight: 600, textAlign: "left", padding: 0, cursor: "pointer" },
+  logoTextBtn: { background: "none", border: "none", color: "#1D5C8A", fontSize: 11.5, fontWeight: 600, textAlign: "left", padding: 0, cursor: "pointer" },
   logoTextBtnMuted: { background: "none", border: "none", color: "#6E6E73", fontSize: 11, textAlign: "left", padding: 0, cursor: "pointer" },
   logoMenuPopover: { position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 30, background: "#FFFFFF", borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.14)", padding: 6, minWidth: 150, display: "flex", flexDirection: "column", gap: 2 },
   downloadMenuPopover: { position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, background: "#FFFFFF", borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.14)", padding: 6, minWidth: 130, display: "flex", flexDirection: "column", gap: 2 },
   logoMenuItem: { background: "none", border: "none", color: "#1D1D1F", fontSize: 13.5, fontWeight: 500, textAlign: "left", padding: "9px 12px", borderRadius: 8, cursor: "pointer" },
 
+  // menuWrap surrounds the button AND the drawer so the CSS hover rule in
+  // GlobalStyles (".sm-menu-wrap:hover .sm-menu-drawer") can bridge the two —
+  // hovering the button, the gap, or the drawer itself all count as "still
+  // hovering the menu," so moving the mouse from button to drawer doesn't
+  // flicker it shut.
+  menuWrap: { position: "relative" },
   menuBtn: { width: 40, height: 40, border: "none", borderRadius: "50%", background: "#F5F5F7", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, padding: 0, flexShrink: 0 },
   menuBtnBar: { display: "block", width: 15, height: 1.5, background: "#1D1D1F", borderRadius: 2, transition: "transform 0.25s ease, opacity 0.2s ease" },
   menuBtnBar1Open: { transform: "translateY(5.5px) rotate(45deg)" },
   menuBtnBarMidOpen: { opacity: 0 },
   menuBtnBar3Open: { transform: "translateY(-5.5px) rotate(-45deg)" },
 
-  // Every value below is copied 1:1 from sitemargin.co.za's own
-  // .menu-panel / .menu-inner / .menu-link / .menu-actions rules in
-  // styles.css — not approximated. menuPanelInner previously used 1180
-  // (the app's wider content-page width) instead of the marketing site's
-  // actual 980, and menuPanelActions was a side-by-side row instead of
-  // marketing's stacked, full-width column — both fixed here.
-  menuPanel: { position: "fixed", inset: 0, background: "rgba(255,255,255,0.94)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", zIndex: 200, display: "flex", flexDirection: "column", padding: "120px 20px 40px", overflowY: "auto" },
-  menuPanelInner: { maxWidth: 980, margin: "0 auto", width: "100%" },
-  menuPanelLink: { display: "block", width: "100%", textAlign: "left", background: "none", fontSize: 29, fontWeight: 700, letterSpacing: "-0.018em", color: "#1D1D1F", border: "none", padding: "9px 0", cursor: "pointer" },
-  menuPanelLinkActive: { color: "#B85C2C" },
-  menuPanelDim: { display: "block", width: "100%", textAlign: "left", background: "none", border: "none", fontSize: 15, fontWeight: 500, color: "#6E6E73", padding: "5px 0", cursor: "pointer", textDecoration: "none" },
-  menuPanelDimFirst: { marginTop: 18, paddingTop: 16, borderTop: "1px solid #E8E8ED" },
-  menuPanelActions: { marginTop: 28, display: "flex", flexDirection: "column", gap: 10, maxWidth: 340 },
+  // The hamburger button always stays on screen (it just morphs into a ✕
+  // rather than being covered or replaced), and its options now live in a
+  // panel anchored to the right edge instead of taking over the whole
+  // screen — closed by default (translated off-screen + invisible so it
+  // can't be tabbed/clicked into), opened either by the onClick toggle
+  // (menuOpen state — works on touch, where hover doesn't exist) or, on
+  // devices that actually have a hover-capable pointer, by hovering
+  // .sm-menu-wrap (see GlobalStyles). zIndex 200 keeps it above page
+  // content; the wrap itself is zIndex 201 so the button/✕ stay clickable.
+  menuDrawer: {
+    position: "fixed", top: 0, right: 0, height: "100vh",
+    width: "min(340px, 88vw)", background: "#FFFFFF",
+    boxShadow: "-10px 0 36px rgba(0,0,0,0.14)", zIndex: 200,
+    display: "flex", flexDirection: "column",
+    padding: "88px 26px 28px", overflowY: "auto",
+    transform: "translateX(100%)", opacity: 0, visibility: "hidden", pointerEvents: "none",
+    transition: "transform 0.26s ease, opacity 0.2s ease",
+  },
+  menuDrawerOpen: { transform: "translateX(0)", opacity: 1, visibility: "visible", pointerEvents: "auto" },
+  menuPanelInner: { width: "100%" },
+  menuPanelLink: { display: "block", width: "100%", textAlign: "left", background: "none", fontSize: 18.5, fontWeight: 700, letterSpacing: "-0.01em", color: "#1D1D1F", border: "none", padding: "8px 0", cursor: "pointer" },
+  menuPanelLinkActive: { color: "#1D5C8A" },
+  menuPanelDim: { display: "block", width: "100%", textAlign: "left", background: "none", border: "none", fontSize: 14, fontWeight: 500, color: "#6E6E73", padding: "5px 0", cursor: "pointer", textDecoration: "none" },
+  menuPanelDimFirst: { marginTop: 14, paddingTop: 14, borderTop: "1px solid #E8E8ED" },
+  menuPanelActions: { marginTop: 22, display: "flex", flexDirection: "column", gap: 10 },
   menuPanelGhost: { textAlign: "center", padding: 13, borderRadius: 100, fontWeight: 600, fontSize: 14.5, border: "1px solid #1D1D1F", color: "#1D1D1F", background: "none", cursor: "pointer" },
   menuPanelSolid: { textAlign: "center", padding: 13, borderRadius: 100, fontWeight: 600, fontSize: 14.5, border: "none", color: "#FFFFFF", background: "#1D1D1F", cursor: "pointer" },
   menuPanelEmail: { marginTop: 22, fontSize: 12, color: "#6E6E73", fontFamily: "'IBM Plex Mono', monospace" },
@@ -3836,7 +3943,7 @@ const styles = {
   gateNav: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF", borderRadius: 18, padding: "10px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", margin: "14px 0 0" },
   gateWrap: { maxWidth: 640, margin: "48px auto 0", padding: "0 16px" },
   heroWrap: { marginBottom: 36, paddingBottom: 32, borderBottom: "1px solid #E8E8ED" },
-  heroEm: { fontStyle: "normal", color: "#B85C2C" },
+  heroEm: { fontStyle: "normal", color: "#1D5C8A" },
   heroSub: { fontSize: 16, color: "#4A4A4F", lineHeight: 1.6, marginBottom: 26 },
   mockSheet: { background: "#FFFFFF", borderRadius: 18, padding: "16px 18px", boxShadow: "0 12px 34px rgba(0,0,0,0.08)", marginBottom: 28 },
   mockHead: { display: "flex", justifyContent: "space-between", fontSize: 11, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase", fontWeight: 600, paddingBottom: 10, marginBottom: 10, borderBottom: "1px solid #F2F2F5" },
@@ -3856,23 +3963,23 @@ const styles = {
   checkoutPrice: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 26, fontWeight: 600, color: "#1D1D1F", marginBottom: 8 },
   checkoutPriceUnit: { fontSize: 13, color: "#6E6E73", fontWeight: 400 },
   checkoutDesc: { fontSize: 13, color: "#6E6E73", marginBottom: 16, lineHeight: 1.5 },
-  checkoutCardSelected: { boxShadow: "0 0 0 1.5px #B85C2C, 0 12px 34px rgba(0,0,0,0.08)" },
+  checkoutCardSelected: { boxShadow: "0 0 0 1.5px #1D5C8A, 0 12px 34px rgba(0,0,0,0.08)" },
   tierCta: { background: "transparent", border: "1px solid #1D1D1F", borderRadius: 100, padding: "9px 16px", fontSize: 12.5, fontWeight: 600, color: "#1D1D1F", cursor: "pointer" },
-  tierNote: { fontSize: 12.5, color: "#B85C2C", fontWeight: 600, marginBottom: 10 },
+  tierNote: { fontSize: 12.5, color: "#1D5C8A", fontWeight: 600, marginBottom: 10 },
   gateText: { fontSize: 15, color: "#4A4A4F", lineHeight: 1.6, marginBottom: 20 },
   gateForm: { display: "flex", flexDirection: "column", gap: 10 },
-  gateNotice: { background: "rgba(184,92,44,0.07)", border: "1px solid #B85C2C", borderRadius: 14, padding: "14px 16px", fontSize: 14, color: "#4A4A4F" },
+  gateNotice: { background: "rgba(29,92,138,0.07)", border: "1px solid #1D5C8A", borderRadius: 14, padding: "14px 16px", fontSize: 14, color: "#4A4A4F" },
   gateError: { color: "#C1462B", fontSize: 13, marginTop: 10 },
   gateFootnote: { fontSize: 13, color: "#6E6E73", marginTop: 22 },
   topNavBtn: { background: "none", border: "none", color: "#6E6E73", fontSize: 14, fontWeight: 500, padding: "6px 12px", cursor: "pointer", borderRadius: 3 },
   topNavBtnActive: { background: "#1D1D1F", color: "#FFFFFF", fontWeight: 600 },
 
   explainer: { maxWidth: 1180, margin: "0 auto 18px", fontSize: 13, color: "#6E6E73", lineHeight: 1.6, background: "#FFFFFF", borderRadius: 12, padding: "12px 16px", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
-  explainerLink: { color: "#B85C2C", fontWeight: 600 },
+  explainerLink: { color: "#1D5C8A", fontWeight: 600 },
 
   newProjectRow: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", gap: 10 },
-  freeLimitBanner: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, background: "rgba(184,92,44,0.07)", border: "1px solid #B85C2C", borderRadius: 14, padding: "14px 16px", fontSize: 13.5, color: "#4A4A4F", flexWrap: "wrap" },
-  freeLimitLink: { color: "#B85C2C", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" },
+  freeLimitBanner: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, background: "rgba(29,92,138,0.07)", border: "1px solid #1D5C8A", borderRadius: 14, padding: "14px 16px", fontSize: 13.5, color: "#4A4A4F", flexWrap: "wrap" },
+  freeLimitLink: { color: "#1D5C8A", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" },
   addRowStandalone: { maxWidth: 1180, margin: "0 auto 22px", display: "flex", gap: 10, flexWrap: "wrap" },
   projectGrid: { maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 },
   projectCard: { background: "#FFFFFF", borderRadius: 18, padding: "20px 22px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
@@ -3930,7 +4037,7 @@ const styles = {
   row: { display: "flex", alignItems: "center", padding: "12px 14px", borderBottom: "1px solid #F2F2F5", minWidth: 640 },
   tdCell: { fontSize: 14, paddingRight: 8 },
   actualButton: { background: "none", border: "none", color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, cursor: "pointer", borderBottom: "1px dashed #6E6E73", padding: 0 },
-  inlineInput: { width: "100%", background: "#FFFFFF", border: "1px solid #B85C2C", borderRadius: 8, color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, padding: "2px 6px", textAlign: "right" },
+  inlineInput: { width: "100%", background: "#FFFFFF", border: "1px solid #1D5C8A", borderRadius: 8, color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, padding: "2px 6px", textAlign: "right" },
   miniLink: { background: "none", border: "none", color: "#6E6E73", fontSize: 10.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
   miniLinkBlock: { background: "none", border: "none", color: "#3D6FA6", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginTop: 4 },
   gaugeTrack: { position: "relative", height: 6, background: "#F2F2F5", borderRadius: 3, overflow: "visible", marginBottom: 4 },
@@ -3943,14 +4050,14 @@ const styles = {
   removeBtn: { background: "none", border: "none", color: "#6E6E73", cursor: "pointer", fontSize: 13 },
   addRow: { display: "flex", gap: 10, alignItems: "center", padding: "14px", background: "#F5F5F7", flexWrap: "wrap" },
   addInput: { background: "#F5F5F7", border: "1px solid transparent", borderRadius: 10, color: "#1D1D1F", fontSize: 14, padding: "8px 12px" },
-  addBtn: { background: "#B85C2C", border: "none", borderRadius: 100, color: "#FFFFFF", fontWeight: 600, fontSize: 13, padding: "9px 16px", cursor: "pointer", whiteSpace: "nowrap" },
+  addBtn: { background: "#1D5C8A", border: "none", borderRadius: 100, color: "#FFFFFF", fontWeight: 600, fontSize: 13, padding: "9px 16px", cursor: "pointer", whiteSpace: "nowrap" },
   footer: { maxWidth: 1180, margin: "16px auto 0", fontSize: 12, color: "#6E6E73" },
   siteFooter: { maxWidth: 1180, margin: "0 auto", padding: "24px 0", borderTop: "1px solid #E8E8ED", fontSize: 13, color: "#6E6E73", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 14 },
   siteFooterLinks: { display: "flex", gap: 20, flexWrap: "wrap" },
   siteFooterLink: { color: "#6E6E73", textDecoration: "none" },
   referralRow: { maxWidth: 1180, margin: "40px auto 0", padding: "32px 0", borderTop: "1px solid #E8E8ED", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 32, flexWrap: "wrap" },
   referralText: { flex: 1, minWidth: 240 },
-  referralEyebrow: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#B85C2C", marginBottom: 6 },
+  referralEyebrow: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1D5C8A", marginBottom: 6 },
   referralHeading: { fontSize: 17, fontWeight: 700, color: "#1D1D1F", marginBottom: 4 },
   referralSub: { fontSize: 13, color: "#6E6E73", marginBottom: 16, maxWidth: 420 },
   referralActions: { display: "flex", gap: 10, flexWrap: "wrap" },
@@ -3982,7 +4089,7 @@ const styles = {
 
   quoteSheet: { maxWidth: 800, margin: "0 auto", background: "#FFFFFF", borderRadius: 18, padding: "36px 40px", boxShadow: "0 12px 34px rgba(0,0,0,0.08)" },
   quoteHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #1D1D1F", paddingBottom: 20, marginBottom: 28 },
-  quoteEyebrow: { fontSize: 12, letterSpacing: "0.14em", color: "#B85C2C", fontWeight: 600, marginBottom: 6 },
+  quoteEyebrow: { fontSize: 12, letterSpacing: "0.14em", color: "#1D5C8A", fontWeight: 600, marginBottom: 6 },
   quoteProjectName: { fontSize: 24, fontWeight: 700, letterSpacing: "-0.015em", color: "#1D1D1F" },
   quoteMeta: { textAlign: "right", fontSize: 12.5, color: "#6E6E73", lineHeight: 1.7 },
   quoteCatHeading: { fontSize: 13, letterSpacing: "0.06em", color: "#6E6E73", textTransform: "uppercase", marginBottom: 8, paddingBottom: 6, borderBottom: "1px solid #F2F2F5" },
