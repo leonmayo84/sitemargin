@@ -7,7 +7,7 @@
 // stale build. Static assets (JS/CSS/images/fonts) are cache-first once
 // fetched once, since Vite fingerprints those filenames on every build.
 
-const CACHE_NAME = "sitemargin-shell-v1";
+const CACHE_NAME = "sitemargin-shell-v2";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -40,8 +40,16 @@ self.addEventListener("fetch", (event) => {
   if (isNavigation) {
     // Network-first for the page shell — always prefer a fresh build when
     // online, fall back to the last cached shell if offline.
+    //
+    // { cache: "no-store" } is the important part: a plain fetch() here
+    // still follows normal HTTP caching, so this "network-first" strategy
+    // could be silently satisfied out of the browser's own HTTP cache
+    // instead of actually reaching the network — the service worker
+    // *looks* like it's checking for a new build every time, but isn't.
+    // That's almost certainly why hard-refreshing has been necessary:
+    // this override forces every navigation to genuinely hit the server.
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: "no-store" })
         .then((response) => {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
