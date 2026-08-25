@@ -623,7 +623,7 @@ function GlobalStyles() {
          always beat regardless of this rule's specificity. */
       @media (hover: hover) and (pointer: fine) {
         .sm-menu-wrap:hover .sm-menu-drawer {
-          transform: translateX(0) !important;
+          transform: translateY(0) scale(1) !important;
           opacity: 1 !important;
           visibility: visible !important;
           pointer-events: auto !important;
@@ -710,14 +710,16 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                     {label}
                   </button>
                 ))}
-                {/* The marketing site's own menu, one level down, lists its
-                    other pages (What's inside, Pricing, About, Contact, Terms,
-                    Privacy) below its app-equivalent links. Mirroring that here
-                    — same items, same reduced Terms/Privacy treatment — so the
-                    two menus match in contents, not just in style. Web-only,
+                {/* The marketing site's own pages (What's inside, Pricing,
+                    About, Contact, Terms, Privacy) sit one tier down —
+                    smaller and muted rather than matching Projects/
+                    Subcontractors/Templates — so the panel reads as "your
+                    app" first and "more from SiteMargin" second, instead of
+                    seven identical-weight links with no hierarchy. Web-only,
                     same native-webview-hijack reasoning as the footer. */}
                 {!Capacitor.isNativePlatform() && (
                   <>
+                    <div style={styles.menuSectionLabel}>More from SiteMargin</div>
                     {[
                       { label: "What's inside", href: "https://sitemargin.co.za/whats-inside.html" },
                       { label: "Pricing", href: "https://sitemargin.co.za/pricing.html" },
@@ -729,37 +731,35 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                         href={item.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={styles.menuPanelLink}
+                        style={styles.menuSecondaryLink}
                         onClick={() => setMenuOpen(false)}
                       >
                         {item.label}
                       </a>
                     ))}
-                    <a
-                      href="https://sitemargin.co.za/terms.html"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{ ...styles.menuPanelDim, ...styles.menuPanelDimFirst }}
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Terms
-                    </a>
-                    <a
-                      href="https://sitemargin.co.za/privacy.html"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={styles.menuPanelDim}
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Privacy
-                    </a>
+                    <div style={styles.menuPanelDimRow}>
+                      <a href="https://sitemargin.co.za/terms.html" target="_blank" rel="noopener noreferrer" style={styles.menuPanelDim} onClick={() => setMenuOpen(false)}>Terms</a>
+                      <a href="https://sitemargin.co.za/privacy.html" target="_blank" rel="noopener noreferrer" style={styles.menuPanelDim} onClick={() => setMenuOpen(false)}>Privacy</a>
+                    </div>
                   </>
                 )}
-                <div style={styles.menuPanelActions}>
-                  <button style={styles.menuPanelGhost} onClick={closeAnd(() => window.print())}>Print</button>
-                  {onSignOut && <button style={styles.menuPanelSolid} onClick={closeAnd(onSignOut)}>Sign out</button>}
+                <div style={styles.menuFooter}>
+                  <div style={styles.menuFooterBrandRow}>
+                    <svg style={styles.menuFooterLogoMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="4" y="8" width="28" height="8" fill="#3C2E1E" />
+                      <rect x="34" y="8" width="10" height="8" fill="#1D5C8A" />
+                      <rect x="4" y="20" width="40" height="8" fill="#3C2E1E" />
+                      <rect x="4" y="32" width="40" height="8" fill="#3C2E1E" />
+                    </svg>
+                    <span style={styles.menuFooterWordmark}>site<span style={{ color: "#1D5C8A" }}>Margin</span></span>
+                  </div>
+                  <div style={styles.menuFooterTagline}>Cost variance tracking built for contractors, not accountants.</div>
+                  <div style={styles.menuPanelActions}>
+                    <button style={styles.menuPanelGhost} onClick={closeAnd(() => window.print())}>Print</button>
+                    {onSignOut && <button style={styles.menuPanelSolid} onClick={closeAnd(onSignOut)}>Sign out</button>}
+                  </div>
+                  {userEmail && <div style={styles.menuPanelEmail}>{userEmail}</div>}
                 </div>
-                {userEmail && <div style={styles.menuPanelEmail}>{userEmail}</div>}
               </div>
             </div>
           </div>
@@ -1197,31 +1197,35 @@ function AuthGate() {
                       {item.label}
                     </button>
                   ))}
-                  {[
-                    { label: "Terms", href: "https://sitemargin.co.za/terms.html" },
-                    { label: "Privacy", href: "https://sitemargin.co.za/privacy.html" },
-                  ].map((item, i) => (
-                    <button
-                      key={item.label}
-                      style={{ ...styles.menuPanelDim, ...(i === 0 ? styles.menuPanelDimFirst : null) }}
-                      onClick={() => { setGateMenuOpen(false); window.location.href = item.href; }}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                  <div style={{ ...styles.menuPanelActions, flexDirection: "column" }}>
-                    <button
-                      style={styles.menuPanelGhost}
-                      onClick={() => { setGateMenuOpen(false); window.location.href = "https://app.sitemargin.co.za"; }}
-                    >
-                      Open the app
-                    </button>
-                    <button
-                      style={styles.menuPanelSolid}
-                      onClick={() => { setGateMenuOpen(false); window.location.href = "https://app.sitemargin.co.za"; }}
-                    >
-                      Sign up free
-                    </button>
+                  <div style={styles.menuPanelDimRow}>
+                    <button style={styles.menuPanelDim} onClick={() => { setGateMenuOpen(false); window.location.href = "https://sitemargin.co.za/terms.html"; }}>Terms</button>
+                    <button style={styles.menuPanelDim} onClick={() => { setGateMenuOpen(false); window.location.href = "https://sitemargin.co.za/privacy.html"; }}>Privacy</button>
+                  </div>
+                  <div style={styles.menuFooter}>
+                    <div style={styles.menuFooterBrandRow}>
+                      <svg style={styles.menuFooterLogoMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="4" y="8" width="28" height="8" fill="#3C2E1E" />
+                        <rect x="34" y="8" width="10" height="8" fill="#1D5C8A" />
+                        <rect x="4" y="20" width="40" height="8" fill="#3C2E1E" />
+                        <rect x="4" y="32" width="40" height="8" fill="#3C2E1E" />
+                      </svg>
+                      <span style={styles.menuFooterWordmark}>site<span style={{ color: "#1D5C8A" }}>Margin</span></span>
+                    </div>
+                    <div style={styles.menuFooterTagline}>Cost variance tracking built for contractors, not accountants.</div>
+                    <div style={styles.menuPanelActions}>
+                      <button
+                        style={styles.menuPanelGhost}
+                        onClick={() => { setGateMenuOpen(false); window.location.href = "https://app.sitemargin.co.za"; }}
+                      >
+                        Open the app
+                      </button>
+                      <button
+                        style={styles.menuPanelSolid}
+                        onClick={() => { setGateMenuOpen(false); window.location.href = "https://app.sitemargin.co.za"; }}
+                      >
+                        Sign up free
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3905,33 +3909,46 @@ const styles = {
   menuBtnBar3Open: { transform: "translateY(-5.5px) rotate(-45deg)" },
 
   // The hamburger button always stays on screen (it just morphs into a ✕
-  // rather than being covered or replaced), and its options now live in a
-  // panel anchored to the right edge instead of taking over the whole
-  // screen — closed by default (translated off-screen + invisible so it
-  // can't be tabbed/clicked into), opened either by the onClick toggle
-  // (menuOpen state — works on touch, where hover doesn't exist) or, on
-  // devices that actually have a hover-capable pointer, by hovering
-  // .sm-menu-wrap (see GlobalStyles). zIndex 200 keeps it above page
-  // content; the wrap itself is zIndex 201 so the button/✕ stay clickable.
+  // rather than being covered or replaced). Its options now live in a
+  // rounded card that pops out from directly under the button — same
+  // radius/shadow language as the rest of the app's cards (dashNavBar,
+  // summaryCard etc.) instead of a flat edge-to-edge slab — anchored via
+  // position:absolute on .sm-menu-wrap (position:relative), the same
+  // popover pattern already used for the logo/download menus below.
+  // Closed by default (scaled down + invisible so it can't be tabbed into),
+  // opened either by the onClick toggle (menuOpen state — works on touch,
+  // where hover doesn't exist) or, on devices with a real hover-capable
+  // pointer, by hovering .sm-menu-wrap (see GlobalStyles).
   menuDrawer: {
-    position: "fixed", top: 0, right: 0, height: "100vh",
-    width: "min(340px, 88vw)", background: "#FFFFFF",
-    boxShadow: "-10px 0 36px rgba(0,0,0,0.14)", zIndex: 200,
+    position: "absolute", top: "calc(100% + 10px)", right: 0,
+    width: "min(320px, 86vw)", maxHeight: "min(560px, 78vh)",
+    background: "#FFFFFF", borderRadius: 20,
+    boxShadow: "0 20px 50px rgba(0,0,0,0.16), 0 4px 16px rgba(0,0,0,0.07)",
+    zIndex: 200,
     display: "flex", flexDirection: "column",
-    padding: "88px 26px 28px", overflowY: "auto",
-    transform: "translateX(100%)", opacity: 0, visibility: "hidden", pointerEvents: "none",
-    transition: "transform 0.26s ease, opacity 0.2s ease",
+    padding: "18px 20px 18px", overflowY: "auto",
+    transformOrigin: "top right",
+    transform: "translateY(-6px) scale(0.97)", opacity: 0, visibility: "hidden", pointerEvents: "none",
+    transition: "transform 0.2s ease, opacity 0.16s ease",
   },
-  menuDrawerOpen: { transform: "translateX(0)", opacity: 1, visibility: "visible", pointerEvents: "auto" },
+  menuDrawerOpen: { transform: "translateY(0) scale(1)", opacity: 1, visibility: "visible", pointerEvents: "auto" },
   menuPanelInner: { width: "100%" },
-  menuPanelLink: { display: "block", width: "100%", textAlign: "left", background: "none", fontSize: 18.5, fontWeight: 700, letterSpacing: "-0.01em", color: "#1D1D1F", border: "none", padding: "8px 0", cursor: "pointer" },
+  menuPanelLink: { display: "block", width: "100%", textAlign: "left", background: "none", fontSize: 17, fontWeight: 700, letterSpacing: "-0.01em", color: "#1D1D1F", border: "none", padding: "7px 0", cursor: "pointer", textDecoration: "none" },
   menuPanelLinkActive: { color: "#1D5C8A" },
-  menuPanelDim: { display: "block", width: "100%", textAlign: "left", background: "none", border: "none", fontSize: 14, fontWeight: 500, color: "#6E6E73", padding: "5px 0", cursor: "pointer", textDecoration: "none" },
-  menuPanelDimFirst: { marginTop: 14, paddingTop: 14, borderTop: "1px solid #E8E8ED" },
-  menuPanelActions: { marginTop: 22, display: "flex", flexDirection: "column", gap: 10 },
-  menuPanelGhost: { textAlign: "center", padding: 13, borderRadius: 100, fontWeight: 600, fontSize: 14.5, border: "1px solid #1D1D1F", color: "#1D1D1F", background: "none", cursor: "pointer" },
-  menuPanelSolid: { textAlign: "center", padding: 13, borderRadius: 100, fontWeight: 600, fontSize: 14.5, border: "none", color: "#FFFFFF", background: "#1D1D1F", cursor: "pointer" },
-  menuPanelEmail: { marginTop: 22, fontSize: 12, color: "#6E6E73", fontFamily: "'IBM Plex Mono', monospace" },
+  menuSectionLabel: { fontSize: 10.5, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: "#A0A0A6", margin: "16px 0 6px" },
+  menuSecondaryLink: { display: "block", width: "100%", textAlign: "left", background: "none", border: "none", fontSize: 14, fontWeight: 500, color: "#4A4A4F", padding: "5px 0", cursor: "pointer", textDecoration: "none" },
+  menuDivider: { height: 1, background: "#E8E8ED", margin: "14px 0 0" },
+  menuPanelDimRow: { display: "flex", gap: 16, marginTop: 12, paddingTop: 12, borderTop: "1px solid #E8E8ED" },
+  menuPanelDim: { background: "none", border: "none", fontSize: 12, fontWeight: 600, color: "#8A8A90", padding: 0, cursor: "pointer", textDecoration: "none" },
+  menuFooter: { marginTop: 16, paddingTop: 16, borderTop: "1px solid #E8E8ED" },
+  menuFooterBrandRow: { display: "flex", alignItems: "center", gap: 7, marginBottom: 6 },
+  menuFooterLogoMark: { height: 20, width: "auto", display: "block" },
+  menuFooterWordmark: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 14.5, color: "#1D1D1F" },
+  menuFooterTagline: { fontSize: 12, color: "#6E6E73", lineHeight: 1.5, marginBottom: 14 },
+  menuPanelActions: { display: "flex", flexDirection: "column", gap: 8 },
+  menuPanelGhost: { textAlign: "center", padding: 11, borderRadius: 100, fontWeight: 600, fontSize: 14, border: "1px solid #1D1D1F", color: "#1D1D1F", background: "none", cursor: "pointer" },
+  menuPanelSolid: { textAlign: "center", padding: 11, borderRadius: 100, fontWeight: 600, fontSize: 14, border: "none", color: "#FFFFFF", background: "#1D5C8A", cursor: "pointer" },
+  menuPanelEmail: { marginTop: 14, fontSize: 11.5, color: "#A0A0A6", fontFamily: "'IBM Plex Mono', monospace" },
 
   topNav: { maxWidth: 1180, margin: "0 auto 20px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #E8E8ED", paddingBottom: 12 },
   topNavRight: { marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 },
@@ -4008,7 +4025,7 @@ const styles = {
   summaryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, maxWidth: 1180, margin: "0 auto 16px" },
   summaryCard: { background: "#FFFFFF", borderRadius: 16, padding: "14px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
   summaryLabel: { fontSize: 11, letterSpacing: "0.08em", color: "#6E6E73", marginBottom: 6, textTransform: "uppercase" },
-  summaryValue: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 17, fontWeight: 600 },
+  summaryValue: { fontFamily: "'Inter', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 19, fontWeight: 500 },
 
   warningBanner: { maxWidth: 1180, margin: "0 auto 12px", background: "rgba(193,70,43,0.07)", border: "1px solid #C1462B", borderRadius: 14, padding: "12px 16px", fontSize: 14, color: "#8A3D1E" },
 
