@@ -1304,9 +1304,9 @@ function AuthGate() {
                     <div style={styles.menuPanelActions}>
                       <button
                         style={styles.menuPanelGhost}
-                        onClick={() => { setGateMenuOpen(false); window.location.href = "https://app.sitemargin.co.za"; }}
+                        onClick={() => { setGateMenuOpen(false); window.location.href = "https://app.sitemargin.co.za/?login=1"; }}
                       >
-                        Open the app
+                        Log in
                       </button>
                       <button
                         style={styles.menuPanelSolid}
