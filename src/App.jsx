@@ -2067,20 +2067,6 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   }
 
 
-  function downloadTemplate() {
-    const csv = [
-      "Name,Category,Budget,Actual,Percent Complete,Claimed,Certified",
-      "Excavation & earthworks,Subcontractors,185000,0,0,0,0",
-      "Concrete & foundations,Materials,420000,0,0,0,0",
-      "Electrical rough-in,Labour,140000,0,0,0,0",
-    ].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "sitemargin-budget-template.csv"; a.click();
-    URL.revokeObjectURL(url);
-  }
-
   async function applyTemplate(templateId) {
     if (!templateId) return;
     const { data: tItems } = await supabase.from("template_items").select("*").eq("template_id", templateId).order("sort_order");
@@ -2697,7 +2683,6 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
         <button style={styles.importBtn} onClick={saveAsTemplate}>Save as template</button>
-        <button style={styles.templateLink} onClick={downloadTemplate}>Download CSV format</button>
         {importMessage && (
           <span style={{ fontSize: 12.5, color: importMessage.type === "error" ? "#C1462B" : "#4C7A5C" }}>{importMessage.text}</span>
         )}
