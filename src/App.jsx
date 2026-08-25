@@ -636,6 +636,11 @@ function GlobalStyles() {
       .sm-pub-footer-social:hover { background: #ECECEF !important; color: #1D1D1F !important; }
       .sm-pub-footer-col a:hover { color: #1D5C8A !important; }
       .sm-pub-footer-bottom a:hover { color: #1D1D1F !important; }
+      /* Always-visible Log in / Sign up pill in the gate screen's header —
+         mirrors the marketing site's .nav-app-link pill exactly, so the
+         login entry point is immediately visible without opening the
+         hamburger menu at all, on every screen size. */
+      .sm-gate-nav-btn:hover { background: #154766 !important; }
       /* Lets the hamburger's drawer pop open on hover, but only on devices
          that have a real hover-capable pointer (a mouse/trackpad) — gated
          behind (hover: hover) and (pointer: fine) so touchscreens (the
@@ -1254,7 +1259,15 @@ function AuthGate() {
         <div style={styles.gateNavWrap}>
           <div style={styles.gateNav}>
             <AppLogo />
-            <div className="sm-menu-wrap" ref={gateMenuWrapRef} style={styles.menuWrap}>
+            <div style={styles.gateNavActions}>
+              <a
+                className="sm-gate-nav-btn"
+                href={isLoginIntent ? "https://app.sitemargin.co.za" : "https://app.sitemargin.co.za/?login=1"}
+                style={styles.gateNavBtn}
+              >
+                {isLoginIntent ? "Sign up" : "Log in"}
+              </a>
+              <div className="sm-menu-wrap" ref={gateMenuWrapRef} style={styles.menuWrap}>
               <button
                 type="button"
                 style={styles.menuBtn}
@@ -1318,6 +1331,7 @@ function AuthGate() {
                   </div>
                 </div>
               </div>
+            </div>
             </div>
           </div>
         </div>
@@ -4103,6 +4117,11 @@ const styles = {
   gateNavOuter: { position: "sticky", top: 0, zIndex: 201, background: "#F5F5F7" },
   gateNavWrap: { maxWidth: 980, margin: "0 auto", padding: "0 20px" },
   gateNav: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF", borderRadius: 18, padding: "10px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", margin: "14px 0 0" },
+  // Always-visible pill next to the hamburger — same idea as the marketing
+  // site's .nav-app-link, so "Log in" is right there in the header on the
+  // signed-out gate screen without needing to open any menu.
+  gateNavActions: { display: "flex", alignItems: "center", gap: 10 },
+  gateNavBtn: { fontSize: 13.5, fontWeight: 600, color: "#FFFFFF", textDecoration: "none", whiteSpace: "nowrap", background: "#1D5C8A", padding: "8px 16px", borderRadius: 100, display: "inline-block" },
   gateWrap: { maxWidth: 640, margin: "48px auto 0", padding: "0 16px" },
   heroWrap: { marginBottom: 36, paddingBottom: 32, borderBottom: "1px solid #E8E8ED" },
   heroEm: { fontStyle: "normal", color: "#1D5C8A" },
