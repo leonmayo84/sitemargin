@@ -683,12 +683,110 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
   );
 }
 
+// QR code encoding https://www.sitemargin.co.za, generated offline (no
+// external QR API call) and verified to decode correctly before being
+// committed here. Stored as one binary string per row (not a packed int —
+// the 33-column width exceeds JS's 32-bit bitwise-op range) so ReferralQr
+// below can render it as plain SVG rects with no image request at all.
+const SITEMARGIN_QR_SIZE = 33;
+const SITEMARGIN_QR_ROWS = [
+  "000000000000000000000000000000000",
+  "000000000000000000000000000000000",
+  "001111111000000100111110111111100",
+  "001000001011100011101100100000100",
+  "001011101000111110101100101110100",
+  "001011101000001111001000101110100",
+  "001011101011101010001100101110100",
+  "001000001000011100000110100000100",
+  "001111111010101010101010111111100",
+  "000000000000110110111100000000000",
+  "001010101001100011010110001001000",
+  "000011100010000011000010100100100",
+  "000110011111101100010000100011100",
+  "001101110010100001011010101001000",
+  "001111001011111000111011100101100",
+  "001101100010001101100011110100100",
+  "001010011100100011110010010101100",
+  "000110100000000110110000000101000",
+  "000101011110101011010001110101100",
+  "000001110001101011001010100110100",
+  "001001101010101100011001110001100",
+  "000111000101100001010101000101000",
+  "001101111011101000110011111000000",
+  "000000000011101101110110001011100",
+  "001111111001100011101110101101100",
+  "001000001001011110111010001101000",
+  "001011101011110011001011111001000",
+  "001011101000101011000000001010000",
+  "001011101011110100010100011100100",
+  "001000001000011001000110001001000",
+  "001111111010001100100111111101100",
+  "000000000000000000000000000000000",
+  "000000000000000000000000000000000",
+];
+
+// Renders the QR matrix above as inline SVG rects — no <img>, no network
+// request, so it can never break due to a third-party QR API going down.
+function ReferralQr({ size = 112 }) {
+  const quiet = 2; // the matrix already bakes in ~2 modules of quiet zone per edge
+  const scale = 8;
+  const full = (SITEMARGIN_QR_SIZE + quiet * 2) * scale;
+  const rects = [];
+  for (let r = 0; r < SITEMARGIN_QR_SIZE; r++) {
+    const row = SITEMARGIN_QR_ROWS[r];
+    for (let c = 0; c < SITEMARGIN_QR_SIZE; c++) {
+      if (row[c] === "1") {
+        rects.push(<rect key={`${r}-${c}`} x={(c + quiet) * scale} y={(r + quiet) * scale} width={scale} height={scale} />);
+      }
+    }
+  }
+  return (
+    <svg viewBox={`0 0 ${full} ${full}`} width={size} height={size} shapeRendering="crispEdges" style={{ boxShadow: "0 1px 6px rgba(0,0,0,0.08)" }}>
+      <rect width={full} height={full} fill="#ffffff" />
+      <g fill="#1D1D1F">{rects}</g>
+    </svg>
+  );
+}
+
+function ReferralRow() {
+  const [copied, setCopied] = useState(false);
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText("https://www.sitemargin.co.za");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* clipboard permission denied — link is still visible via the other share options */
+    }
+  }
+  return (
+    <div className="no-print" style={styles.referralRow}>
+      <div style={styles.referralText}>
+        <div style={styles.referralEyebrow}>Spread the word</div>
+        <div style={styles.referralHeading}>Know a contractor or homeowner who'd love this?</div>
+        <div style={styles.referralSub}>Share SiteMargin with friends and family — no referral code needed, just send the link.</div>
+        <div style={styles.referralActions}>
+          <a style={{ ...styles.referralBtn, ...styles.referralBtnWhatsapp }} href="https://wa.me/?text=Check%20out%20SiteMargin%20%E2%80%94%20cost%20variance%20tracking%20built%20for%20contractors%3A%20https%3A%2F%2Fwww.sitemargin.co.za" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+          <a style={styles.referralBtn} href="mailto:?subject=Take%20a%20look%20at%20SiteMargin&body=Thought%20you%27d%20find%20this%20useful%20%E2%80%94%20https%3A%2F%2Fwww.sitemargin.co.za">Email</a>
+          <button type="button" style={styles.referralBtn} onClick={copyLink}>{copied ? "Copied!" : "Copy link"}</button>
+        </div>
+      </div>
+      <div style={styles.referralQrBlock}>
+        <ReferralQr />
+        <div style={styles.referralQrCaption}>Scan to visit<br /><b style={{ fontFamily: "'IBM Plex Mono', monospace" }}>sitemargin.co.za</b></div>
+      </div>
+    </div>
+  );
+}
+
 /* Footer, matching sitemargin.co.za's own footer exactly (same text, same
    six links back to the marketing site's pages) — rendered at the bottom of
    every app page for the "all aspects, uniform" header/footer request. */
 function AppFooter() {
   return (
-    <div className="no-print" style={styles.siteFooter}>
+    <>
+      <ReferralRow />
+      <div className="no-print" style={styles.siteFooter}>
       <span>SiteMargin — built for contractors, not accountants.</span>
       {/* Same reasoning as the hamburger menu's marketing-site link: on the
           native app these would hijack the app's own webview to show an
@@ -704,7 +802,8 @@ function AppFooter() {
           <a href="https://sitemargin.co.za/privacy.html" target="_blank" rel="noopener noreferrer" style={styles.siteFooterLink}>Privacy</a>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -3772,9 +3871,19 @@ const styles = {
   addInput: { background: "#F5F5F7", border: "1px solid transparent", borderRadius: 10, color: "#1D1D1F", fontSize: 14, padding: "8px 12px" },
   addBtn: { background: "#B85C2C", border: "none", borderRadius: 100, color: "#FFFFFF", fontWeight: 600, fontSize: 13, padding: "9px 16px", cursor: "pointer", whiteSpace: "nowrap" },
   footer: { maxWidth: 1180, margin: "16px auto 0", fontSize: 12, color: "#6E6E73" },
-  siteFooter: { maxWidth: 1180, margin: "40px auto 0", padding: "24px 0", borderTop: "1px solid #E8E8ED", fontSize: 13, color: "#6E6E73", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 14 },
+  siteFooter: { maxWidth: 1180, margin: "0 auto", padding: "24px 0", borderTop: "1px solid #E8E8ED", fontSize: 13, color: "#6E6E73", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 14 },
   siteFooterLinks: { display: "flex", gap: 20, flexWrap: "wrap" },
   siteFooterLink: { color: "#6E6E73", textDecoration: "none" },
+  referralRow: { maxWidth: 1180, margin: "40px auto 0", padding: "32px 0", borderTop: "1px solid #E8E8ED", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 32, flexWrap: "wrap" },
+  referralText: { flex: 1, minWidth: 240 },
+  referralEyebrow: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#B85C2C", marginBottom: 6 },
+  referralHeading: { fontSize: 17, fontWeight: 700, color: "#1D1D1F", marginBottom: 4 },
+  referralSub: { fontSize: 13, color: "#6E6E73", marginBottom: 16, maxWidth: 420 },
+  referralActions: { display: "flex", gap: 10, flexWrap: "wrap" },
+  referralBtn: { display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius: 100, fontSize: 13, fontWeight: 600, textDecoration: "none", border: "1px solid #1D1D1F", color: "#1D1D1F", background: "none", cursor: "pointer" },
+  referralBtnWhatsapp: { borderColor: "#25D366", color: "#1c8a44" },
+  referralQrBlock: { display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: "0 0 auto" },
+  referralQrCaption: { fontSize: 11, color: "#6E6E73", textAlign: "center" },
   docFooter: { maxWidth: 1180, margin: "30px auto 0", paddingTop: 14, borderTop: "1px solid #D9D9DE" },
   dfRow: { display: "flex", justifyContent: "space-between", alignItems: "center" },
   dfBrand: { display: "flex", alignItems: "center", gap: 6, fontWeight: 600, fontSize: 14, color: "#1D1D1F" },
