@@ -541,6 +541,7 @@ function GlobalStyles() {
   return (
     <style>{`
       * { box-sizing: border-box; }
+      input, select, textarea, button { font-family: inherit; }
       input:focus, select:focus, textarea:focus { outline: 2px solid #B85C2C; outline-offset: 1px; }
       button:focus-visible { outline: 2px solid #B85C2C; outline-offset: 2px; }
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -1876,6 +1877,8 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const [docLineItemId, setDocLineItemId] = useState("");
   const documentsInputRef = useRef(null);
   const DOC_CATEGORIES = ["Drawings", "Contracts", "Specifications", "Photos", "Correspondence", "Other"];
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
+  const downloadMenuRef = useRef(null);
   const fileInputRef = useRef(null);
   const attachInputRef = useRef(null);
   const attachTargetItem = useRef(null);
@@ -2491,6 +2494,73 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
+  useEffect(() => {
+    if (!downloadMenuOpen) return;
+    function handleOutside(e) {
+      if (downloadMenuRef.current && !downloadMenuRef.current.contains(e.target)) setDownloadMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [downloadMenuOpen]);
+
+  // Download menu — the three formats a client or bank might ask for. PDF
+  // reuses the existing print stylesheet (@media print already hides all
+  // no-print controls), CSV/Excel export the live ledger rows directly
+  // rather than the blank import template downloadTemplate() produces.
+  function ledgerExportRows() {
+    const header = ["Name", "Category", "Budget", "Actual", "Variance", "% Complete", "Subcontractor", "Claimed", "Certified"];
+    const rows = items.map((i) => {
+      const subName = subs.find((s) => s.id === i.subcontractor_id)?.name || "";
+      const variance = Number(i.actual || 0) - Number(i.budget || 0);
+      return [
+        i.name || "",
+        i.category || "",
+        Number(i.budget || 0),
+        Number(i.actual || 0),
+        variance,
+        Number(i.percent_complete || 0),
+        subName,
+        Number(i.claimed || 0),
+        Number(i.certified || 0),
+      ];
+    });
+    return [header, ...rows];
+  }
+
+  function exportFileBaseName() {
+    const name = (project?.name || "project").trim().replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "");
+    return `${name || "project"}-cost-variance`;
+  }
+
+  function exportLedgerCsv() {
+    const csv = ledgerExportRows()
+      .map((row) => row.map((cell) => {
+        const s = String(cell ?? "");
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      }).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${exportFileBaseName()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    setDownloadMenuOpen(false);
+  }
+
+  async function exportLedgerExcel() {
+    const XLSX = await import("xlsx");
+    const ws = XLSX.utils.aoa_to_sheet(ledgerExportRows());
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Cost Variance");
+    XLSX.writeFile(wb, `${exportFileBaseName()}.xlsx`);
+    setDownloadMenuOpen(false);
+  }
+
+  function exportLedgerPdf() {
+    setDownloadMenuOpen(false);
+    window.print();
+  }
+
   async function logSnapshot() {
     const { data, error } = await supabase
       .from("snapshots")
@@ -2524,7 +2594,16 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
       <div className="no-print" style={styles.backRow}>
         <button style={styles.backBtn} onClick={onBack}>← All projects</button>
-        <button style={styles.exportBtn} onClick={() => window.print()}>Export PDF</button>
+        <div ref={downloadMenuRef} style={{ position: "relative" }}>
+          <button style={styles.exportBtn} onClick={() => setDownloadMenuOpen((v) => !v)}>Download</button>
+          {downloadMenuOpen && (
+            <div style={styles.downloadMenuPopover}>
+              <button style={styles.logoMenuItem} onClick={exportLedgerPdf}>PDF</button>
+              <button style={styles.logoMenuItem} onClick={exportLedgerExcel}>Excel</button>
+              <button style={styles.logoMenuItem} onClick={exportLedgerCsv}>CSV</button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={styles.titleBlock}>
@@ -3562,6 +3641,7 @@ const styles = {
   logoTextBtn: { background: "none", border: "none", color: "#B85C2C", fontSize: 11.5, fontWeight: 600, textAlign: "left", padding: 0, cursor: "pointer" },
   logoTextBtnMuted: { background: "none", border: "none", color: "#6E6E73", fontSize: 11, textAlign: "left", padding: 0, cursor: "pointer" },
   logoMenuPopover: { position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 30, background: "#FFFFFF", borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.14)", padding: 6, minWidth: 150, display: "flex", flexDirection: "column", gap: 2 },
+  downloadMenuPopover: { position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, background: "#FFFFFF", borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.14)", padding: 6, minWidth: 130, display: "flex", flexDirection: "column", gap: 2 },
   logoMenuItem: { background: "none", border: "none", color: "#1D1D1F", fontSize: 13.5, fontWeight: 500, textAlign: "left", padding: "9px 12px", borderRadius: 8, cursor: "pointer" },
 
   menuBtn: { width: 40, height: 40, border: "none", borderRadius: "50%", background: "#F5F5F7", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, padding: 0, flexShrink: 0 },
@@ -3652,7 +3732,7 @@ const styles = {
 
   titleBlock: { display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-end", gap: 16, borderBottom: "2px solid #E8E8ED", paddingBottom: 14, maxWidth: 1180, margin: "0 auto 20px" },
   titleBlockLeft: { display: "flex", flexDirection: "column", gap: 6, flex: 1, minWidth: 240 },
-  projectInput: { background: "transparent", border: "none", color: "#1D1D1F", fontSize: 26, fontWeight: 700, padding: 0, flex: "1 1 auto", minWidth: 160, letterSpacing: "-0.02em" },
+  projectInput: { background: "transparent", border: "none", color: "#1D1D1F", fontSize: 26, fontWeight: 700, padding: 0, flex: "1 1 auto", minWidth: 160, letterSpacing: "-0.02em", fontFamily: "'Inter', sans-serif" },
   titleBlockRight: { display: "flex", gap: 22 },
   tbCell: { display: "flex", flexDirection: "column", alignItems: "flex-end" },
   tbLabel: { fontSize: 10, letterSpacing: "0.1em", color: "#6E6E73" },
