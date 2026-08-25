@@ -610,7 +610,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
               <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />
             )
           )}
-          {titleNode !== undefined ? titleNode : <h1 style={styles.dashTitle}>{title}</h1>}
+          {titleNode !== undefined ? titleNode : <h1 style={styles.pageHeaderEyebrow}>{title}</h1>}
         </div>
       )}
 
@@ -3621,6 +3621,7 @@ const styles = {
   // back to the marketing site instead of into the app.
   navHomeLink: { fontSize: 13.5, fontWeight: 600, color: "#FFFFFF", textDecoration: "none", whiteSpace: "nowrap", background: "#B85C2C", padding: "8px 16px", borderRadius: 100, display: "inline-block" },
   dashTitle: { fontSize: "clamp(30px, 4.5vw, 42px)", fontWeight: 700, letterSpacing: "-0.02em" },
+  pageHeaderEyebrow: { fontSize: 17, letterSpacing: "0.06em", color: "#B85C2C", fontWeight: 800, textTransform: "uppercase", margin: 0 },
   dashTitleInput: { fontSize: "clamp(30px, 4.5vw, 42px)", fontWeight: 700, letterSpacing: "-0.02em", color: "#1D1D1F", background: "none", border: "none", borderBottom: "1px dashed #D9D9DE", padding: 0, width: "100%", minWidth: 0 },
   companyLogoMark: { height: "clamp(28px, 4.5vw, 44px)", width: "auto", maxWidth: 140, objectFit: "contain", borderRadius: 6 },
   logoTextBtn: { background: "none", border: "none", color: "#B85C2C", fontSize: 11.5, fontWeight: 600, textAlign: "left", padding: 0, cursor: "pointer" },
