@@ -106,6 +106,16 @@ const MODULE_COLOR = {
   changeorders: { solid: "#C6902E", tint: "rgba(198,144,46,0.09)" }, // change orders
 };
 
+// Display labels for the pricing-tier keys used across the gate screen —
+// matches sitemargin.co.za's own pricing page (Free/Contractor/Company/Home
+// Owner), which this gate is meant to mirror one-to-one.
+const TIER_LABEL = {
+  free: "Free",
+  contractor: "Contractor",
+  firm: "Company",
+  homeowner: "Home Owner",
+};
+
 function statusFor(budget, actual) {
   if (budget <= 0) return "ok";
   const ratio = actual / budget;
@@ -1307,7 +1317,9 @@ function AuthGate() {
                 </p>
                 {selectedTier && (
                   <div style={styles.tierNote}>
-                    {selectedTier === "free" ? "Starting on the Free plan." : `Continuing with ${selectedTier === "contractor" ? "Contractor" : "Company"} — you'll choose it again once you're signed in.`}
+                    {selectedTier === "free"
+                      ? "Starting on the Free plan."
+                      : `Continuing with ${TIER_LABEL[selectedTier] || selectedTier} — you'll choose it again once you're signed in.`}
                   </div>
                 )}
                 <form onSubmit={sendMagicLink} style={styles.gateForm}>
@@ -1350,6 +1362,14 @@ function AuthGate() {
                 </div>
                 <div style={styles.checkoutDesc}>Everything in Contractor, plus unlimited attachments and priority support.</div>
                 <button type="button" style={styles.tierCta} onClick={() => chooseTier("firm")}>Get started</button>
+              </div>
+              <div style={{ ...styles.checkoutCard, ...(selectedTier === "homeowner" ? styles.checkoutCardSelected : {}) }}>
+                <div style={styles.checkoutTier}>Home Owner</div>
+                <div style={styles.checkoutPrice}>
+                  R899<span style={styles.checkoutPriceUnit}>/project</span>
+                </div>
+                <div style={styles.checkoutDesc}>Once-off, for managing your own build. Payments &amp; retention tracking, document register, PDF export.</div>
+                <button type="button" style={styles.tierCta} onClick={() => chooseTier("homeowner")}>Get started</button>
               </div>
             </div>
           </>
@@ -3889,7 +3909,13 @@ const styles = {
   // covers the close (✕) button and there's no way to see it's open or close
   // it, which is what the marketing site avoids via the same nav-above-panel
   // stacking (nav z-index 200 > .menu-panel z-index 150 on sitemargin.co.za).
-  dashHeader: { maxWidth: 1180, margin: "0 auto 20px", position: "relative", zIndex: 201 },
+  // Sticky, with a background matching .page exactly (#F5F5F7) so the band
+  // reads as seamless with the page behind it even though it's only as wide
+  // as the maxWidth content column — everything below is capped at the same
+  // 1180px too, so there's no visible seam on wider viewports. Matches
+  // sitemargin.co.za's own nav (position:sticky; top:0) — this header used
+  // to just scroll away with the page instead of staying put.
+  dashHeader: { maxWidth: 1180, margin: "0 auto 20px", position: "sticky", top: 0, background: "#F5F5F7", zIndex: 201 },
   dashNavBar: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF", borderRadius: 18, padding: "10px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 22, gap: 16, flexWrap: "wrap" },
   dashNavRight: { display: "flex", alignItems: "center", gap: 14 },
   // Matches sitemargin.co.za's own .nav-app-link exactly (same font, size,
@@ -3971,7 +3997,10 @@ const styles = {
   topNavEmail: { fontSize: 12, color: "#6E6E73", fontFamily: "'IBM Plex Mono', monospace" },
   topNavSignOut: { background: "none", border: "1px solid #E8E8ED", borderRadius: 100, color: "#6E6E73", fontSize: 12, padding: "6px 12px", cursor: "pointer" },
 
-  gateNavOuter: { position: "relative", zIndex: 201, background: "#F5F5F7" },
+  // Sticky, same reasoning as dashHeader above — this already had the right
+  // background band, it was just missing position:sticky, so it scrolled
+  // out of view instead of staying put like sitemargin.co.za's own nav.
+  gateNavOuter: { position: "sticky", top: 0, zIndex: 201, background: "#F5F5F7" },
   gateNavWrap: { maxWidth: 980, margin: "0 auto", padding: "0 20px" },
   gateNav: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF", borderRadius: 18, padding: "10px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", margin: "14px 0 0" },
   gateWrap: { maxWidth: 640, margin: "48px auto 0", padding: "0 16px" },
