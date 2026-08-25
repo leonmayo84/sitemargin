@@ -686,6 +686,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
     ["dashboard", "Projects"],
     ["subcontractors", "Subcontractors"],
     ["templates", "Templates"],
+    ["integrations", "Accounting"],
   ];
   const closeAnd = (fn) => () => { setMenuOpen(false); if (fn) fn(); };
 
@@ -1058,6 +1059,9 @@ function AppShell({ userEmail, onSignOut }) {
   }
   if (route.page === "templates") {
     return <TemplatesView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={companyLogoUrl} />;
+  }
+  if (route.page === "integrations") {
+    return <IntegrationsView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={companyLogoUrl} />;
   }
   return (
     <Dashboard
@@ -2432,6 +2436,206 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
           })}
         </div>
       )}
+      <AppFooter />
+    </div>
+  );
+}
+
+/* ============================== ACCOUNTING SYNC (Xero / Sage) ============================== */
+
+const ACCOUNTING_PROVIDERS = [
+  { key: "xero", label: "Xero", color: "#13B5EA" },
+  { key: "sage", label: "Sage", color: "#00DC00" },
+];
+
+function IntegrationsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
+  const [connections, setConnections] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [lineItemOptions, setLineItemOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(null);
+  const [syncing, setSyncing] = useState(null);
+  const [banner, setBanner] = useState(null);
+
+  async function loadAll() {
+    setLoading(true);
+    const [{ data: conns }, { data: txns }, { data: projects }] = await Promise.all([
+      supabase.from("accounting_connections").select("*").order("provider"),
+      supabase.from("accounting_transactions").select("*").eq("status", "unmatched").order("txn_date", { ascending: false }),
+      supabase.from("projects_v2").select("id, name, line_items(id, name)"),
+    ]);
+    setConnections(conns || []);
+    setTransactions(txns || []);
+    const opts = [];
+    (projects || []).forEach((p) => (p.line_items || []).forEach((li) => opts.push({ id: li.id, projectId: p.id, label: `${p.name} — ${li.name}` })));
+    setLineItemOptions(opts);
+    setLoading(false);
+  }
+
+  useEffect(() => { loadAll(); }, []);
+
+  // The OAuth callback (accounting-oauth-callback) has no app session to
+  // work with — it's the accounting platform's own redirect — so it reports
+  // success/failure the only way it can: query params on the bounce back
+  // into the app. Read them once, then strip them so a refresh doesn't
+  // re-show the banner.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("accounting");
+    if (!status) return;
+    const provider = params.get("provider");
+    const providerLabel = provider === "xero" ? "Xero" : provider === "sage" ? "Sage" : "your accounting account";
+    if (status === "connected") {
+      setBanner({ type: "connected", text: `${providerLabel} connected — you can sync now.` });
+    } else if (status === "error") {
+      setBanner({ type: "error", text: `Couldn't connect ${providerLabel} — ${params.get("message") || "please try again"}.` });
+    }
+    params.delete("accounting"); params.delete("provider"); params.delete("message");
+    const qs = params.toString();
+    window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
+  }, []);
+
+  async function connect(provider) {
+    setConnecting(provider);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/accounting-oauth-start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session?.access_token || ""}` },
+        body: JSON.stringify({ email: userEmail, provider }),
+      });
+      const json = await res.json();
+      if (json.url) window.location.href = json.url;
+      else { setBanner({ type: "error", text: json.error || "Couldn't start the connection." }); setConnecting(null); }
+    } catch (err) {
+      console.error("accounting connect failed", err);
+      setBanner({ type: "error", text: "Couldn't start the connection." });
+      setConnecting(null);
+    }
+  }
+
+  async function disconnect(conn) {
+    const label = conn.provider === "xero" ? "Xero" : "Sage";
+    if (!window.confirm(`Disconnect ${label}? Actuals already synced stay on your line items — future syncs stop until you reconnect.`)) return;
+    await supabase.from("accounting_connections").update({ status: "disconnected" }).eq("id", conn.id);
+    loadAll();
+  }
+
+  async function syncNow(provider) {
+    setSyncing(provider);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/accounting-sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session?.access_token || ""}` },
+        body: JSON.stringify({ email: userEmail, provider }),
+      });
+      const json = await res.json();
+      const result = json.results?.[provider];
+      if (result?.error) setBanner({ type: "error", text: `Sync failed: ${result.error}` });
+      else setBanner({ type: "connected", text: `Synced — pulled ${result?.pulled ?? 0}, matched ${result?.matched ?? 0}.` });
+      loadAll();
+    } catch (err) {
+      console.error("accounting sync failed", err);
+      setBanner({ type: "error", text: "Sync failed — please try again." });
+    } finally {
+      setSyncing(null);
+    }
+  }
+
+  async function assignTransaction(txn, lineItemId) {
+    if (!lineItemId) return;
+    const opt = lineItemOptions.find((o) => o.id === lineItemId);
+    await supabase.from("accounting_transactions")
+      .update({ status: "matched", matched_line_item_id: lineItemId, matched_project_id: opt?.projectId || null })
+      .eq("id", txn.id);
+    const { data: sumRows } = await supabase.from("accounting_transactions")
+      .select("amount").eq("matched_line_item_id", lineItemId).eq("status", "matched");
+    const total = (sumRows || []).reduce((s, r) => s + Number(r.amount || 0), 0);
+    await supabase.from("line_items")
+      .update({ actual: total, actual_source: txn.provider, synced_at: new Date().toISOString() })
+      .eq("id", lineItemId);
+    setTransactions((prev) => prev.filter((t) => t.id !== txn.id));
+  }
+
+  async function ignoreTransaction(txn) {
+    await supabase.from("accounting_transactions").update({ status: "ignored" }).eq("id", txn.id);
+    setTransactions((prev) => prev.filter((t) => t.id !== txn.id));
+  }
+
+  const byProvider = Object.fromEntries(connections.filter((c) => c.status === "connected").map((c) => [c.provider, c]));
+
+  return (
+    <div style={styles.page}>
+      <GlobalStyles />
+      <PageHeader title="Accounting sync" current="integrations" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
+
+      <div style={styles.explainer}>
+        Connect Xero or Sage to pull paid bills straight into each project's Cost &amp; Progress ledger as actuals — no
+        more retyping what's already in your books. This only reads from your accounting platform; SiteMargin never
+        creates or edits anything there. Matches are automatic where an invoice clearly lines up with a line item —
+        anything unclear lands below for you to assign by hand rather than being guessed.
+      </div>
+
+      {banner && (
+        <div style={{ ...styles.integrationsBanner, ...(banner.type === "error" ? styles.integrationsBannerError : {}) }}>
+          {banner.text}
+        </div>
+      )}
+
+      <div style={styles.integrationsGrid}>
+        {ACCOUNTING_PROVIDERS.map((p) => {
+          const conn = byProvider[p.key];
+          return (
+            <div key={p.key} style={styles.integrationsCard}>
+              <div style={styles.integrationsCardHead}>
+                <span style={{ ...styles.integrationsDot, background: p.color }} />
+                <span style={styles.integrationsCardName}>{p.label}</span>
+                {conn && <span style={styles.integrationsConnectedTag}>Connected</span>}
+              </div>
+              {conn ? (
+                <>
+                  <div style={styles.integrationsMeta}>{conn.tenant_name || "Connected account"}</div>
+                  <div style={styles.integrationsMeta}>
+                    {conn.last_synced_at ? `Last synced ${new Date(conn.last_synced_at).toLocaleString()}` : "Never synced"}
+                  </div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                    <button style={styles.addBtn} disabled={syncing === p.key} onClick={() => syncNow(p.key)}>
+                      {syncing === p.key ? "Syncing…" : "Sync now"}
+                    </button>
+                    <button style={styles.removeBtn} onClick={() => disconnect(conn)}>Disconnect</button>
+                  </div>
+                </>
+              ) : (
+                <button style={styles.importBtn} disabled={connecting === p.key} onClick={() => connect(p.key)}>
+                  {connecting === p.key ? "Redirecting…" : `Connect ${p.label}`}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {!loading && transactions.length > 0 && (
+        <div style={styles.integrationsUnmatched}>
+          <div style={styles.toggleGroupLabel}>Needs a line item — {transactions.length} unmatched</div>
+          {transactions.map((t) => (
+            <div key={t.id} style={styles.integrationsTxnRow}>
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <div style={{ fontWeight: 600, fontSize: 13.5 }}>{t.contact_name || t.description || "Transaction"}</div>
+                <div style={{ fontSize: 12, color: "#6E6E73" }}>{t.description}{t.txn_date ? ` · ${t.txn_date}` : ""}</div>
+              </div>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, minWidth: 100, textAlign: "right" }}>{fmt(t.amount)}</div>
+              <select style={{ ...styles.addInput, maxWidth: 240 }} defaultValue="" onChange={(e) => assignTransaction(t, e.target.value)}>
+                <option value="">Assign to line item…</option>
+                {lineItemOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+              </select>
+              <button style={styles.removeBtn} onClick={() => ignoreTransaction(t)}>Ignore</button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <AppFooter />
     </div>
   );
@@ -4381,6 +4585,19 @@ const styles = {
   topNavBtnActive: { background: "#1D1D1F", color: "#FFFFFF", fontWeight: 600 },
 
   explainer: { maxWidth: 1180, margin: "0 auto 18px", fontSize: 13, color: "#6E6E73", lineHeight: 1.6, background: "#FFFFFF", borderRadius: 12, padding: "12px 16px", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
+
+  // ---- Accounting sync (Xero / Sage) ----
+  integrationsBanner: { maxWidth: 1180, margin: "0 auto 18px", fontSize: 13.5, fontWeight: 500, color: "#154766", background: "#E9F1F6", borderRadius: 12, padding: "12px 16px" },
+  integrationsBannerError: { color: "#8A2E1B", background: "rgba(193,70,43,0.09)" },
+  integrationsGrid: { maxWidth: 1180, margin: "0 auto 24px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14 },
+  integrationsCard: { background: "#FFFFFF", borderRadius: 14, padding: "18px 20px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)" },
+  integrationsCardHead: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 },
+  integrationsDot: { width: 10, height: 10, borderRadius: "50%" },
+  integrationsCardName: { fontSize: 15, fontWeight: 700 },
+  integrationsConnectedTag: { fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#4C7A5C", background: "rgba(76,122,92,0.12)", padding: "3px 9px", borderRadius: 100, marginLeft: "auto" },
+  integrationsMeta: { fontSize: 12.5, color: "#6E6E73", marginBottom: 3 },
+  integrationsUnmatched: { maxWidth: 1180, margin: "0 auto 24px", background: "#FFFFFF", borderRadius: 14, padding: "16px 20px", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
+  integrationsTxnRow: { display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid #F2F2F5", flexWrap: "wrap" },
   explainerLink: { color: "#1D5C8A", fontWeight: 600 },
 
   newProjectRow: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", gap: 10 },
