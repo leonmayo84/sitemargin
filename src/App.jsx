@@ -1096,6 +1096,22 @@ function AuthGate() {
   const [isLoginIntent] = useState(() => {
     try { return new URLSearchParams(window.location.search).get("login") === "1"; } catch { return false; }
   });
+  // Password is an alternative to the magic link, not a replacement — most
+  // people still get the one-click email link by default, but anyone who'd
+  // rather not wait on email each time can switch to a password instead.
+  const [authMode, setAuthMode] = useState("magic"); // magic | password
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordState, setPasswordState] = useState("idle"); // idle | sending | error
+  const [forgotState, setForgotState] = useState("idle"); // idle | sending | sent | error
+  // Set when Supabase redirects back here after a "forgot password" email
+  // link — supabase-js fires a PASSWORD_RECOVERY auth event with a live
+  // (but purpose-limited) session, which we use only to let them set a new
+  // password below, rather than dropping them straight into the app.
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
+  const [resetState, setResetState] = useState("idle"); // idle | saving | saved | error
   const [gateMenuOpen, setGateMenuOpen] = useState(false);
   const gateMenuWrapRef = useRef(null);
   const emailInputRef = useRef(null);
@@ -1174,33 +1190,118 @@ function AuthGate() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => checkAccess(data.session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === "PASSWORD_RECOVERY") {
+        // A recovery-flow session, not a real sign-in — hold here and show
+        // the "set a new password" screen instead of routing into the app.
+        setSession(newSession);
+        setRecoveryMode(true);
+        return;
+      }
       checkAccess(newSession);
     });
     return () => listener.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Same production-origin guard as sendMagicLink below, shared by every
+  // Supabase auth call that needs an emailRedirectTo/redirectTo — sign-in
+  // links should never silently point at localhost or a stray preview URL.
+  function authRedirectOrigin() {
+    const PROD_ORIGIN = "https://app.sitemargin.co.za";
+    return window.location.hostname === "localhost" ? window.location.origin : PROD_ORIGIN;
+  }
+
   async function sendMagicLink(e) {
     e.preventDefault();
     if (!email.trim()) return;
     setSendState("sending");
     setErrorMsg("");
-    // Always send the magic link back to production, unless we're actually
-    // running the local dev server right now. This stops sign-in links from
-    // silently pointing at localhost (or a stray preview URL) just because
-    // that's what tab happened to be open when the link was requested.
-    const PROD_ORIGIN = "https://app.sitemargin.co.za";
-    const redirectOrigin = window.location.hostname === "localhost" ? window.location.origin : PROD_ORIGIN;
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: redirectOrigin },
+      options: { emailRedirectTo: authRedirectOrigin() },
     });
     if (error) {
       setSendState("error");
       setErrorMsg(error.message);
     } else {
       setSendState("sent");
+    }
+  }
+
+  async function handlePasswordAuth(e) {
+    e.preventDefault();
+    if (!email.trim() || !password) return;
+    if (!isLoginIntent && password !== confirmPassword) {
+      setPasswordState("error");
+      setErrorMsg("Passwords don't match.");
+      return;
+    }
+    setPasswordState("sending");
+    setErrorMsg("");
+    if (isLoginIntent) {
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) {
+        setPasswordState("error");
+        setErrorMsg(error.message);
+      }
+      // On success the onAuthStateChange listener above picks up the new
+      // session and checkAccess() takes it from here — nothing more to do.
+    } else {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { emailRedirectTo: authRedirectOrigin() },
+      });
+      if (error) {
+        setPasswordState("error");
+        setErrorMsg(error.message);
+      } else if (!data.session) {
+        // Email confirmation is required before the account is usable —
+        // reuse the same "check your inbox" notice as the magic link.
+        setSendState("sent");
+      }
+      // If data.session came back immediately (confirmation disabled on
+      // the Supabase project), onAuthStateChange handles routing in as usual.
+    }
+  }
+
+  async function handleForgotPassword() {
+    if (!email.trim()) {
+      setForgotState("error");
+      setErrorMsg("Enter your email above first, then click Forgot password.");
+      return;
+    }
+    setForgotState("sending");
+    setErrorMsg("");
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${authRedirectOrigin()}/?login=1`,
+    });
+    if (error) {
+      setForgotState("error");
+      setErrorMsg(error.message);
+    } else {
+      setForgotState("sent");
+    }
+  }
+
+  async function handleSetNewPassword(e) {
+    e.preventDefault();
+    if (newPassword !== newPasswordConfirm) {
+      setResetState("error");
+      setErrorMsg("Passwords don't match.");
+      return;
+    }
+    setResetState("saving");
+    setErrorMsg("");
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      setResetState("error");
+      setErrorMsg(error.message);
+    } else {
+      setResetState("saved");
+      setRecoveryMode(false);
+      checkAccess(session);
     }
   }
 
@@ -1236,6 +1337,48 @@ function AuthGate() {
       setErrorMsg("Couldn't start checkout — please try again.");
       setCheckoutTier(null);
     }
+  }
+
+  if (recoveryMode) {
+    return (
+      <div style={styles.page}>
+        <GlobalStyles />
+        <div style={styles.gateWrap}>
+          <h1 style={{ ...styles.dashTitle, marginBottom: 10 }}>Set a new password</h1>
+          {resetState === "saved" ? (
+            <div style={styles.gateNotice}>Password updated — taking you in…</div>
+          ) : (
+            <>
+              <p style={styles.gateText}>Choose a new password for your SiteMargin account.</p>
+              <form onSubmit={handleSetNewPassword} style={styles.gateForm}>
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  placeholder="New password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  style={styles.addInput}
+                />
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  placeholder="Confirm new password"
+                  value={newPasswordConfirm}
+                  onChange={(e) => setNewPasswordConfirm(e.target.value)}
+                  style={styles.addInput}
+                />
+                <button type="submit" style={styles.addBtn} disabled={resetState === "saving"}>
+                  {resetState === "saving" ? "Saving…" : "Save new password"}
+                </button>
+              </form>
+              {resetState === "error" && <div style={styles.gateError}>{errorMsg}</div>}
+            </>
+          )}
+        </div>
+      </div>
+    );
   }
 
   if (status === "checking") {
@@ -1397,12 +1540,22 @@ function AuthGate() {
           <>
             {sendState === "sent" ? (
               <div style={styles.gateNotice}>
-                Check your inbox at <b>{email}</b> for the sign-in link. You can close this tab.
+                {authMode === "password"
+                  ? <>Check your inbox at <b>{email}</b> to confirm your account, then come back and log in.</>
+                  : <>Check your inbox at <b>{email}</b> for the sign-in link. You can close this tab.</>}
+              </div>
+            ) : forgotState === "sent" ? (
+              <div style={styles.gateNotice}>
+                Check your inbox at <b>{email}</b> for the password reset link.
               </div>
             ) : (
               <>
                 <p style={styles.gateText}>
-                  {isLoginIntent
+                  {authMode === "password"
+                    ? isLoginIntent
+                      ? "Enter your email and password to log in."
+                      : "Pick an email and password for your new account."
+                    : isLoginIntent
                     ? "Enter the email you signed up with and we'll send you a one-click link to log in — no password needed."
                     : "Enter your email and we'll send you a one-click sign-in link — no password needed."}
                 </p>
@@ -1413,20 +1566,87 @@ function AuthGate() {
                       : `Continuing with ${TIER_LABEL[selectedTier] || selectedTier} — you'll choose it again once you're signed in.`}
                   </div>
                 )}
-                <form onSubmit={sendMagicLink} style={styles.gateForm}>
-                  <input
-                    ref={emailInputRef}
-                    type="email"
-                    required
-                    placeholder="you@yourcompany.co.za"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    style={styles.addInput}
-                  />
-                  <button type="submit" style={styles.addBtn} disabled={sendState === "sending"}>
-                    {sendState === "sending" ? "Sending…" : "Send sign-in link"}
+                {authMode === "magic" ? (
+                  <form onSubmit={sendMagicLink} style={styles.gateForm}>
+                    <input
+                      ref={emailInputRef}
+                      type="email"
+                      required
+                      placeholder="you@yourcompany.co.za"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      style={styles.addInput}
+                    />
+                    <button type="submit" style={styles.addBtn} disabled={sendState === "sending"}>
+                      {sendState === "sending" ? "Sending…" : "Send sign-in link"}
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handlePasswordAuth} style={styles.gateForm}>
+                    <input
+                      ref={emailInputRef}
+                      type="email"
+                      required
+                      placeholder="you@yourcompany.co.za"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      style={styles.addInput}
+                    />
+                    <input
+                      type="password"
+                      required
+                      minLength={8}
+                      placeholder="Password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      style={styles.addInput}
+                      autoComplete={isLoginIntent ? "current-password" : "new-password"}
+                    />
+                    {!isLoginIntent && (
+                      <input
+                        type="password"
+                        required
+                        minLength={8}
+                        placeholder="Confirm password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        style={styles.addInput}
+                        autoComplete="new-password"
+                      />
+                    )}
+                    <button type="submit" style={styles.addBtn} disabled={passwordState === "sending"}>
+                      {passwordState === "sending"
+                        ? isLoginIntent
+                          ? "Logging in…"
+                          : "Creating account…"
+                        : isLoginIntent
+                        ? "Log in"
+                        : "Create account"}
+                    </button>
+                  </form>
+                )}
+                <p style={styles.gateSwitchText}>
+                  <button
+                    type="button"
+                    style={styles.gateSwitchLinkBtn}
+                    onClick={() => { setAuthMode((m) => (m === "magic" ? "password" : "magic")); setErrorMsg(""); }}
+                  >
+                    {authMode === "magic" ? "Use a password instead" : "Use a one-click email link instead"}
                   </button>
-                </form>
+                  {authMode === "password" && isLoginIntent && (
+                    <>
+                      {" · "}
+                      <button
+                        type="button"
+                        style={styles.gateSwitchLinkBtn}
+                        onClick={handleForgotPassword}
+                        disabled={forgotState === "sending"}
+                      >
+                        {forgotState === "sending" ? "Sending reset link…" : "Forgot password?"}
+                      </button>
+                    </>
+                  )}
+                </p>
                 <p style={styles.gateSwitchText}>
                   {isLoginIntent ? (
                     <>New here? <a href="https://sitemargin.co.za/pricing.html" style={styles.gateSwitchLink}>See pricing &amp; sign up</a></>
@@ -1436,7 +1656,9 @@ function AuthGate() {
                 </p>
               </>
             )}
-            {sendState === "error" && <div style={styles.gateError}>{errorMsg}</div>}
+            {(sendState === "error" || passwordState === "error" || forgotState === "error") && (
+              <div style={styles.gateError}>{errorMsg}</div>
+            )}
             {!isLoginIntent && (
               <>
                 <div style={styles.pricingHead}>Pricing</div>
@@ -4154,6 +4376,7 @@ const styles = {
   gateFootnote: { fontSize: 13, color: "#6E6E73", marginTop: 22 },
   gateSwitchText: { fontSize: 13.5, color: "#6E6E73", marginTop: 14 },
   gateSwitchLink: { color: "#1D5C8A", fontWeight: 600, textDecoration: "none" },
+  gateSwitchLinkBtn: { color: "#1D5C8A", fontWeight: 600, background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" },
   topNavBtn: { background: "none", border: "none", color: "#6E6E73", fontSize: 14, fontWeight: 500, padding: "6px 12px", cursor: "pointer", borderRadius: 3 },
   topNavBtnActive: { background: "#1D1D1F", color: "#FFFFFF", fontWeight: 600 },
 
