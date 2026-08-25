@@ -610,6 +610,15 @@ function GlobalStyles() {
       .print-only-status { display: none; }
       .print-only-footer { display: none; }
       .sm-logo-menu-item:hover { background: #F5F5F7; }
+      /* Hover highlight for every link/button row inside the hamburger
+         drawer — blueprint blue rather than the old accent orange, to stay
+         consistent with the rest of the app's colour swap. .sm-menu-item
+         covers Projects/Subcontractors/Templates and the "More from
+         SiteMargin" links; .sm-menu-item-dim covers the smaller Terms/
+         Privacy row, which gets a colour-only hover (no background) since
+         it has no horizontal padding to hold one. */
+      .sm-menu-item:hover { background: #E9F1F6; color: #1D5C8A; }
+      .sm-menu-item-dim:hover { color: #1D5C8A; }
       /* Lets the hamburger's drawer pop open on hover, but only on devices
          that have a real hover-capable pointer (a mouse/trackpad) — gated
          behind (hover: hover) and (pointer: fine) so touchscreens (the
@@ -704,6 +713,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                 {onNavigate && tabs.map(([key, label]) => (
                   <button
                     key={key}
+                    className="sm-menu-item"
                     style={{ ...styles.menuPanelLink, ...(current === key ? styles.menuPanelLinkActive : {}) }}
                     onClick={closeAnd(() => onNavigate(key))}
                   >
@@ -731,6 +741,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                         href={item.href}
                         target="_blank"
                         rel="noopener noreferrer"
+                        className="sm-menu-item"
                         style={styles.menuSecondaryLink}
                         onClick={() => setMenuOpen(false)}
                       >
@@ -738,8 +749,8 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                       </a>
                     ))}
                     <div style={styles.menuPanelDimRow}>
-                      <a href="https://sitemargin.co.za/terms.html" target="_blank" rel="noopener noreferrer" style={styles.menuPanelDim} onClick={() => setMenuOpen(false)}>Terms</a>
-                      <a href="https://sitemargin.co.za/privacy.html" target="_blank" rel="noopener noreferrer" style={styles.menuPanelDim} onClick={() => setMenuOpen(false)}>Privacy</a>
+                      <a href="https://sitemargin.co.za/terms.html" target="_blank" rel="noopener noreferrer" className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => setMenuOpen(false)}>Terms</a>
+                      <a href="https://sitemargin.co.za/privacy.html" target="_blank" rel="noopener noreferrer" className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => setMenuOpen(false)}>Privacy</a>
                     </div>
                   </>
                 )}
@@ -1191,6 +1202,7 @@ function AuthGate() {
                   ].map((item) => (
                     <button
                       key={item.label}
+                      className="sm-menu-item"
                       style={styles.menuPanelLink}
                       onClick={() => { setGateMenuOpen(false); window.location.href = item.href; }}
                     >
@@ -1198,8 +1210,8 @@ function AuthGate() {
                     </button>
                   ))}
                   <div style={styles.menuPanelDimRow}>
-                    <button style={styles.menuPanelDim} onClick={() => { setGateMenuOpen(false); window.location.href = "https://sitemargin.co.za/terms.html"; }}>Terms</button>
-                    <button style={styles.menuPanelDim} onClick={() => { setGateMenuOpen(false); window.location.href = "https://sitemargin.co.za/privacy.html"; }}>Privacy</button>
+                    <button className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => { setGateMenuOpen(false); window.location.href = "https://sitemargin.co.za/terms.html"; }}>Terms</button>
+                    <button className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => { setGateMenuOpen(false); window.location.href = "https://sitemargin.co.za/privacy.html"; }}>Privacy</button>
                   </div>
                   <div style={styles.menuFooter}>
                     <div style={styles.menuFooterBrandRow}>
@@ -3939,10 +3951,10 @@ const styles = {
   },
   menuDrawerOpen: { transform: "translateY(0) scale(1)", opacity: 1, visibility: "visible", pointerEvents: "auto" },
   menuPanelInner: { width: "100%" },
-  menuPanelLink: { display: "block", width: "100%", textAlign: "left", background: "none", fontSize: 17, fontWeight: 700, letterSpacing: "-0.01em", color: "#1D1D1F", border: "none", padding: "7px 0", cursor: "pointer", textDecoration: "none" },
+  menuPanelLink: { display: "block", width: "calc(100% + 20px)", textAlign: "left", background: "none", fontSize: 17, fontWeight: 700, letterSpacing: "-0.01em", color: "#1D1D1F", border: "none", borderRadius: 10, padding: "7px 10px", margin: "0 -10px", cursor: "pointer", textDecoration: "none" },
   menuPanelLinkActive: { color: "#1D5C8A" },
   menuSectionLabel: { fontSize: 10.5, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: "#A0A0A6", margin: "16px 0 6px" },
-  menuSecondaryLink: { display: "block", width: "100%", textAlign: "left", background: "none", border: "none", fontSize: 14, fontWeight: 500, color: "#4A4A4F", padding: "5px 0", cursor: "pointer", textDecoration: "none" },
+  menuSecondaryLink: { display: "block", width: "calc(100% + 20px)", textAlign: "left", background: "none", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 500, color: "#4A4A4F", padding: "5px 10px", margin: "0 -10px", cursor: "pointer", textDecoration: "none" },
   menuDivider: { height: 1, background: "#E8E8ED", margin: "14px 0 0" },
   menuPanelDimRow: { display: "flex", gap: 16, marginTop: 12, paddingTop: 12, borderTop: "1px solid #E8E8ED" },
   menuPanelDim: { background: "none", border: "none", fontSize: 12, fontWeight: 600, color: "#8A8A90", padding: 0, cursor: "pointer", textDecoration: "none" },
