@@ -2799,7 +2799,7 @@ function StorageMeter({ email }) {
     setUpgradeError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/storage-checkout`, {
+      const res = await fetch("https://mcxmtnlhqubaljvnwmzc.supabase.co/functions/v1/storage-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
         body: JSON.stringify({ email, upgrade_tier: tier }),
