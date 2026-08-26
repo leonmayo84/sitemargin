@@ -2453,11 +2453,14 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
       <PageHeader title="Subcontractor scorecards" current="subcontractors" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
 
       <div style={styles.explainer}>
-        Scores build up automatically from the line items you assign to each sub. <b>Budget</b> comes from how close
-        actuals land to budget, <b>schedule</b> from due date vs completed date, and <b>quality</b> from the 1–5 rating
-        you set per line item. Dimensions with no data yet show a dash rather than a misleading zero. A flag and notes
-        are yours to set manually — they never affect the computed scores, they're just a place to keep the context
-        the numbers don't capture (or can't yet).
+        There's no rating button here — scores build up automatically from the line items you assign to each sub
+        inside a project. Open a project, click a line item, then under <b>Details</b> pick the subcontractor from
+        the dropdown. That same panel has <b>Due date</b> and <b>Completed date</b> fields (these drive the
+        <b> schedule</b> score) and a <b>Quality (1–5)</b> rating (drives the <b>quality</b> score) — set them there
+        and they'll roll up to the sub's card here. <b>Budget</b> comes from how close actuals land to budget on
+        their assigned items, no extra step needed. Dimensions with no data yet show a dash rather than a
+        misleading zero. The flag and notes below are yours to set manually — they never affect the computed
+        scores, they're just a place to keep the context the numbers don't capture (or can't yet).
       </div>
 
       <div className="no-print" style={styles.addRowStandalone}>
@@ -2610,7 +2613,10 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                 {isOpen && (
                   <div style={{ marginTop: 10, borderTop: "1px solid #F2F2F5", paddingTop: 10 }}>
                     {groups.length === 0 ? (
-                      <div style={{ fontSize: 12, color: "#6E6E73" }}>No line items assigned to this sub yet.</div>
+                      <div style={{ fontSize: 12, color: "#6E6E73" }}>
+                        No line items assigned to this sub yet. Open a project, click a line item, then under
+                        Details pick "{sub.name}" as the subcontractor to start scoring them.
+                      </div>
                     ) : (
                       groups.map((g) => {
                         const gScore = scoreSubcontractor(g.items);
