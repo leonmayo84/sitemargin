@@ -5054,10 +5054,10 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
       {view === "tenders" && (
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
-          <div className="no-print" style={{ ...styles.addRow, flexWrap: "nowrap", borderRadius: 18, marginBottom: 16 }}>
-            <input style={{ ...styles.addInput, flex: 1.2, minWidth: 0 }} placeholder="Trade (e.g. Plumbing)" value={tTrade} onChange={(e) => setTTrade(e.target.value)} />
-            <input style={{ ...styles.addInput, flex: 2, minWidth: 0 }} placeholder="Scope of work being tendered" value={tTitle} onChange={(e) => setTTitle(e.target.value)} />
-            <select style={{ ...styles.addInput, flex: 1.4, minWidth: 0 }} value={tLineItemId} onChange={(e) => setTLineItemId(e.target.value)}>
+          <div className="no-print" style={{ ...styles.addRow, borderRadius: 18, marginBottom: 16 }}>
+            <input style={{ ...styles.addInput, flex: "1.2 1 160px" }} placeholder="Trade (e.g. Plumbing)" value={tTrade} onChange={(e) => setTTrade(e.target.value)} />
+            <input style={{ ...styles.addInput, flex: "2 1 200px" }} placeholder="Scope of work being tendered" value={tTitle} onChange={(e) => setTTitle(e.target.value)} />
+            <select style={{ ...styles.addInput, flex: "1.4 1 160px" }} value={tLineItemId} onChange={(e) => setTLineItemId(e.target.value)}>
               <option value="">No line item</option>
               {items.map((i) => (
                 <option key={i.id} value={i.id}>{i.name}</option>
@@ -5113,19 +5113,19 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                 </div>
 
                 {tender.status === "open" && (
-                  <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "nowrap", marginTop: 12 }}>
-                    <input style={{ ...styles.addInput, flex: 1.4, minWidth: 0 }} placeholder="Bidder / company name"
+                  <div className="no-print" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+                    <input style={{ ...styles.addInput, flex: "1.4 1 150px" }} placeholder="Bidder / company name"
                       value={draft.bidderName} onChange={(e) => updateBidDraft(tender.id, { bidderName: e.target.value })} />
-                    <select style={{ ...styles.addInput, flex: 1.4, minWidth: 0 }}
+                    <select style={{ ...styles.addInput, flex: "1.4 1 150px" }}
                       value={draft.subcontractorId} onChange={(e) => updateBidDraft(tender.id, { subcontractorId: e.target.value })}>
                       <option value="">Not yet in Subcontractors</option>
                       {subs.map((s) => (
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>
-                    <input style={{ ...styles.addInput, flex: 1, minWidth: 0, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Amount" type="number"
+                    <input style={{ ...styles.addInput, flex: "1 1 110px", textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Amount" type="number"
                       value={draft.amount} onChange={(e) => updateBidDraft(tender.id, { amount: e.target.value })} />
-                    <input style={{ ...styles.addInput, flex: 1.6, minWidth: 0 }} placeholder="Notes (optional)"
+                    <input style={{ ...styles.addInput, flex: "1.6 1 150px" }} placeholder="Notes (optional)"
                       value={draft.notes} onChange={(e) => updateBidDraft(tender.id, { notes: e.target.value })} />
                     <button style={{ ...styles.addBtn, flex: "1.1 0 auto" }} onClick={() => addBid(tender.id)}>+ Add bid</button>
                   </div>
@@ -5148,16 +5148,16 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         return (
           <div style={{ maxWidth: 1180, margin: "0 auto" }}>
             <ModuleBanner moduleKey="schedule" stat={String(openTaskCount)} statLabel={openTaskCount === 1 ? "task open" : "tasks open"} />
-            <div className="no-print" style={{ ...styles.addRow, flexWrap: "nowrap", borderRadius: 18, marginBottom: 16 }}>
-              <input style={{ ...styles.addInput, flex: 1.6, minWidth: 0 }} placeholder="Task name (e.g. Roof trusses)" value={taskName} onChange={(e) => setTaskName(e.target.value)} />
-              <select style={{ ...styles.addInput, flex: 1.4, minWidth: 0 }} value={taskLineItemId} onChange={(e) => setTaskLineItemId(e.target.value)}>
+            <div className="no-print" style={{ ...styles.addRow, borderRadius: 18, marginBottom: 16 }}>
+              <input style={{ ...styles.addInput, flex: "1.6 1 170px" }} placeholder="Task name (e.g. Roof trusses)" value={taskName} onChange={(e) => setTaskName(e.target.value)} />
+              <select style={{ ...styles.addInput, flex: "1.4 1 150px" }} value={taskLineItemId} onChange={(e) => setTaskLineItemId(e.target.value)}>
                 <option value="">No line item</option>
                 {items.map((i) => (
                   <option key={i.id} value={i.id}>{i.name}</option>
                 ))}
               </select>
-              <input style={{ ...styles.addInput, flex: 1, minWidth: 0 }} type="date" value={taskStart} onChange={(e) => setTaskStart(e.target.value)} />
-              <input style={{ ...styles.addInput, flex: 1, minWidth: 0 }} type="date" value={taskEnd} onChange={(e) => setTaskEnd(e.target.value)} />
+              <input style={{ ...styles.addInput, flex: "1 1 130px" }} type="date" value={taskStart} onChange={(e) => setTaskStart(e.target.value)} />
+              <input style={{ ...styles.addInput, flex: "1 1 130px" }} type="date" value={taskEnd} onChange={(e) => setTaskEnd(e.target.value)} />
               <button style={{ ...styles.addBtn, flex: "1.2 0 auto" }} onClick={addScheduleTask}>+ Add task</button>
             </div>
 
@@ -5227,11 +5227,11 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             style={{ display: "none" }}
             onChange={handleDocumentUpload}
           />
-          <div className="no-print" style={{ ...styles.addRow, flexWrap: "nowrap", borderRadius: 18, marginBottom: 16 }}>
-            <select style={{ ...styles.addInput, flex: 1.2, minWidth: 0 }} value={docCategory} onChange={(e) => setDocCategory(e.target.value)}>
+          <div className="no-print" style={{ ...styles.addRow, borderRadius: 18, marginBottom: 16 }}>
+            <select style={{ ...styles.addInput, flex: "1.2 1 150px" }} value={docCategory} onChange={(e) => setDocCategory(e.target.value)}>
               {DOC_CATEGORIES.map((c) => (<option key={c} value={c}>{c}</option>))}
             </select>
-            <select style={{ ...styles.addInput, flex: 1.6, minWidth: 0 }} value={docLineItemId} onChange={(e) => setDocLineItemId(e.target.value)}>
+            <select style={{ ...styles.addInput, flex: "1.6 1 170px" }} value={docLineItemId} onChange={(e) => setDocLineItemId(e.target.value)}>
               <option value="">No line item</option>
               {items.map((i) => (<option key={i.id} value={i.id}>{i.name}</option>))}
             </select>
