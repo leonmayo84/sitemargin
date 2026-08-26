@@ -86,15 +86,43 @@ const STATUS = {
   over: { label: "OVER", color: "#C1462B", bg: "rgba(193,70,43,0.12)" },
 };
 
-const CATEGORIES = ["Groundworks & Structural", "Plumbing", "Electrical", "Joinery & Carpentry", "Tiling & Finishes", "Roofing", "External Works", "Provisional Sums", "Other"];
+const CATEGORIES = [
+  "Preliminaries", "Demolition", "Groundworks & Earthworks", "Concrete & Structural", "Steelwork",
+  "Bricklaying & Masonry", "Roofing & Waterproofing", "Windows & Doors", "Plumbing", "Electrical",
+  "HVAC & Mechanical", "Fire Protection", "Plastering & Rendering", "Dry-walling & Ceilings",
+  "Joinery & Carpentry", "Shopfitting & Cabinetry", "Tiling & Finishes", "Flooring", "Glazing",
+  "Security & Access Control", "Solar & Renewable Energy", "Paving & Driveways", "Fencing & Gates",
+  "Landscaping & Irrigation", "Pool & Water Features", "Scaffolding", "External Works",
+  "Provisional Sums", "Other",
+];
 const CATEGORY_COLOR = {
-  "Groundworks & Structural": "#6B7A8F",
+  Preliminaries: "#6B7A8F",
+  Demolition: "#7A4B4B",
+  "Groundworks & Earthworks": "#9C7A4A",
+  "Concrete & Structural": "#8C8C94",
+  Steelwork: "#5C6B73",
+  "Bricklaying & Masonry": "#A0522D",
+  "Roofing & Waterproofing": "#B5651D",
+  "Windows & Doors": "#4F7A8C",
   Plumbing: "#3D6FA6",
   Electrical: "#B8862F",
+  "HVAC & Mechanical": "#4C8C87",
+  "Fire Protection": "#B3453D",
+  "Plastering & Rendering": "#BFA98C",
+  "Dry-walling & Ceilings": "#9B9BA3",
   "Joinery & Carpentry": "#8B6F4E",
+  "Shopfitting & Cabinetry": "#6F5B7A",
   "Tiling & Finishes": "#4FA8A0",
-  Roofing: "#A0522D",
-  "External Works": "#5B8C5A",
+  Flooring: "#7C6A55",
+  Glazing: "#5A8FA3",
+  "Security & Access Control": "#4A5B7A",
+  "Solar & Renewable Energy": "#C9A227",
+  "Paving & Driveways": "#6B6459",
+  "Fencing & Gates": "#77775B",
+  "Landscaping & Irrigation": "#5B8C5A",
+  "Pool & Water Features": "#3F8FA0",
+  Scaffolding: "#A6A6A6",
+  "External Works": "#7A8C5B",
   "Provisional Sums": "#8B5FA3",
   Other: "#6E6E73",
 };
@@ -439,13 +467,33 @@ function pdfRowsToItems(rows) {
 
 
 const CATEGORY_KEYWORDS = {
-  "Groundworks & Structural": ["excavation", "earthwork", "foundation", "footing", "concrete", "steel", "structural", "groundwork", "masonry", "brickwork", "slab"],
+  Preliminaries: ["preliminaries", "prelim", "site establishment", "site setup"],
+  Demolition: ["demolition", "demolish", "strip out", "strip-out"],
+  "Groundworks & Earthworks": ["earthwork", "excavation", "groundwork", "site clearance", "bulk earthworks"],
+  "Concrete & Structural": ["concrete", "foundation", "footing", "slab", "structural concrete"],
+  Steelwork: ["structural steel", "steelwork", "reinforcing", "rebar"],
+  "Bricklaying & Masonry": ["brickwork", "masonry", "blockwork", "bricklaying"],
+  "Roofing & Waterproofing": ["roofing", "roof ", "waterproofing", "gutter", "fascia"],
+  "Windows & Doors": ["windows", "aluminium windows", "door frames", " doors"],
   Plumbing: ["plumbing", "plumber", "drainage", "sanitary ware", "sewer", "water supply"],
   Electrical: ["electrical", "electrician", "wiring", "lighting", "led ", "distribution board", "db board"],
-  "Joinery & Carpentry": ["joinery", "carpentry", "cabinet", "cupboard", "shopfitting", "timber"],
-  "Tiling & Finishes": ["tiling", "tile", "paint", "painting", "plaster", "grout", "flooring", "finishes"],
-  Roofing: ["roofing", "roof ", "waterproofing", "gutter", "fascia"],
-  "External Works": ["external works", "paving", "landscaping", "fencing", "driveway", "site works"],
+  "HVAC & Mechanical": ["hvac", "air conditioning", "aircon", "ventilation", "mechanical"],
+  "Fire Protection": ["fire protection", "sprinkler", "fire detection", "fire hose"],
+  "Plastering & Rendering": ["plaster", "rendering", "skim coat"],
+  "Dry-walling & Ceilings": ["drywall", "dry-wall", "ceiling", "gypsum", "rhino board"],
+  "Joinery & Carpentry": ["joinery", "carpentry", "timber"],
+  "Shopfitting & Cabinetry": ["shopfitting", "shop fitting", "cabinetry", "cabinet", "cupboard"],
+  "Tiling & Finishes": ["tiling", "tile", "paint", "painting", "grout"],
+  Flooring: ["flooring", "vinyl floor", "laminate floor", "carpet"],
+  Glazing: ["glazing", "glass", "shopfront glazing"],
+  "Security & Access Control": ["security", "access control", "cctv", "alarm system"],
+  "Solar & Renewable Energy": ["solar", "pv panel", "inverter", "renewable energy"],
+  "Paving & Driveways": ["paving", "driveway", "cobble"],
+  "Fencing & Gates": ["fencing", "fence", "gate", "palisade"],
+  "Landscaping & Irrigation": ["landscaping", "irrigation", "garden"],
+  "Pool & Water Features": ["swimming pool", "pool", "water feature"],
+  Scaffolding: ["scaffolding", "scaffold"],
+  "External Works": ["external works", "site works"],
   "Provisional Sums": ["provisional sum", "prov sum", "pc sum", "contingency", "nominated", "specialist"],
 };
 
@@ -640,32 +688,44 @@ function DonutCategorySplit({ rollup }) {
   );
 }
 
-function ProgressScatter({ items }) {
-  const plotted = items.filter((i) => Number(i.budget) > 0 && i.percent_complete != null);
-  if (plotted.length === 0) return <EmptyChart label="Set % complete on line items to plot them." />;
+function ProgressBars({ items }) {
+  const plotted = items
+    .filter((i) => Number(i.budget) > 0 && i.percent_complete != null)
+    .map((i) => {
+      const prog = Math.min(Number(i.percent_complete), 100);
+      const spent = Math.min((Number(i.actual) / Number(i.budget)) * 100, 130);
+      return { ...i, prog, spent, gap: spent - prog };
+    })
+    .sort((a, b) => b.gap - a.gap);
 
-  const W = 320, H = 220, pad = 34;
+  if (plotted.length === 0) return <EmptyChart label="Set % complete on line items to see this." />;
 
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", maxWidth: 420, display: "block" }}>
-        <rect x={pad} y={10} width={W - pad - 10} height={H - pad - 10} fill="#F5F5F7" stroke="#E8E8ED" />
-        <line x1={pad} y1={H - pad} x2={W - 10} y2={10} stroke="#C7C7CE" strokeWidth="1" strokeDasharray="3,3" />
-        <text x={W - 14} y={22} textAnchor="end" fill="#A0A0A6" fontSize="8" fontFamily="'IBM Plex Mono', monospace">on parity</text>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {plotted.map((item) => {
-          const prog = Math.min(Number(item.percent_complete), 100);
-          const spent = Math.min((Number(item.actual) / Number(item.budget)) * 100, 130);
-          const x = pad + (prog / 100) * (W - pad - 10);
-          const y = H - pad - (spent / 130) * (H - pad - 10);
-          const gap = spent - prog;
-          const color = gap > 15 ? "#C1462B" : gap > 5 ? "#B8862F" : "#4C7A5C";
-          return <circle key={item.id} cx={x} cy={Math.max(y, 12)} r="4.5" fill={color} opacity="0.85" />;
+          const color = item.gap > 15 ? "#C1462B" : item.gap > 5 ? "#B8862F" : "#4C7A5C";
+          return (
+            <div key={item.id}>
+              <div style={{ fontSize: 12.5, color: "#4A4A4F", marginBottom: 5 }}>{item.name}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                <div style={{ height: 7, background: "#F2F2F5", borderRadius: 3 }}>
+                  <div style={{ width: `${item.prog}%`, height: "100%", background: "#4C7A5C", borderRadius: 3 }} />
+                </div>
+                <div style={{ height: 7, background: "#F2F2F5", borderRadius: 3 }}>
+                  <div style={{ width: `${Math.min(item.spent, 100)}%`, height: "100%", background: color, borderRadius: 3 }} />
+                </div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
+                <span style={{ fontSize: 10, color: "#4C7A5C" }}>{item.prog.toFixed(0)}% done</span>
+                <span style={{ fontSize: 10, color }}>{item.spent.toFixed(0)}% spent</span>
+              </div>
+            </div>
+          );
         })}
-        <text x={pad} y={H - 12} fill="#6E6E73" fontSize="9" fontFamily="'IBM Plex Mono', monospace">0%</text>
-        <text x={W - 10} y={H - 12} textAnchor="end" fill="#6E6E73" fontSize="9" fontFamily="'IBM Plex Mono', monospace">100% complete →</text>
-      </svg>
-      <p style={{ fontSize: 12, color: "#6E6E73", marginTop: 10, maxWidth: 420 }}>
-        Anything above the dashed line is spending faster than it's progressing. The further above, the more urgent.
+      </div>
+      <p style={{ fontSize: 12, color: "#6E6E73", marginTop: 14 }}>
+        Red means spending is well ahead of progress — the bigger the gap between the two bars, the more urgent.
       </p>
     </div>
   );
@@ -709,7 +769,7 @@ function TopOverruns({ items }) {
 
 function ClaimsCertifiedChart({ items }) {
   const relevant = items.filter(
-    (i) => Number(i.claimed) > 0 || Number(i.certified) > 0 || Number(i.actual) > 0
+    (i) => Number(i.claimed) > 0 || Number(i.certified) > 0
   );
   if (relevant.length === 0) {
     return <EmptyChart label="Log claimed and certified amounts on line items (via Details) to see this chart." />;
@@ -766,7 +826,7 @@ function TrendChart({ snapshots }) {
   // would render the points as ellipses and squash the labels. Leaving
   // the default "meet" behaviour and sizing the wrapper only by width
   // (no fixed height) keeps everything scaling uniformly, the same way
-  // ProgressScatter's viewBox does elsewhere in this file.
+  // ProgressBars's bar widths do elsewhere in this file.
   const W = 1000, H = 220;
   const marginTop = 34, marginBottom = 14;
   const plotTop = marginTop, plotBottom = H - marginBottom;
@@ -1290,7 +1350,7 @@ function AppFooter() {
                   Google Play
                 </a>
                 <span style={{ ...styles.pubFooterStoreLink, ...styles.pubFooterStoreLinkSoon }}>
-                  <svg viewBox="0 0 24 24" fill="currentColor" style={styles.pubFooterStoreIcon}><path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.24-1.68.03.13.05.28.06.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.95 1.34-1.94 2.71-3.44 2.71-1.53 0-1.98-.9-3.72-.9-1.7 0-2.35.93-3.72.93-1.5 0-2.5-1.24-3.5-2.6C1.55 18.24.66 15.25.66 12.4c0-4.24 2.75-6.53 5.5-6.53 1.5 0 2.75.98 3.68.98.9 0 2.28-1.03 3.87-1.03.63 0 2.86.06 4.34 2.14-.11.07-2.58 1.5-2.58 4.58 0 3.67 3.24 4.98 3.29 5.01z" /></svg>
+                  <svg viewBox="0 0 24 24" fill="currentColor" style={styles.pubFooterStoreIcon}><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.947 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.692 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zm3.415-3.132c.843-1.012 1.4-2.427 1.245-3.831-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.717-.688 3.559-1.701z" /></svg>
                   Apple App Store — coming soon
                 </span>
               </div>
@@ -1299,12 +1359,6 @@ function AppFooter() {
         </div>
         <div className="sm-pub-footer-bottom" style={styles.pubFooterBottom}>
           <span>© 2026 SiteMargin</span>
-          {showExternalLinks && (
-            <div style={styles.pubFooterBottomLinks}>
-              <a href="https://sitemargin.co.za/terms.html" style={styles.pubFooterColLink}>Terms</a>
-              <a href="https://sitemargin.co.za/privacy.html" style={styles.pubFooterColLink}>Privacy</a>
-            </div>
-          )}
         </div>
       </footer>
     </>
@@ -3760,8 +3814,8 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const [scheduleTasks, setScheduleTasks] = useState([]);
   const [taskName, setTaskName] = useState("");
   const [taskLineItemId, setTaskLineItemId] = useState("");
-  const [taskStart, setTaskStart] = useState(() => new Date().toISOString().slice(0, 10));
-  const [taskEnd, setTaskEnd] = useState(() => new Date().toISOString().slice(0, 10));
+  const [taskStart, setTaskStart] = useState("");
+  const [taskEnd, setTaskEnd] = useState("");
   const [documents, setDocuments] = useState([]);
   const [docCategory, setDocCategory] = useState("Drawings");
   const [docLineItemId, setDocLineItemId] = useState("");
@@ -3774,12 +3828,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const attachTargetItem = useRef(null);
   const plansInputRef = useRef(null);
   const saveTimers = useRef({});
-  // Client company logo shown on the Quote tab's letterhead — stored per
-  // project (not per account, unlike the contractor's own logo above) since
-  // a contractor quotes different clients on different jobs.
-  const clientLogoInputRef = useRef(null);
-  const [clientLogoUploading, setClientLogoUploading] = useState(false);
-  const [clientLogoError, setClientLogoError] = useState(null);
+  // Quote tab: its own Download menu (PDF/Excel/Word) plus a ref around the
+  // printable quote content so Word export can grab it. The quote's "client
+  // logo" is just the contractor's own company logo (logoUrl, set once from
+  // the projects homepage) — no separate per-project upload any more.
+  const quoteContentRef = useRef(null);
+  const [quoteDownloadMenuOpen, setQuoteDownloadMenuOpen] = useState(false);
+  const quoteDownloadMenuRef = useRef(null);
 
   async function loadAll() {
     const [{ data: proj }, { data: lineItems }, { data: cos }, { data: snaps }, { data: subsData }, { data: temps }, { data: pos }, { data: tends }, { data: tasks }, { data: docs }] =
@@ -3869,36 +3924,52 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     }, 500);
   }
 
-  async function handleClientLogoFile(e) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (!/^image\/(png|jpeg|jpg|svg\+xml|webp)$/.test(file.type)) {
-      setClientLogoError("Please choose a PNG, JPG, SVG, or WEBP image.");
-      return;
-    }
-    if (file.size > 1_500_000) {
-      setClientLogoError("That image is a bit large — please use something under 1.5MB.");
-      return;
-    }
-    setClientLogoError(null);
-    setClientLogoUploading(true);
-    const dataUrl = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+  // Quote export — mirrors the Cost & Progress ledger's Download menu
+  // (PDF via print, Excel via the same xlsx lib) plus a lightweight Word
+  // export (an HTML file with a .doc extension, which Word opens directly —
+  // no new dependency needed for that one).
+  function quoteExportRows() {
+    const header = ["Category", "Item", "Price"];
+    const rows = [];
+    categoryRollup.forEach((cat) => {
+      items.filter((i) => (i.category || "Other") === cat.category).forEach((item) => {
+        rows.push([cat.category, item.name || "", Number(item.budget || 0)]);
+      });
+      rows.push([cat.category, `Subtotal — ${cat.category}`, Number(cat.budget || 0)]);
     });
-    const { error } = await supabase.from("projects_v2").update({ client_logo_data_url: dataUrl }).eq("id", projectId);
-    setClientLogoUploading(false);
-    if (error) { setClientLogoError("Couldn't save the logo — please try again."); return; }
-    setProject((p) => ({ ...p, client_logo_data_url: dataUrl }));
+    rows.push(["", "Total", Number(totals.budget || 0)]);
+    return [header, ...rows];
   }
 
-  async function removeClientLogo() {
-    if (!window.confirm("Remove the client logo from this quote?")) return;
-    await supabase.from("projects_v2").update({ client_logo_data_url: null }).eq("id", projectId);
-    setProject((p) => ({ ...p, client_logo_data_url: null }));
+  function quoteExportFileBaseName() {
+    const client = (project?.client_name || "").trim().replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "");
+    const name = (project?.name || "quote").trim().replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "");
+    return client ? `quote-${client}` : `quote-${name || "project"}`;
+  }
+
+  function exportQuotePdf() {
+    setQuoteDownloadMenuOpen(false);
+    window.print();
+  }
+
+  async function exportQuoteExcel() {
+    const XLSX = await import("xlsx");
+    const ws = XLSX.utils.aoa_to_sheet(quoteExportRows());
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Quote");
+    XLSX.writeFile(wb, `${quoteExportFileBaseName()}.xlsx`);
+    setQuoteDownloadMenuOpen(false);
+  }
+
+  function exportQuoteWord() {
+    setQuoteDownloadMenuOpen(false);
+    const inner = quoteContentRef.current?.innerHTML || "";
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Quote</title></head><body>${inner}</body></html>`;
+    const blob = new Blob([html], { type: "application/msword" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${quoteExportFileBaseName()}.doc`; a.click();
+    URL.revokeObjectURL(url);
   }
 
   async function addItem() {
@@ -3911,6 +3982,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   }
 
   async function removeItem(id) {
+    if (!window.confirm("Delete this line item? This can't be undone.")) return;
     setItems((prev) => prev.filter((i) => i.id !== id));
     await supabase.from("line_items").delete().eq("id", id);
   }
@@ -4319,7 +4391,8 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   }
 
   async function addScheduleTask() {
-    if (!taskName.trim() || !taskStart || !taskEnd) return;
+    if (!taskName.trim()) return;
+    if (!taskStart || !taskEnd) { alert("Please set both a start and due date."); return; }
     if (new Date(taskEnd) < new Date(taskStart)) { alert("End date can't be before the start date."); return; }
     const { data, error } = await supabase
       .from("schedule_tasks")
@@ -4416,6 +4489,15 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
   }, [downloadMenuOpen]);
+
+  useEffect(() => {
+    if (!quoteDownloadMenuOpen) return;
+    function handleOutside(e) {
+      if (quoteDownloadMenuRef.current && !quoteDownloadMenuRef.current.contains(e.target)) setQuoteDownloadMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [quoteDownloadMenuOpen]);
 
   // Download menu — the three formats a client or bank might ask for. PDF
   // reuses the existing print stylesheet (@media print already hides all
@@ -4520,16 +4602,6 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
       <div className="no-print" style={styles.backRow}>
         <button style={styles.backBtn} onClick={onBack}>← All projects</button>
-        <div ref={downloadMenuRef} style={{ position: "relative" }}>
-          <button style={styles.exportBtn} onClick={() => setDownloadMenuOpen((v) => !v)}>Download</button>
-          {downloadMenuOpen && (
-            <div style={styles.downloadMenuPopover}>
-              <button style={styles.logoMenuItem} onClick={exportLedgerPdf}>PDF</button>
-              <button style={styles.logoMenuItem} onClick={exportLedgerExcel}>Excel</button>
-              <button style={styles.logoMenuItem} onClick={exportLedgerCsv}>CSV</button>
-            </div>
-          )}
-        </div>
       </div>
 
       <div style={styles.titleBlock}>
@@ -4626,6 +4698,16 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         {importMessage && (
           <span style={{ fontSize: 12.5, color: importMessage.type === "error" ? "#C1462B" : "#4C7A5C" }}>{importMessage.text}</span>
         )}
+        <div ref={downloadMenuRef} style={{ position: "relative", marginLeft: "auto" }}>
+          <button style={styles.exportBtn} onClick={() => setDownloadMenuOpen((v) => !v)}>Download</button>
+          {downloadMenuOpen && (
+            <div style={styles.downloadMenuPopover}>
+              <button style={styles.logoMenuItem} onClick={exportLedgerPdf}>PDF</button>
+              <button style={styles.logoMenuItem} onClick={exportLedgerExcel}>Excel</button>
+              <button style={styles.logoMenuItem} onClick={exportLedgerCsv}>CSV</button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="no-print" style={styles.toggleGroupWrap}>
@@ -4737,6 +4819,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>
                     {editingCell === `${item.id}:actual` ? (
                       <input autoFocus style={styles.inlineInput} value={editValue} type="number"
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => setEditValue(e.target.value)}
                         onBlur={() => saveEdit(item.id, "actual")}
                         onKeyDown={(e) => e.key === "Enter" && saveEdit(item.id, "actual")} />
@@ -4788,7 +4871,16 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                       <label style={styles.detailField}>
                         <span style={styles.detailLabel}>% complete</span>
                         <input style={styles.addInput} type="number" value={item.percent_complete ?? ""}
+                          onFocus={(e) => e.target.select()}
                           onChange={(e) => scheduleSave(item.id, { percent_complete: Number(e.target.value) || 0 })} />
+                      </label>
+                      <label style={styles.detailField}>
+                        <span style={styles.detailLabel}>Quality</span>
+                        <select style={styles.addInput} value={item.quality_rating || ""}
+                          onChange={(e) => scheduleSave(item.id, { quality_rating: e.target.value ? Number(e.target.value) : null })}>
+                          <option value="">—</option>
+                          {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
+                        </select>
                       </label>
                       <label style={styles.detailField}>
                         <span style={styles.detailLabel}>Due date</span>
@@ -4801,19 +4893,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                           onChange={(e) => scheduleSave(item.id, { completed_date: e.target.value || null })} />
                       </label>
                       <label style={styles.detailField}>
-                        <span style={styles.detailLabel}>Quality (1–5)</span>
-                        <select style={styles.addInput} value={item.quality_rating || ""}
-                          onChange={(e) => scheduleSave(item.id, { quality_rating: e.target.value ? Number(e.target.value) : null })}>
-                          <option value="">— not rated —</option>
-                          {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
-                        </select>
-                      </label>
-                      <label style={styles.detailField}>
                         <span style={styles.detailLabel}>Claimed / Certified</span>
                         <div style={{ display: "flex", gap: 6 }}>
                           <input style={{ ...styles.addInput, width: "50%" }} type="number" placeholder="Claimed" value={item.claimed ?? ""}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => scheduleSave(item.id, { claimed: Number(e.target.value) || 0 })} />
                           <input style={{ ...styles.addInput, width: "50%" }} type="number" placeholder="Certified" value={item.certified ?? ""}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => scheduleSave(item.id, { certified: Number(e.target.value) || 0 })} />
                         </div>
                       </label>
@@ -4865,8 +4951,8 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           </div>
           <div style={styles.chartCard}>
             <div style={styles.chartTitle}>Progress against spend</div>
-            <div style={styles.chartSub}>Each dot is a line item.</div>
-            <ProgressScatter items={items} />
+            <div style={styles.chartSub}>Progress bar vs spend bar, per line item.</div>
+            <ProgressBars items={items} />
           </div>
           <div style={styles.chartCard}>
             <div style={styles.chartTitle}>Category variance</div>
@@ -4916,13 +5002,6 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
       {view === "quote" && (
         <div style={styles.quoteSheet}>
-          <input
-            ref={clientLogoInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/svg+xml,image/webp"
-            onChange={handleClientLogoFile}
-            style={{ display: "none" }}
-          />
           <div className="no-print" style={styles.quoteClientEditRow}>
             <span style={styles.quoteClientEditLabel}>Quoting to</span>
             <input
@@ -4938,67 +5017,72 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                 }, 500);
               }}
             />
-            <button style={styles.miniLinkBlock} disabled={clientLogoUploading} onClick={() => clientLogoInputRef.current?.click()}>
-              {clientLogoUploading ? "Uploading…" : project.client_logo_data_url ? "Change client logo" : "+ Add client logo"}
-            </button>
-            {project.client_logo_data_url && (
-              <button style={styles.miniLinkBlock} onClick={removeClientLogo}>Remove logo</button>
-            )}
-            {clientLogoError && <span style={{ fontSize: 11.5, color: "#C1462B" }}>{clientLogoError}</span>}
-          </div>
-
-          <div style={styles.quoteHead}>
-            <div>
-              <div style={styles.quoteEyebrow}>QUOTATION</div>
-              <div style={styles.quoteProjectName}>{project.name}</div>
-            </div>
-            <div style={styles.quoteMeta}>
-              <div>Date: {new Date().toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}</div>
-              <div>Valid for 30 days from date of issue</div>
+            <div ref={quoteDownloadMenuRef} style={{ position: "relative", marginLeft: "auto" }}>
+              <button style={styles.exportBtn} onClick={() => setQuoteDownloadMenuOpen((v) => !v)}>Download</button>
+              {quoteDownloadMenuOpen && (
+                <div style={styles.downloadMenuPopover}>
+                  <button style={styles.logoMenuItem} onClick={exportQuotePdf}>PDF</button>
+                  <button style={styles.logoMenuItem} onClick={exportQuoteExcel}>Excel</button>
+                  <button style={styles.logoMenuItem} onClick={exportQuoteWord}>Word</button>
+                </div>
+              )}
             </div>
           </div>
 
-          {(project.client_logo_data_url || project.client_name) && (
-            <div style={styles.quoteClientBlock}>
-              <div style={styles.quoteEyebrow}>PREPARED FOR</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                {project.client_logo_data_url && (
-                  <img src={project.client_logo_data_url} alt={`${project.client_name || "Client"} logo`} style={styles.quoteClientLogo} />
-                )}
-                {project.client_name && <div style={styles.quoteClientName}>{project.client_name}</div>}
+          <div ref={quoteContentRef}>
+            <div style={styles.quoteHead}>
+              <div>
+                <div style={styles.quoteEyebrow}>QUOTATION</div>
+                <div style={styles.quoteProjectName}>{project.name}</div>
+              </div>
+              <div style={styles.quoteMeta}>
+                <div>Date: {new Date().toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}</div>
+                <div>Valid for 30 days from date of issue</div>
               </div>
             </div>
-          )}
 
-          {categoryRollup.map((cat) => {
-            const catItems = items.filter((i) => (i.category || "Other") === cat.category);
-            return (
-              <div key={cat.category} style={{ marginBottom: 24 }}>
-                <div style={styles.quoteCatHeading}>{cat.category}</div>
-                {catItems.map((item) => (
-                  <div key={item.id} style={styles.quoteRow}>
-                    <span style={{ flex: 3 }}>{item.name}</span>
-                    <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(item.budget)}</span>
-                  </div>
-                ))}
-                <div style={{ ...styles.quoteRow, borderTop: "1px solid #E8E8ED", fontWeight: 600 }}>
-                  <span style={{ flex: 3 }}>Subtotal — {cat.category}</span>
-                  <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(cat.budget)}</span>
+            {(logoUrl || project.client_name) && (
+              <div style={styles.quoteClientBlock}>
+                <div style={styles.quoteEyebrow}>PREPARED FOR</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  {logoUrl && (
+                    <img src={logoUrl} alt="Company logo" style={styles.quoteClientLogo} />
+                  )}
+                  {project.client_name && <div style={styles.quoteClientName}>{project.client_name}</div>}
                 </div>
               </div>
-            );
-          })}
+            )}
 
-          <div style={styles.quoteTotalRow}>
-            <span>Total</span>
-            <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.budget)}</span>
+            {categoryRollup.map((cat) => {
+              const catItems = items.filter((i) => (i.category || "Other") === cat.category);
+              return (
+                <div key={cat.category} style={{ marginBottom: 24 }}>
+                  <div style={styles.quoteCatHeading}>{cat.category}</div>
+                  {catItems.map((item) => (
+                    <div key={item.id} style={styles.quoteRow}>
+                      <span style={{ flex: 3 }}>{item.name}</span>
+                      <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(item.budget)}</span>
+                    </div>
+                  ))}
+                  <div style={{ ...styles.quoteRow, borderTop: "1px solid #E8E8ED", fontWeight: 600 }}>
+                    <span style={{ flex: 3 }}>Subtotal — {cat.category}</span>
+                    <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(cat.budget)}</span>
+                  </div>
+                </div>
+              );
+            })}
+
+            <div style={styles.quoteTotalRow}>
+              <span>Total</span>
+              <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.budget)}</span>
+            </div>
+
+            <p style={styles.quoteFootnote}>
+              This quotation covers the work described above at the prices listed. It does not include
+              variations, delays, or site conditions discovered after work begins — those will be raised
+              separately as change orders. Prices exclude VAT unless stated otherwise.
+            </p>
           </div>
-
-          <p style={styles.quoteFootnote}>
-            This quotation covers the work described above at the prices listed. It does not include
-            variations, delays, or site conditions discovered after work begins — those will be raised
-            separately as change orders. Prices exclude VAT unless stated otherwise.
-          </p>
         </div>
       )}
 
@@ -5038,6 +5122,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                 <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>
                   {editingCell === `${item.id}:claimed` ? (
                     <input autoFocus style={styles.inlineInput} value={editValue} type="number"
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setEditValue(e.target.value)}
                       onBlur={() => saveEdit(item.id, "claimed")}
                       onKeyDown={(e) => e.key === "Enter" && saveEdit(item.id, "claimed")} />
@@ -5048,6 +5133,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                 <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>
                   {editingCell === `${item.id}:certified` ? (
                     <input autoFocus style={styles.inlineInput} value={editValue} type="number"
+                      onFocus={(e) => e.target.select()}
                       onChange={(e) => setEditValue(e.target.value)}
                       onBlur={() => saveEdit(item.id, "certified")}
                       onKeyDown={(e) => e.key === "Enter" && saveEdit(item.id, "certified")} />
@@ -5739,7 +5825,7 @@ const styles = {
   navHomeLink: { fontSize: 13.5, fontWeight: 600, color: "#FFFFFF", textDecoration: "none", whiteSpace: "nowrap", background: "#1D5C8A", padding: "8px 16px", borderRadius: 100, display: "inline-block" },
   dashTitle: { fontSize: "clamp(30px, 4.5vw, 42px)", fontWeight: 700, letterSpacing: "-0.02em" },
   pageHeaderEyebrow: { fontSize: 17, letterSpacing: "0.06em", color: "#1D5C8A", fontWeight: 800, textTransform: "uppercase", margin: 0 },
-  dashTitleInput: { fontSize: "clamp(30px, 4.5vw, 42px)", fontWeight: 700, letterSpacing: "-0.02em", color: "#1D1D1F", background: "none", border: "none", borderBottom: "1px dashed #D9D9DE", padding: 0, width: "100%", minWidth: 0 },
+  dashTitleInput: { fontSize: "clamp(20px, 2.6vw, 26px)", fontWeight: 700, letterSpacing: "-0.02em", color: "#1D5C8A", background: "none", border: "none", borderBottom: "1px dashed #D9D9DE", padding: 0, width: "100%", minWidth: 0 },
   companyLogoMark: { height: "clamp(28px, 4.5vw, 44px)", width: "auto", maxWidth: 140, objectFit: "contain", borderRadius: 6 },
   logoTextBtn: { background: "none", border: "none", color: "#1D5C8A", fontSize: 11.5, fontWeight: 600, textAlign: "left", padding: 0, cursor: "pointer" },
   logoTextBtnMuted: { background: "none", border: "none", color: "#6E6E73", fontSize: 11, textAlign: "left", padding: 0, cursor: "pointer" },
@@ -5995,7 +6081,7 @@ const styles = {
   dfDisclaimer: { fontSize: 10, color: "#A0A0A6", marginTop: 4, fontFamily: "Arial, sans-serif" },
 
   detailPanel: { background: "#F5F5F7", padding: "16px 18px", borderBottom: "1px solid #F2F2F5" },
-  detailGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 },
+  detailGrid: { display: "grid", gridTemplateColumns: "minmax(170px,2.6fr) minmax(75px,0.85fr) minmax(70px,0.75fr) minmax(110px,1.15fr) minmax(110px,1.15fr) minmax(190px,3fr)", gap: 12, overflowX: "auto" },
   detailField: { display: "flex", flexDirection: "column", gap: 5 },
   detailLabel: { fontSize: 10.5, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase" },
   notesTextarea: { width: "100%", minHeight: 60, background: "#F5F5F7", border: "1px solid transparent", borderRadius: 10, color: "#1D1D1F", fontSize: 13, padding: "8px 10px", fontFamily: "'Inter', sans-serif", resize: "vertical", marginTop: 5 },
