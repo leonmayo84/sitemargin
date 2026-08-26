@@ -755,26 +755,21 @@ function TopOverruns({ items }) {
     .slice(0, 6);
 
   if (overruns.length === 0) return <EmptyChart label="Nothing is over budget right now." />;
-  const maxVariance = Math.max(...overruns.map((i) => i.variance), 1);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {overruns.map((item) => {
-        const w = (item.variance / maxVariance) * 100;
-        return (
-          <div key={item.id}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-              <span style={{ fontSize: 12.5, color: "#4A4A4F" }}>{item.name}</span>
-              <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: "#C1462B" }}>
-                +{fmtShort(item.variance)} · +{item.pctOver.toFixed(0)}%
-              </span>
-            </div>
-            <div style={{ height: 8, background: "#F2F2F5", borderRadius: 3 }}>
-              <div style={{ width: `${w}%`, height: "100%", background: "#C1462B", borderRadius: 3 }} />
-            </div>
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {overruns.map((item, idx) => (
+        <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: idx < overruns.length - 1 ? "1px solid #F2F2F5" : "none" }}>
+          <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#FDEDE8", color: "#C1462B", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            {idx + 1}
           </div>
-        );
-      })}
+          <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#1D1D1F" }}>{item.name}</div>
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "'IBM Plex Mono', monospace", color: "#C1462B" }}>+{fmtShort(item.variance)}</div>
+            <div style={{ fontSize: 11, color: "#8E8E93" }}>+{item.pctOver.toFixed(0)}%</div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -786,39 +781,39 @@ function ClaimsCertifiedChart({ items }) {
   if (relevant.length === 0) {
     return <EmptyChart label="Log claimed and certified amounts on line items (via Details) to see this chart." />;
   }
-  const max = Math.max(
-    ...relevant.map((i) => Math.max(Number(i.claimed) || 0, Number(i.certified) || 0, Number(i.actual) || 0)),
-    1
-  );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       {relevant.map((item) => {
-        const claimedPct = ((Number(item.claimed) || 0) / max) * 100;
-        const certifiedPct = ((Number(item.certified) || 0) / max) * 100;
-        const paidPct = ((Number(item.actual) || 0) / max) * 100;
-        const gap = (Number(item.claimed) || 0) - (Number(item.certified) || 0);
+        const claimed = Number(item.claimed) || 0;
+        const certified = Number(item.certified) || 0;
+        const paid = Number(item.actual) || 0;
+        const stageMax = Math.max(claimed, certified, paid, 1);
+        const gap = claimed - certified;
+        const stages = [
+          { label: "Claimed", value: claimed, color: "#B8862F" },
+          { label: "Certified", value: certified, color: "#3D6FA6" },
+          { label: "Paid", value: paid, color: "#4C7A5C" },
+        ];
         return (
-          <div key={item.id}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-              <span style={{ fontSize: 12.5, color: "#4A4A4F" }}>{item.name}</span>
+          <div key={item.id} style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#1D1D1F" }}>{item.name}</span>
               {gap > 0 && (
                 <span style={{ fontSize: 10.5, fontFamily: "'IBM Plex Mono', monospace", color: "#B8862F" }}>
                   {fmtShort(gap)} awaiting sign-off
                 </span>
               )}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <div style={{ height: 6, background: "#F2F2F5", borderRadius: 3 }}>
-                <div style={{ width: `${claimedPct}%`, height: "100%", background: "#B8862F", borderRadius: 3 }} />
+            {stages.map((stage) => (
+              <div key={stage.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                <span style={{ width: 60, fontSize: 10.5, color: "#6E6E73", textAlign: "right", flexShrink: 0 }}>{stage.label}</span>
+                <div style={{ flex: 1, height: 14, background: "#F2F2F5", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ width: `${(stage.value / stageMax) * 100}%`, height: "100%", background: stage.color, borderRadius: 3 }} />
+                </div>
+                <span style={{ fontSize: 10.5, fontFamily: "'IBM Plex Mono', monospace", color: "#4A4A4F", width: 60, flexShrink: 0 }}>{fmtShort(stage.value)}</span>
               </div>
-              <div style={{ height: 6, background: "#F2F2F5", borderRadius: 3 }}>
-                <div style={{ width: `${certifiedPct}%`, height: "100%", background: "#3D6FA6", borderRadius: 3 }} />
-              </div>
-              <div style={{ height: 6, background: "#F2F2F5", borderRadius: 3 }}>
-                <div style={{ width: `${paidPct}%`, height: "100%", background: "#4C7A5C", borderRadius: 3 }} />
-              </div>
-            </div>
+            ))}
           </div>
         );
       })}
@@ -954,6 +949,37 @@ function SummaryCard({ label, value, accent }) {
     <div style={styles.summaryCard}>
       <div style={styles.summaryLabel}>{label}</div>
       <div style={{ ...styles.summaryValue, color: accent || "#1D1D1F" }}>{value}</div>
+    </div>
+  );
+}
+
+function FlaggedLinesCard({ label, value, accent, items }) {
+  const [hover, setHover] = useState(false);
+  const hasItems = items && items.length > 0;
+  return (
+    <div
+      style={{ ...styles.summaryCard, position: "relative", cursor: hasItems ? "pointer" : "default" }}
+      onMouseEnter={() => hasItems && setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <div style={styles.summaryLabel}>{label}</div>
+      <div style={{ ...styles.summaryValue, color: accent || "#1D1D1F" }}>{value}</div>
+      {hover && hasItems && (
+        <div style={styles.flaggedPopover}>
+          <div style={styles.flaggedPopoverTitle}>Flagged line items</div>
+          <div style={styles.flaggedPopoverList}>
+            {items.map((f) => (
+              <div key={f.id} style={styles.flaggedPopoverRow}>
+                <span style={{ ...styles.flaggedDot, background: f.status === "over" ? "#C1462B" : "#B8862F" }} />
+                <span style={styles.flaggedPopoverName}>{f.name}</span>
+                <span style={{ ...styles.flaggedPopoverVariance, color: f.status === "over" ? "#C1462B" : "#B8862F" }}>
+                  {f.variance >= 0 ? "+" : ""}{fmt(f.variance)} · {f.pct >= 0 ? "+" : ""}{f.pct.toFixed(0)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3930,6 +3956,25 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     return gap != null && gap > 15;
   }).length;
 
+  const flaggedItems = useMemo(() => {
+    return items
+      .map((i) => {
+        const status = statusFor(i.budget, i.actual);
+        if (status !== "over" && status !== "watch") return null;
+        const budget = Number(i.budget || 0);
+        const actual = Number(i.actual || 0);
+        return {
+          id: i.id,
+          name: i.name || "Untitled line",
+          status,
+          variance: actual - budget,
+          pct: budget ? ((actual - budget) / budget) * 100 : 0,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.variance - a.variance);
+  }, [items]);
+
   const categoryRollup = useMemo(() => {
     return CATEGORIES.map((cat) => {
       const catItems = items.filter((i) => (i.category || "Other") === cat);
@@ -4690,7 +4735,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         <SummaryCard label="Actual spend" value={fmt(totals.actual)} />
         <SummaryCard label="Variance" value={`${totals.variance >= 0 ? "+" : ""}${fmt(totals.variance)}`} accent={totals.variance > 0 ? "#C1462B" : "#4C7A5C"} />
         <SummaryCard label="Retention held" value={fmt(totals.retentionHeld)} />
-        <SummaryCard label="Flagged lines" value={`${overCount} over · ${watchCount} watch`} accent={overCount ? "#C1462B" : watchCount ? "#B8862F" : "#4C7A5C"} />
+        <FlaggedLinesCard label="Flagged lines" value={`${overCount} over · ${watchCount} watch`} accent={overCount ? "#C1462B" : watchCount ? "#B8862F" : "#4C7A5C"} items={flaggedItems} />
       </div>
 
       {totals.pct > 0 && (
@@ -4925,28 +4970,24 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                         <input style={styles.addInput} type="date" value={item.completed_date || ""}
                           onChange={(e) => scheduleSave(item.id, { completed_date: e.target.value || null })} />
                       </label>
-                      <div style={styles.detailField}>
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <label style={{ display: "flex", flexDirection: "column", gap: 5, flex: 1 }}>
-                            <span style={styles.detailLabel}>Claimed</span>
-                            <div style={styles.currencyInputWrap}>
-                              <span style={styles.currencyPrefix}>R</span>
-                              <input style={{ ...styles.addInput, border: "none", padding: 0, flex: 1 }} type="number" value={item.claimed ?? ""}
-                                onFocus={(e) => e.target.select()}
-                                onChange={(e) => scheduleSave(item.id, { claimed: Number(e.target.value) || 0 })} />
-                            </div>
-                          </label>
-                          <label style={{ display: "flex", flexDirection: "column", gap: 5, flex: 1 }}>
-                            <span style={styles.detailLabel}>Certified</span>
-                            <div style={styles.currencyInputWrap}>
-                              <span style={styles.currencyPrefix}>R</span>
-                              <input style={{ ...styles.addInput, border: "none", padding: 0, flex: 1 }} type="number" value={item.certified ?? ""}
-                                onFocus={(e) => e.target.select()}
-                                onChange={(e) => scheduleSave(item.id, { certified: Number(e.target.value) || 0 })} />
-                            </div>
-                          </label>
+                      <label style={styles.detailField}>
+                        <span style={styles.detailLabel}>Claimed</span>
+                        <div style={styles.currencyInputWrap}>
+                          <span style={styles.currencyPrefix}>R</span>
+                          <input style={{ ...styles.addInput, border: "none", padding: 0, flex: 1 }} type="number" value={item.claimed ?? ""}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => scheduleSave(item.id, { claimed: Number(e.target.value) || 0 })} />
                         </div>
-                      </div>
+                      </label>
+                      <label style={styles.detailField}>
+                        <span style={styles.detailLabel}>Certified</span>
+                        <div style={styles.currencyInputWrap}>
+                          <span style={styles.currencyPrefix}>R</span>
+                          <input style={{ ...styles.addInput, border: "none", padding: 0, flex: 1 }} type="number" value={item.certified ?? ""}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => scheduleSave(item.id, { certified: Number(e.target.value) || 0 })} />
+                        </div>
+                      </label>
                     </div>
 
                     <div style={{ marginTop: 12 }}>
@@ -5004,25 +5045,34 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             {categoryRollup.length === 0 ? (
               <EmptyChart label="Add line items to see category variance." />
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 6 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 6 }}>
                 {categoryRollup.map((c) => {
                   const maxAbs = Math.max(...categoryRollup.map((x) => Math.abs(x.variance)), 1);
-                  const w = (Math.abs(c.variance) / maxAbs) * 50;
                   const over = c.variance > 0;
+                  const offset = c.variance === 0 ? 0 : (Math.abs(c.variance) / maxAbs) * 42;
+                  const dotPos = 50 + (over ? offset : -offset);
+                  const dotColor = c.variance === 0 ? "#8E8E93" : over ? "#C1462B" : "#4C7A5C";
                   return (
                     <div key={c.category}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                         <span style={{ fontSize: 12.5, color: "#4A4A4F" }}>{c.category}</span>
-                        <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: over ? "#C1462B" : "#4C7A5C" }}>
+                        <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: dotColor }}>
                           {over ? "+" : ""}{fmtShort(c.variance)}
                         </span>
                       </div>
-                      <div style={{ position: "relative", height: 8, background: "#F2F2F5", borderRadius: 3 }}>
-                        <div style={{ position: "absolute", left: "50%", top: -2, width: 1, height: 12, background: "#C7C7CE" }} />
+                      <div style={{ position: "relative", height: 22, background: "#F2F2F5", borderRadius: 4 }}>
+                        <div style={{ position: "absolute", left: "50%", top: -4, width: 1, height: 30, background: "#C7C7CE" }} />
+                        {c.variance !== 0 && (
+                          <div style={{
+                            position: "absolute", top: "50%", height: 2, transform: "translateY(-1px)",
+                            left: over ? "50%" : `${dotPos}%`, width: `${offset}%`,
+                            background: dotColor,
+                          }} />
+                        )}
                         <div style={{
-                          position: "absolute", top: 0, height: "100%", borderRadius: 3,
-                          left: over ? "50%" : `${50 - w}%`, width: `${w}%`,
-                          background: over ? "#C1462B" : "#4C7A5C",
+                          position: "absolute", top: "50%", width: 12, height: 12, borderRadius: "50%",
+                          transform: "translate(-50%,-50%)", border: "2px solid #FFF", boxShadow: "0 0 0 1px rgba(0,0,0,0.08)",
+                          left: `${dotPos}%`, background: dotColor,
                         }} />
                       </div>
                     </div>
@@ -6040,6 +6090,14 @@ const styles = {
   summaryLabel: { fontSize: 11, lineHeight: 1.3, minHeight: 29, letterSpacing: "0.08em", color: "#6E6E73", marginBottom: 6, textTransform: "uppercase" },
   summaryValue: { fontFamily: "'Inter', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 19, fontWeight: 500 },
 
+  flaggedPopover: { position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, width: 280, background: "#FFFFFF", borderRadius: 14, boxShadow: "0 8px 28px rgba(0,0,0,0.16)", border: "1px solid #E8E8ED", padding: "12px 14px" },
+  flaggedPopoverTitle: { fontSize: 10.5, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase", marginBottom: 8 },
+  flaggedPopoverList: { display: "flex", flexDirection: "column", gap: 8, maxHeight: 220, overflowY: "auto" },
+  flaggedPopoverRow: { display: "flex", alignItems: "center", gap: 8 },
+  flaggedDot: { width: 7, height: 7, borderRadius: "50%", flexShrink: 0 },
+  flaggedPopoverName: { flex: 1, fontSize: 12.5, color: "#1D1D1F", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  flaggedPopoverVariance: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontVariantNumeric: "tabular-nums", flexShrink: 0 },
+
   warningBanner: { maxWidth: 1180, margin: "0 auto 12px", background: "rgba(193,70,43,0.07)", border: "1px solid #C1462B", borderRadius: 14, padding: "12px 16px", fontSize: 14, color: "#8A3D1E" },
 
   categoryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, maxWidth: 1180, margin: "0 auto 16px" },
@@ -6066,7 +6124,7 @@ const styles = {
   thCell: { fontSize: 11, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase" },
   row: { display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", borderBottom: "1px solid #F2F2F5", minWidth: 640 },
   tdCell: { fontSize: 14, paddingRight: 8 },
-  actualButton: { display: "block", width: "100%", textAlign: "right", background: "none", border: "none", color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, cursor: "pointer", borderBottom: "1px dashed #6E6E73", padding: 0 },
+  actualButton: { display: "inline-block", boxSizing: "border-box", appearance: "none", WebkitAppearance: "none", margin: 0, textAlign: "right", background: "none", border: "none", color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, lineHeight: "inherit", cursor: "pointer", borderBottom: "1px dashed #6E6E73", padding: 0 },
   inlineInput: { width: "100%", background: "#FFFFFF", border: "1px solid #1D5C8A", borderRadius: 8, color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, padding: "2px 6px", textAlign: "right" },
   miniLink: { background: "none", border: "none", color: "#6E6E73", fontSize: 10.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
   miniLinkBlock: { background: "none", border: "none", color: "#3D6FA6", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginTop: 4 },
@@ -6124,7 +6182,7 @@ const styles = {
   dfDisclaimer: { fontSize: 10, color: "#A0A0A6", marginTop: 4, fontFamily: "Arial, sans-serif" },
 
   detailPanel: { background: "#F5F5F7", padding: "16px 18px", borderBottom: "1px solid #F2F2F5" },
-  detailGrid: { display: "grid", gridTemplateColumns: "minmax(170px,2.6fr) minmax(75px,0.85fr) minmax(70px,0.75fr) minmax(110px,1.15fr) minmax(110px,1.15fr) minmax(190px,3fr)", gap: 12, overflowX: "auto" },
+  detailGrid: { display: "grid", gridTemplateColumns: "minmax(170px,2.2fr) minmax(75px,0.75fr) minmax(70px,0.65fr) minmax(105px,1fr) minmax(105px,1fr) minmax(125px,1fr) minmax(125px,1fr)", gap: 12, overflowX: "auto" },
   detailField: { display: "flex", flexDirection: "column", gap: 5 },
   currencyInputWrap: { display: "flex", alignItems: "center", gap: 4, background: "#FFFFFF", border: "1px solid #D9D9DE", borderRadius: 8, padding: "0 8px" },
   currencyPrefix: { fontSize: 12.5, color: "#8E8E93" },
