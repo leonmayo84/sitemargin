@@ -2362,11 +2362,20 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
   const [newTrade, setNewTrade] = useState("");
   const [newContact, setNewContact] = useState("");
   const [expanded, setExpanded] = useState(null);
+  // "all" or one exact sub.trade value — also drives the compare table below.
+  const [tradeFilter, setTradeFilter] = useState("all");
+  const fieldSaveTimers = useRef({});
 
   async function loadAll() {
     setLoading(true);
     const { data: subsData } = await supabase.from("subcontractors").select("*").order("name");
-    const { data: items } = await supabase.from("line_items").select("*").not("subcontractor_id", "is", null);
+    // projects_v2(name) is a PostgREST embed over the line_items -> projects_v2
+    // foreign key — pulled in here so the per-project breakdown below can
+    // group and label each sub's items by project without a second round trip.
+    const { data: items } = await supabase
+      .from("line_items")
+      .select("*, projects_v2(name)")
+      .not("subcontractor_id", "is", null);
     const grouped = {};
     (items || []).forEach((i) => {
       if (!grouped[i.subcontractor_id]) grouped[i.subcontractor_id] = [];
@@ -2397,11 +2406,46 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
     setSubs((prev) => prev.filter((s) => s.id !== id));
   }
 
+  // Flag changes are infrequent and low-risk to fire immediately; notes are
+  // typed character-by-character so those get the same debounce pattern
+  // ProjectView uses for the project-name input.
+  function setFlag(id, flag) {
+    setSubs((prev) => prev.map((s) => (s.id === id ? { ...s, flag } : s)));
+    supabase.from("subcontractors").update({ flag }).eq("id", id);
+  }
+
+  function setNotes(id, notes) {
+    setSubs((prev) => prev.map((s) => (s.id === id ? { ...s, notes } : s)));
+    if (fieldSaveTimers.current[id]) clearTimeout(fieldSaveTimers.current[id]);
+    fieldSaveTimers.current[id] = setTimeout(() => {
+      supabase.from("subcontractors").update({ notes }).eq("id", id);
+    }, 600);
+  }
+
+  const trades = useMemo(
+    () => Array.from(new Set(subs.map((s) => s.trade).filter((t) => t && t.trim()))).sort(),
+    [subs]
+  );
+
   const ranked = useMemo(() => {
-    return subs
+    const filtered = tradeFilter === "all" ? subs : subs.filter((s) => s.trade === tradeFilter);
+    return filtered
       .map((s) => ({ sub: s, score: scoreSubcontractor(itemsBySub[s.id] || []) }))
       .sort((a, b) => (b.score.overall ?? -1) - (a.score.overall ?? -1));
-  }, [subs, itemsBySub]);
+  }, [subs, itemsBySub, tradeFilter]);
+
+  // Splits one sub's flat line-item list into per-project buckets (each
+  // re-scored on its own subset) so you can tell a sub that's great on small
+  // jobs but struggles on big ones apart from their blended overall number.
+  function projectGroups(items) {
+    const groups = {};
+    items.forEach((i) => {
+      const pid = i.project_id || "unknown";
+      if (!groups[pid]) groups[pid] = { projectId: pid, projectName: i.projects_v2?.name || "Unknown project", items: [] };
+      groups[pid].items.push(i);
+    });
+    return Object.values(groups).sort((a, b) => a.projectName.localeCompare(b.projectName));
+  }
 
   return (
     <div style={styles.page}>
@@ -2411,7 +2455,9 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
       <div style={styles.explainer}>
         Scores build up automatically from the line items you assign to each sub. <b>Budget</b> comes from how close
         actuals land to budget, <b>schedule</b> from due date vs completed date, and <b>quality</b> from the 1–5 rating
-        you set per line item. Dimensions with no data yet show a dash rather than a misleading zero.
+        you set per line item. Dimensions with no data yet show a dash rather than a misleading zero. A flag and notes
+        are yours to set manually — they never affect the computed scores, they're just a place to keep the context
+        the numbers don't capture (or can't yet).
       </div>
 
       <div className="no-print" style={styles.addRowStandalone}>
@@ -2421,16 +2467,68 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
         <button style={styles.addBtn} onClick={addSub}>+ Add subcontractor</button>
       </div>
 
+      {trades.length > 0 && (
+        <div className="no-print" style={{ maxWidth: 1180, margin: "0 auto 16px", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73", marginRight: 2 }}>Trade</span>
+          <button style={{ ...styles.toggleBtn, ...(tradeFilter === "all" ? styles.toggleBtnActive : {}) }} onClick={() => setTradeFilter("all")}>
+            All ({subs.length})
+          </button>
+          {trades.map((t) => (
+            <button
+              key={t}
+              style={{ ...styles.toggleBtn, ...(tradeFilter === t ? styles.toggleBtnActive : {}) }}
+              onClick={() => setTradeFilter(t)}
+            >
+              {t} ({subs.filter((s) => s.trade === t).length})
+            </button>
+          ))}
+        </div>
+      )}
+
+      {tradeFilter !== "all" && ranked.length > 1 && (
+        <div className="no-print" style={{ ...styles.integrationsCard, maxWidth: 1180, margin: "0 auto 16px", overflowX: "auto" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73", marginBottom: 10 }}>
+            Comparing {tradeFilter} ({ranked.length})
+          </div>
+          <div style={{ minWidth: 480 }}>
+            <div style={{ display: "flex", padding: "6px 0", borderBottom: "1px solid #E8E8ED", fontSize: 11, fontWeight: 700, color: "#6E6E73", textTransform: "uppercase" }}>
+              <span style={{ flex: 2 }}>Name</span>
+              <span style={{ flex: 1, textAlign: "right" }}>Overall</span>
+              <span style={{ flex: 1, textAlign: "right" }}>Budget</span>
+              <span style={{ flex: 1, textAlign: "right" }}>Schedule</span>
+              <span style={{ flex: 1, textAlign: "right" }}>Quality</span>
+            </div>
+            {ranked.map(({ sub, score }) => (
+              <div key={sub.id} style={{ display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #F2F2F5", fontSize: 13 }}>
+                <span style={{ flex: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                  {sub.flag && sub.flag !== "none" && (
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: sub.flag === "red" ? "#C1462B" : "#B8862F" }} />
+                  )}
+                  {sub.name}
+                </span>
+                <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: scoreColor(score.overall) }}>{score.overall == null ? "—" : Math.round(score.overall)}</span>
+                <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: scoreColor(score.budgetScore) }}>{score.budgetScore == null ? "—" : Math.round(score.budgetScore)}</span>
+                <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: scoreColor(score.scheduleScore) }}>{score.scheduleScore == null ? "—" : Math.round(score.scheduleScore)}</span>
+                <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: scoreColor(score.qualityScore) }}>{score.qualityScore == null ? "—" : Math.round(score.qualityScore)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div style={{ ...styles.footer, textAlign: "center", padding: 40 }}>Loading…</div>
       ) : ranked.length === 0 ? (
         <div style={{ ...styles.footer, textAlign: "center", padding: 40 }}>
-          No subcontractors yet. Add one above, then assign line items to them inside a project.
+          {tradeFilter === "all"
+            ? "No subcontractors yet. Add one above, then assign line items to them inside a project."
+            : `No subcontractors tagged "${tradeFilter}".`}
         </div>
       ) : (
         <div style={styles.projectGrid}>
           {ranked.map(({ sub, score }) => {
             const isOpen = expanded === sub.id;
+            const groups = isOpen ? projectGroups(itemsBySub[sub.id] || []) : [];
             return (
               <div key={sub.id} style={styles.scoreCard}>
                 <div style={styles.projectCardTop}>
@@ -2448,6 +2546,27 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                     <button style={styles.deleteProjectBtn} className="no-print" onClick={() => removeSub(sub.id, sub.name)}>✕</button>
                   </div>
                 </div>
+
+                <div className="no-print" style={{ margin: "2px 0 12px" }}>
+                  <select
+                    value={sub.flag || "none"}
+                    onChange={(e) => setFlag(sub.id, e.target.value)}
+                    style={{
+                      fontSize: 12, fontWeight: 600, border: "1px solid transparent", borderRadius: 100, padding: "4px 10px", cursor: "pointer",
+                      color: sub.flag === "red" ? "#C1462B" : sub.flag === "amber" ? "#B8862F" : "#6E6E73",
+                      background: sub.flag === "red" ? "rgba(193,70,43,0.09)" : sub.flag === "amber" ? "rgba(184,134,47,0.09)" : "#F5F5F7",
+                    }}
+                  >
+                    <option value="none">No flag</option>
+                    <option value="amber">⚠ Amber — watch</option>
+                    <option value="red">⛔ Red — don't rehire</option>
+                  </select>
+                </div>
+                {sub.flag && sub.flag !== "none" && (
+                  <div className="print-only-status" style={{ fontSize: 11.5, fontWeight: 600, marginBottom: 8, color: sub.flag === "red" ? "#C1462B" : "#B8862F" }}>
+                    {sub.flag === "red" ? "⛔ Red flag — don't rehire" : "⚠ Amber flag — watch"}
+                  </div>
+                )}
 
                 <ScoreBar
                   label="Budget accuracy"
@@ -2471,29 +2590,55 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                   detail={score.ratedCount ? `${score.avgQuality.toFixed(1)} / 5 across ${score.ratedCount} rated item${score.ratedCount > 1 ? "s" : ""}` : "Rate line items 1–5 to score this"}
                 />
 
+                <div className="no-print" style={{ marginTop: 6 }}>
+                  <div style={{ fontSize: 11, color: "#6E6E73", marginBottom: 4 }}>Notes</div>
+                  <textarea
+                    value={sub.notes || ""}
+                    onChange={(e) => setNotes(sub.id, e.target.value)}
+                    placeholder="e.g. reliable on small jobs, slow to respond to calls…"
+                    style={{ width: "100%", minHeight: 48, fontSize: 12.5, fontFamily: "inherit", border: "1px solid #E8E8ED", borderRadius: 8, padding: 8, resize: "vertical" }}
+                  />
+                </div>
+                {sub.notes && sub.notes.trim() && (
+                  <p className="print-only-status" style={{ fontSize: 11.5, color: "#6E6E73" }}>Notes: {sub.notes}</p>
+                )}
+
                 <button style={styles.miniLinkBlock} className="no-print" onClick={() => setExpanded(isOpen ? null : sub.id)}>
-                  {isOpen ? "Hide line items" : `View ${score.itemCount} line item${score.itemCount === 1 ? "" : "s"}`}
+                  {isOpen ? "Hide project breakdown" : `View ${score.itemCount} line item${score.itemCount === 1 ? "" : "s"}`}
                 </button>
 
                 {isOpen && (
                   <div style={{ marginTop: 10, borderTop: "1px solid #F2F2F5", paddingTop: 10 }}>
-                    {(itemsBySub[sub.id] || []).length === 0 ? (
+                    {groups.length === 0 ? (
                       <div style={{ fontSize: 12, color: "#6E6E73" }}>No line items assigned to this sub yet.</div>
                     ) : (
-                      (itemsBySub[sub.id] || []).map((i) => {
-                        const late = daysBetween(i.due_date, i.completed_date);
+                      groups.map((g) => {
+                        const gScore = scoreSubcontractor(g.items);
                         return (
-                          <div key={i.id} style={styles.subItemRow}>
-                            <span style={{ fontSize: 12.5, flex: 2 }}>{i.name}</span>
-                            <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: Number(i.actual) > Number(i.budget) ? "#C1462B" : "#4C7A5C", flex: 1, textAlign: "right" }}>
-                              {fmtShort(i.actual)} / {fmtShort(i.budget)}
-                            </span>
-                            <span style={{ fontSize: 11, color: "#6E6E73", flex: 0.8, textAlign: "right" }}>
-                              {late == null ? "—" : late > 0 ? `${late}d late` : `${Math.abs(late)}d early`}
-                            </span>
-                            <span style={{ fontSize: 11, color: "#B8862F", flex: 0.5, textAlign: "right" }}>
-                              {i.quality_rating ? `${i.quality_rating}/5` : "—"}
-                            </span>
+                          <div key={g.projectId} style={{ marginBottom: 14 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+                              <span style={{ fontSize: 12.5, fontWeight: 600 }}>{g.projectName}</span>
+                              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: scoreColor(gScore.overall) }}>
+                                {gScore.overall == null ? "—" : Math.round(gScore.overall)}
+                              </span>
+                            </div>
+                            {g.items.map((i) => {
+                              const late = daysBetween(i.due_date, i.completed_date);
+                              return (
+                                <div key={i.id} style={styles.subItemRow}>
+                                  <span style={{ fontSize: 12.5, flex: 2 }}>{i.name}</span>
+                                  <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: Number(i.actual) > Number(i.budget) ? "#C1462B" : "#4C7A5C", flex: 1, textAlign: "right" }}>
+                                    {fmtShort(i.actual)} / {fmtShort(i.budget)}
+                                  </span>
+                                  <span style={{ fontSize: 11, color: "#6E6E73", flex: 0.8, textAlign: "right" }}>
+                                    {late == null ? "—" : late > 0 ? `${late}d late` : `${Math.abs(late)}d early`}
+                                  </span>
+                                  <span style={{ fontSize: 11, color: "#B8862F", flex: 0.5, textAlign: "right" }}>
+                                    {i.quality_rating ? `${i.quality_rating}/5` : "—"}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         );
                       })
@@ -2519,10 +2664,16 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
   const [expanded, setExpanded] = useState(null);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
+  const [newTags, setNewTags] = useState("");
   const [addingTo, setAddingTo] = useState(null);
   const [itemName, setItemName] = useState("");
   const [itemCategory, setItemCategory] = useState(CATEGORIES[0]);
   const [itemBudget, setItemBudget] = useState("");
+  const [tagFilter, setTagFilter] = useState("all");
+  const [tagDrafts, setTagDrafts] = useState({}); // { [templateId]: string being typed }
+  const [importMessage, setImportMessage] = useState(null);
+  const importFileRef = useRef(null);
+  const importTargetRef = useRef(null);
 
   async function loadAll() {
     setLoading(true);
@@ -2540,13 +2691,19 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
 
   useEffect(() => { loadAll(); }, []);
 
+  function flashMessage(type, text) {
+    setImportMessage({ type, text });
+    setTimeout(() => setImportMessage(null), 6000);
+  }
+
   async function createTemplate() {
     if (!newName.trim()) return;
+    const tags = newTags.split(",").map((t) => t.trim()).filter(Boolean);
     const { data, error } = await supabase
-      .from("templates").insert({ name: newName.trim(), description: newDesc.trim(), owner_email: userEmail }).select().single();
+      .from("templates").insert({ name: newName.trim(), description: newDesc.trim(), owner_email: userEmail, tags }).select().single();
     if (!error && data) {
       setTemplates((prev) => [data, ...prev]);
-      setNewName(""); setNewDesc("");
+      setNewName(""); setNewDesc(""); setNewTags("");
       setExpanded(data.id);
     }
   }
@@ -2581,6 +2738,99 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
     await supabase.from("template_items").delete().eq("id", itemId);
   }
 
+  // Swaps this item's sort_order with its neighbour above/below — simple
+  // up/down reordering rather than drag-and-drop, since it needs no new
+  // dependency and works identically on touch.
+  async function moveTemplateItem(templateId, itemId, direction) {
+    const items = [...(itemsByTemplate[templateId] || [])].sort((a, b) => a.sort_order - b.sort_order);
+    const idx = items.findIndex((i) => i.id === itemId);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (idx === -1 || swapIdx < 0 || swapIdx >= items.length) return;
+    const a = items[idx], b = items[swapIdx];
+    const aOrder = a.sort_order, bOrder = b.sort_order;
+    const reordered = [...items];
+    reordered[idx] = { ...a, sort_order: bOrder };
+    reordered[swapIdx] = { ...b, sort_order: aOrder };
+    setItemsByTemplate((prev) => ({ ...prev, [templateId]: reordered }));
+    await Promise.all([
+      supabase.from("template_items").update({ sort_order: bOrder }).eq("id", a.id),
+      supabase.from("template_items").update({ sort_order: aOrder }).eq("id", b.id),
+    ]);
+  }
+
+  function addTag(templateId, rawTag) {
+    const tag = rawTag.trim();
+    if (!tag) return;
+    setTemplates((prev) => prev.map((t) => {
+      if (t.id !== templateId) return t;
+      if ((t.tags || []).includes(tag)) return t;
+      const tags = [...(t.tags || []), tag];
+      supabase.from("templates").update({ tags }).eq("id", templateId);
+      return { ...t, tags };
+    }));
+    setTagDrafts((prev) => ({ ...prev, [templateId]: "" }));
+  }
+
+  function removeTag(templateId, tag) {
+    setTemplates((prev) => prev.map((t) => {
+      if (t.id !== templateId) return t;
+      const tags = (t.tags || []).filter((x) => x !== tag);
+      supabase.from("templates").update({ tags }).eq("id", templateId);
+      return { ...t, tags };
+    }));
+  }
+
+  function triggerImport(templateId) {
+    importTargetRef.current = templateId;
+    importFileRef.current?.click();
+  }
+
+  function handleImportFile(e) {
+    const file = e.target.files?.[0];
+    const templateId = importTargetRef.current;
+    e.target.value = "";
+    if (!file || !templateId) return;
+    const isExcel = /\.xlsx$/i.test(file.name);
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const { items: parsed, error } = isExcel
+          ? rowsToItems(await xlsxBufferToRows(evt.target.result))
+          : parseCsvToItems(evt.target.result);
+        if (error) { flashMessage("error", error); return; }
+        if (!window.confirm(`Import ${parsed.length} item${parsed.length === 1 ? "" : "s"} into this template?`)) return;
+
+        const existing = itemsByTemplate[templateId] || [];
+        const rows = parsed.map((p, idx) => ({
+          template_id: templateId,
+          name: p.name,
+          category: p.category,
+          budget: p.budget || 0,
+          sort_order: existing.length + idx,
+        }));
+        const { data, error: insErr } = await supabase.from("template_items").insert(rows).select();
+        if (insErr || !data) {
+          flashMessage("error", "Import failed — please try again.");
+        } else {
+          setItemsByTemplate((prev) => ({ ...prev, [templateId]: [...(prev[templateId] || []), ...data] }));
+          flashMessage("success", `Imported ${data.length} item${data.length > 1 ? "s" : ""}.`);
+        }
+      } catch (err) {
+        console.error("Template import failed", err);
+        flashMessage("error", "Couldn't read that file — make sure it's a valid CSV or .xlsx.");
+      }
+    };
+    if (isExcel) reader.readAsArrayBuffer(file);
+    else reader.readAsText(file);
+  }
+
+  const allTags = useMemo(
+    () => Array.from(new Set(templates.flatMap((t) => t.tags || []))).sort(),
+    [templates]
+  );
+  const visibleTemplates = tagFilter === "all" ? templates : templates.filter((t) => (t.tags || []).includes(tagFilter));
+
   return (
     <div style={styles.page}>
       <GlobalStyles />
@@ -2589,7 +2839,9 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
       <div style={styles.explainer}>
         Build a standard line-item set once — a typical residential build, a shopfit, whatever you repeat — then apply it
         to any new project in one click instead of retyping it. You can also save an existing project's line items
-        straight back out as a new template from inside that project.
+        straight back out as a new template from inside that project. Tag templates by project type to filter the list
+        below, reorder items with the arrows once a template is open, or import a CSV/.xlsx straight into one instead
+        of adding items by hand.
         <div style={{ marginTop: 10 }}>
           Need a starting point? <ExplainerRefLink href="https://jbcc.co.za/free-forms/">JBCC's free standard forms ↗</ExplainerRefLink>
           {" · "}<ExplainerRefLink href="https://www.cidb.org.za/about-us/our-construction-mandate/">CIDB registration ↗</ExplainerRefLink>
@@ -2598,22 +2850,51 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
         </div>
       </div>
 
+      <input ref={importFileRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleImportFile} style={{ display: "none" }} />
+
+      {importMessage && (
+        <div style={{ ...styles.integrationsBanner, ...(importMessage.type === "error" ? styles.integrationsBannerError : {}) }}>
+          {importMessage.text}
+        </div>
+      )}
+
       <div className="no-print" style={styles.addRowStandalone}>
         <input style={{ ...styles.addInput, flex: 1.4 }} placeholder="Template name (e.g. Standard residential build)" value={newName} onChange={(e) => setNewName(e.target.value)} />
-        <input style={{ ...styles.addInput, flex: 1.6 }} placeholder="Description (optional)" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} />
+        <input style={{ ...styles.addInput, flex: 1.4 }} placeholder="Description (optional)" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} />
+        <input style={{ ...styles.addInput, flex: 1 }} placeholder="Tags (comma separated)" value={newTags} onChange={(e) => setNewTags(e.target.value)} />
         <button style={styles.addBtn} onClick={createTemplate}>+ New template</button>
       </div>
 
+      {allTags.length > 0 && (
+        <div className="no-print" style={{ maxWidth: 1180, margin: "0 auto 16px", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73", marginRight: 2 }}>Tag</span>
+          <button style={{ ...styles.toggleBtn, ...(tagFilter === "all" ? styles.toggleBtnActive : {}) }} onClick={() => setTagFilter("all")}>
+            All ({templates.length})
+          </button>
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              style={{ ...styles.toggleBtn, ...(tagFilter === tag ? styles.toggleBtnActive : {}) }}
+              onClick={() => setTagFilter(tag)}
+            >
+              {tag} ({templates.filter((t) => (t.tags || []).includes(tag)).length})
+            </button>
+          ))}
+        </div>
+      )}
+
       {loading ? (
         <div style={{ ...styles.footer, textAlign: "center", padding: 40 }}>Loading…</div>
-      ) : templates.length === 0 ? (
+      ) : visibleTemplates.length === 0 ? (
         <div style={{ ...styles.footer, textAlign: "center", padding: 40 }}>
-          No templates yet. Create one above, or save one from an existing project.
+          {templates.length === 0
+            ? "No templates yet. Create one above, or save one from an existing project."
+            : `No templates tagged "${tagFilter}".`}
         </div>
       ) : (
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
-          {templates.map((t) => {
-            const tItems = itemsByTemplate[t.id] || [];
+          {visibleTemplates.map((t) => {
+            const tItems = [...(itemsByTemplate[t.id] || [])].sort((a, b) => a.sort_order - b.sort_order);
             const total = tItems.reduce((s, i) => s + Number(i.budget || 0), 0);
             const isOpen = expanded === t.id;
             return (
@@ -2625,6 +2906,15 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                     <div style={{ fontSize: 11.5, color: "#6E6E73", marginTop: 6, fontFamily: "'IBM Plex Mono', monospace" }}>
                       {tItems.length} line item{tItems.length === 1 ? "" : "s"} · {fmt(total)}
                     </div>
+                    {(t.tags || []).length > 0 && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                        {t.tags.map((tag) => (
+                          <span key={tag} style={{ fontSize: 11, fontWeight: 600, color: "#1D5C8A", background: "rgba(29,92,138,0.08)", borderRadius: 100, padding: "2px 9px" }}>
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }} className="no-print">
                     <button style={styles.miniLink} onClick={() => setExpanded(isOpen ? null : t.id)}>
@@ -2636,8 +2926,29 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
 
                 {isOpen && (
                   <div style={{ marginTop: 12, borderTop: "1px solid #F2F2F5", paddingTop: 12 }}>
-                    {tItems.map((i) => (
+                    <div className="no-print" style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+                      {(t.tags || []).map((tag) => (
+                        <span key={tag} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#1D5C8A", background: "rgba(29,92,138,0.08)", borderRadius: 100, padding: "2px 6px 2px 9px" }}>
+                          {tag}
+                          <button style={{ ...styles.removeBtn, fontSize: 11, padding: 0, color: "#1D5C8A" }} onClick={() => removeTag(t.id, tag)}>✕</button>
+                        </span>
+                      ))}
+                      <input
+                        style={{ ...styles.addInput, width: 140, padding: "4px 10px", fontSize: 12 }}
+                        placeholder="+ tag"
+                        value={tagDrafts[t.id] || ""}
+                        onChange={(e) => setTagDrafts((prev) => ({ ...prev, [t.id]: e.target.value }))}
+                        onKeyDown={(e) => { if (e.key === "Enter") addTag(t.id, tagDrafts[t.id] || ""); }}
+                        onBlur={() => { if (tagDrafts[t.id]) addTag(t.id, tagDrafts[t.id]); }}
+                      />
+                    </div>
+
+                    {tItems.map((i, idx) => (
                       <div key={i.id} style={styles.subItemRow}>
+                        <span className="no-print" style={{ display: "flex", flexDirection: "column", flex: "0 0 auto", marginRight: 4 }}>
+                          <button style={{ ...styles.removeBtn, fontSize: 10, lineHeight: 1, padding: 0, opacity: idx === 0 ? 0.3 : 1 }} disabled={idx === 0} onClick={() => moveTemplateItem(t.id, i.id, "up")}>▲</button>
+                          <button style={{ ...styles.removeBtn, fontSize: 10, lineHeight: 1, padding: 0, opacity: idx === tItems.length - 1 ? 0.3 : 1 }} disabled={idx === tItems.length - 1} onClick={() => moveTemplateItem(t.id, i.id, "down")}>▼</button>
+                        </span>
                         <span style={{ display: "flex", alignItems: "center", gap: 6, flex: 2 }}>
                           <span style={{ width: 6, height: 6, borderRadius: "50%", background: CATEGORY_COLOR[i.category] || "#6E6E73" }} />
                           <span style={{ fontSize: 12.5 }}>{i.name}</span>
@@ -2647,13 +2958,14 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                         <button style={{ ...styles.removeBtn, flex: 0.2, textAlign: "right" }} className="no-print" onClick={() => removeTemplateItem(t.id, i.id)}>✕</button>
                       </div>
                     ))}
-                    <div className="no-print" style={{ ...styles.addRow, marginTop: 10, borderRadius: 4 }}>
+                    <div className="no-print" style={{ ...styles.addRow, marginTop: 10, borderRadius: 4, flexWrap: "wrap" }}>
                       <input style={{ ...styles.addInput, flex: 2 }} placeholder="Line item name" value={addingTo === t.id ? itemName : ""} onChange={(e) => { setAddingTo(t.id); setItemName(e.target.value); }} />
                       <select style={{ ...styles.addInput, flex: 1 }} value={addingTo === t.id ? itemCategory : CATEGORIES[0]} onChange={(e) => { setAddingTo(t.id); setItemCategory(e.target.value); }}>
                         {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
                       <input style={{ ...styles.addInput, flex: 0.9, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Budget (optional)" type="number" value={addingTo === t.id ? itemBudget : ""} onChange={(e) => { setAddingTo(t.id); setItemBudget(e.target.value); }} />
                       <button style={styles.addBtn} onClick={() => addTemplateItem(t.id)}>+ Add</button>
+                      <button style={{ ...styles.addBtn, background: "#6E6E73" }} onClick={() => triggerImport(t.id)}>Import CSV / .xlsx</button>
                     </div>
                   </div>
                 )}
