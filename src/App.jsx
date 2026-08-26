@@ -4330,6 +4330,12 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     setTimeout(() => setImportMessage(null), 6000);
   }
 
+  async function removeSnapshot(id) {
+    if (!window.confirm("Delete this snapshot? This can't be undone.")) return;
+    setSnapshots((prev) => prev.filter((s) => s.id !== id));
+    await supabase.from("snapshots").delete().eq("id", id);
+  }
+
   if (!loaded || !project) {
     return (
       <div style={styles.page}>
@@ -5346,18 +5352,68 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           ) : (
             <div style={{ padding: "0 20px 20px" }}>
               <TrendChart snapshots={snapshots} />
-              <div style={{ marginTop: 16 }}>
-                {[...snapshots].reverse().map((s) => (
-                  <div key={s.id} style={styles.trendRow}>
-                    <span style={{ fontSize: 12, color: "#6E6E73", fontFamily: "'IBM Plex Mono', monospace" }}>
-                      {new Date(s.created_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })}
-                    </span>
-                    <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(s.actual)}</span>
-                    <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", color: Number(s.variance) > 0 ? "#C1462B" : "#4C7A5C", fontWeight: 600 }}>
-                      {Number(s.variance) >= 0 ? "+" : ""}{fmt(s.variance)}
-                    </span>
+
+              {snapshots.length > 1 && (() => {
+                const first = snapshots[0];
+                const latest = snapshots[snapshots.length - 1];
+                const swing = Number(latest.variance) - Number(first.variance);
+                return (
+                  <div style={{ ...styles.summaryStrip, margin: "18px 0 0" }}>
+                    <SummaryCard
+                      label={`First logged — ${new Date(first.created_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}`}
+                      value={`${Number(first.variance) >= 0 ? "+" : ""}${fmt(first.variance)}`}
+                    />
+                    <SummaryCard
+                      label={`Latest — ${new Date(latest.created_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}`}
+                      value={`${Number(latest.variance) >= 0 ? "+" : ""}${fmt(latest.variance)}`}
+                      accent={Number(latest.variance) > 0 ? "#C1462B" : "#4C7A5C"}
+                    />
+                    <SummaryCard
+                      label="Swing since first snapshot"
+                      value={`${swing >= 0 ? "+" : ""}${fmt(swing)}`}
+                      accent={swing > 0 ? "#C1462B" : swing < 0 ? "#4C7A5C" : undefined}
+                    />
+                    <SummaryCard label="Snapshots logged" value={String(snapshots.length)} />
                   </div>
-                ))}
+                );
+              })()}
+
+              <div style={{ marginTop: 16 }}>
+                <div style={{ ...styles.trendRow, borderBottom: "1px solid #E8E8ED" }}>
+                  <span style={{ ...styles.trendHeadCell, flex: 1.3 }}>Date</span>
+                  <span style={{ ...styles.trendHeadCell, flex: 1, textAlign: "right" }}>Budget</span>
+                  <span style={{ ...styles.trendHeadCell, flex: 1, textAlign: "right" }}>Actual</span>
+                  <span style={{ ...styles.trendHeadCell, flex: 1.1, textAlign: "right" }}>Variance</span>
+                  <span style={{ ...styles.trendHeadCell, flex: 1, textAlign: "right" }}>% of budget</span>
+                  <span style={{ ...styles.trendHeadCell, flex: 1.1, textAlign: "right" }}>Since last</span>
+                  <span style={{ ...styles.trendHeadCell, flex: 0.4 }} className="no-print"></span>
+                </div>
+                {[...snapshots].reverse().map((s, idx, arr) => {
+                  const prev = arr[idx + 1]; // arr is newest-first, so idx+1 is the snapshot logged just before this one
+                  const delta = prev ? Number(s.variance) - Number(prev.variance) : null;
+                  const pctOfBudget = Number(s.budget) ? (Number(s.actual) / Number(s.budget)) * 100 : null;
+                  return (
+                    <div key={s.id} style={styles.trendRow}>
+                      <span style={{ ...styles.trendCell, flex: 1.3, color: "#6E6E73" }}>
+                        {new Date(s.created_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}
+                      </span>
+                      <span style={{ ...styles.trendCell, flex: 1, textAlign: "right" }}>{fmt(s.budget)}</span>
+                      <span style={{ ...styles.trendCell, flex: 1, textAlign: "right" }}>{fmt(s.actual)}</span>
+                      <span style={{ ...styles.trendCell, flex: 1.1, textAlign: "right", color: Number(s.variance) > 0 ? "#C1462B" : "#4C7A5C", fontWeight: 600 }}>
+                        {Number(s.variance) >= 0 ? "+" : ""}{fmt(s.variance)}
+                      </span>
+                      <span style={{ ...styles.trendCell, flex: 1, textAlign: "right", color: "#6E6E73" }}>
+                        {pctOfBudget == null ? "—" : `${pctOfBudget.toFixed(1)}%`}
+                      </span>
+                      <span style={{ ...styles.trendCell, flex: 1.1, textAlign: "right", color: delta == null ? "#6E6E73" : delta > 0 ? "#C1462B" : delta < 0 ? "#4C7A5C" : "#6E6E73" }}>
+                        {delta == null ? "— first" : `${delta >= 0 ? "+" : ""}${fmt(delta)}`}
+                      </span>
+                      <span style={{ ...styles.trendCell, flex: 0.4, textAlign: "right" }} className="no-print">
+                        <button style={styles.removeBtn} onClick={() => removeSnapshot(s.id)}>✕</button>
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -5769,7 +5825,9 @@ const styles = {
   chartTitle: { fontSize: 18, fontWeight: 600, marginBottom: 2 },
   chartSub: { fontSize: 12, color: "#6E6E73", marginBottom: 16 },
 
-  trendRow: { display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #F2F2F5" },
+  trendRow: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #F2F2F5", minWidth: 560 },
+  trendHeadCell: { fontSize: 11, letterSpacing: "0.06em", color: "#6E6E73", textTransform: "uppercase" },
+  trendCell: { fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
 
   quoteSheet: { maxWidth: 800, margin: "0 auto", background: "#FFFFFF", borderRadius: 18, padding: "36px 40px", boxShadow: "0 12px 34px rgba(0,0,0,0.08)" },
   quoteHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #1D1D1F", paddingBottom: 20, marginBottom: 28 },
