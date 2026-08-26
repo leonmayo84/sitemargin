@@ -2856,6 +2856,11 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
         </div>
       </div>
 
+      <div style={styles.integrationsBanner}>
+        Used from inside a project: open its <b>Cost & Progress</b> tab → <b>Apply a template…</b> drops these
+        items straight into the ledger. Or click <b>Save as template</b> there to turn that project into a new one.
+      </div>
+
       <input ref={importFileRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleImportFile} style={{ display: "none" }} />
 
       {importMessage && (
