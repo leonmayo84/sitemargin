@@ -687,6 +687,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
     ["subcontractors", "Subcontractors"],
     ["templates", "Templates"],
     ["integrations", "Accounting"],
+    ["storage", "Storage"],
   ];
   const closeAnd = (fn) => () => { setMenuOpen(false); if (fn) fn(); };
 
@@ -1042,6 +1043,17 @@ function AppShell({ userEmail, onSignOut }) {
 
   const navigate = (page) => setRoute({ page, projectId: null });
 
+  // PayFast redirects the browser back to a real URL path after checkout
+  // (/storage/upgrade-success or /storage/upgrade-cancelled). This app has
+  // no path-based router elsewhere, so these two are caught here as a
+  // one-off and rendered standalone, outside the normal tab flow.
+  if (window.location.pathname === "/storage/upgrade-success") {
+    return <StorageUpgradeSuccess />;
+  }
+  if (window.location.pathname === "/storage/upgrade-cancelled") {
+    return <StorageUpgradeCancelled onNavigate={navigate} />;
+  }
+
   if (route.page === "project") {
     return (
       <ProjectView
@@ -1062,6 +1074,9 @@ function AppShell({ userEmail, onSignOut }) {
   }
   if (route.page === "integrations") {
     return <IntegrationsView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={companyLogoUrl} />;
+  }
+  if (route.page === "storage") {
+    return <StorageView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={companyLogoUrl} />;
   }
   return (
     <Dashboard
@@ -2728,6 +2743,228 @@ function IntegrationsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
       )}
 
       <AppFooter />
+    </div>
+  );
+}
+
+/* ============================== STORAGE ============================== */
+
+const STORAGE_INDIVIDUAL_UPGRADES = [
+  { tier: "individual_100mb", label: "100MB", price: "R99 once off" },
+  { tier: "individual_250mb", label: "250MB", price: "R199 once off" },
+];
+const STORAGE_COMPANY_UPGRADES = [
+  { tier: "company_1gb", label: "1GB", price: "R299 once off" },
+  { tier: "company_10gb", label: "10GB", price: "R469 once off" },
+];
+
+function formatStorageBytes(bytes) {
+  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}GB`;
+  return `${Math.round(bytes / (1024 * 1024))}MB`;
+}
+
+function StorageMeter({ email }) {
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [upgrading, setUpgrading] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadStatus() {
+      setLoading(true);
+      const { data, error } = await supabase.from("storage_status").select("*").eq("email", email).single();
+      if (!cancelled) {
+        if (!error) setStatus(data);
+        setLoading(false);
+      }
+    }
+    loadStatus();
+    return () => { cancelled = true; };
+  }, [email]);
+
+  async function handleUpgrade(tier) {
+    setUpgrading(tier);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/storage-checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+        body: JSON.stringify({ email, upgrade_tier: tier }),
+      });
+      if (!res.ok) throw new Error("Checkout request failed");
+      const { payfast_url, fields } = await res.json();
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = payfast_url;
+      for (const [key, value] of Object.entries(fields)) {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = String(value);
+        form.appendChild(input);
+      }
+      document.body.appendChild(form);
+      form.submit();
+    } catch (err) {
+      console.error(err);
+      setUpgrading(null);
+    }
+  }
+
+  if (loading) return <div style={{ padding: "1.25rem", fontSize: 13, color: "#5B6472" }}>Loading storage usage…</div>;
+  if (!status) return null;
+
+  const isCompany = status.tier === "company";
+  const upgrades = isCompany ? STORAGE_COMPANY_UPGRADES : STORAGE_INDIVIDUAL_UPGRADES;
+  const pct = Math.min(status.pct_used, 100);
+  const barColor = pct >= 90 ? "#D14343" : pct >= 70 ? "#E0A32C" : "#1D5A8C";
+
+  return (
+    <div style={{ maxWidth: 420, background: "#EEF4F9", borderRadius: 16, padding: "1.25rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: "#14171A" }}>Storage</span>
+        <span style={{ fontSize: 13, color: "#5B6472" }}>{formatStorageBytes(status.used_bytes)} of {formatStorageBytes(status.limit_bytes)}</span>
+      </div>
+      <div style={{ height: 8, background: "#D7E3EE", borderRadius: 4, overflow: "hidden", marginBottom: 16 }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 4, transition: "width 0.3s ease" }} />
+      </div>
+      {pct >= 70 && (
+        <p style={{ fontSize: 13, color: "#5B6472", margin: "0 0 12px" }}>
+          {pct >= 90 ? "You're almost out of space. Upgrade to keep uploading." : "You're close to your limit. Upgrade for more space."}
+        </p>
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        {upgrades.map((opt) => (
+          <button
+            key={opt.tier}
+            onClick={() => handleUpgrade(opt.tier)}
+            disabled={upgrading === opt.tier}
+            style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", padding: "10px 14px", background: "#FFFFFF", border: "1px solid #D7E3EE", borderRadius: 12, cursor: upgrading === opt.tier ? "default" : "pointer" }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#14171A" }}>{upgrading === opt.tier ? "Redirecting…" : opt.label}</span>
+            <span style={{ fontSize: 12, color: "#5B6472" }}>{opt.price}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
+  return (
+    <div style={styles.page}>
+      <GlobalStyles />
+      <PageHeader title="Storage" current="storage" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
+
+      <div style={styles.explainer}>
+        Every project's photos, drawings, and documents count toward your account's storage limit. Upgrade any time —
+        it's a once-off purchase, not a new subscription.
+      </div>
+
+      <StorageMeter email={userEmail} />
+
+      <AppFooter />
+    </div>
+  );
+}
+
+const TIER_LABELS = {
+  individual_100mb: "100MB",
+  individual_250mb: "250MB",
+  company_1gb: "1GB",
+  company_10gb: "10GB",
+};
+
+function StorageUpgradeSuccess() {
+  const params = new URLSearchParams(window.location.search);
+  const purchaseId = params.get("m_payment_id") || params.get("purchase_id");
+
+  const [purchase, setPurchase] = useState(null);
+  const [status, setStatus] = useState("pending"); // pending | complete | not_found
+
+  useEffect(() => {
+    if (!purchaseId) {
+      setStatus("not_found");
+      return;
+    }
+    let cancelled = false;
+    let attempts = 0;
+
+    async function poll() {
+      attempts += 1;
+      const { data, error } = await supabase
+        .from("storage_purchases")
+        .select("upgrade_tier, amount_zar, status")
+        .eq("id", purchaseId)
+        .single();
+
+      if (cancelled) return;
+      if (error || !data) { setStatus("not_found"); return; }
+
+      setPurchase(data);
+      if (data.status === "complete") setStatus("complete");
+      else if (attempts < 8) setTimeout(poll, 2000);
+      else setStatus("pending");
+    }
+    poll();
+    return () => { cancelled = true; };
+  }, [purchaseId]);
+
+  return (
+    <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#EEF4F9", padding: "2rem" }}>
+      <div style={{ maxWidth: 440, width: "100%", background: "#FFFFFF", borderRadius: 16, padding: "2.5rem 2rem", textAlign: "center" }}>
+        {status === "complete" && (
+          <>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#1D5A8C", color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, margin: "0 auto 1.25rem" }}>✓</div>
+            <h1 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 0.5rem", color: "#14171A" }}>Storage upgraded</h1>
+            <p style={{ color: "#5B6472", fontSize: 15, margin: "0 0 1.5rem" }}>
+              {purchase ? `Your storage limit is now ${TIER_LABELS[purchase.upgrade_tier] ?? "upgraded"}.` : "Your storage limit has been upgraded."}
+            </p>
+          </>
+        )}
+        {status === "pending" && (
+          <>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", border: "3px solid #D7E3EE", borderTopColor: "#1D5A8C", margin: "0 auto 1.25rem", animation: "spin 0.8s linear infinite" }} />
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            <h1 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 0.5rem", color: "#14171A" }}>Confirming payment</h1>
+            <p style={{ color: "#5B6472", fontSize: 15, margin: "0 0 1.5rem" }}>
+              PayFast is finalising your payment. This usually takes a few seconds.{purchase && ` Amount: R${purchase.amount_zar}.`}
+            </p>
+          </>
+        )}
+        {status === "not_found" && (
+          <>
+            <h1 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 0.5rem", color: "#14171A" }}>We couldn't find that payment</h1>
+            <p style={{ color: "#5B6472", fontSize: 15, margin: "0 0 1.5rem" }}>
+              If you completed a payment, it may still be processing. Check your storage usage in a minute, or contact support if it doesn't update.
+            </p>
+          </>
+        )}
+        <a href="/" style={{ display: "inline-block", background: "#1D5A8C", color: "#FFFFFF", padding: "12px 24px", borderRadius: 9999, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>
+          Back to dashboard
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function StorageUpgradeCancelled() {
+  return (
+    <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#EEF4F9", padding: "2rem" }}>
+      <div style={{ maxWidth: 440, width: "100%", background: "#FFFFFF", borderRadius: 16, padding: "2.5rem 2rem", textAlign: "center" }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, margin: "0 0 0.5rem", color: "#14171A" }}>Upgrade cancelled</h1>
+        <p style={{ color: "#5B6472", fontSize: 15, margin: "0 0 1.5rem" }}>
+          No payment was made and your storage limit hasn't changed. You can try again any time from your storage settings.
+        </p>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+          <a href="/" style={{ display: "inline-block", background: "#FFFFFF", color: "#1D5A8C", border: "1px solid #D7E3EE", padding: "12px 22px", borderRadius: 9999, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>
+            Back to dashboard
+          </a>
+          <a href="/" style={{ display: "inline-block", background: "#1D5A8C", color: "#FFFFFF", padding: "12px 24px", borderRadius: 9999, textDecoration: "none", fontSize: 14, fontWeight: 600 }}>
+            Try again
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
