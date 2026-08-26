@@ -2856,6 +2856,11 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState(null);
   const [banner, setBanner] = useState(null);
+  // Separate from `status` above (which holds storage usage numbers) — this
+  // holds the subscription/billing row itself, used to render the "Plan &
+  // billing" card and decide whether a Cancel button should show.
+  const [plan, setPlan] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
 
   async function loadStatus() {
     setLoading(true);
@@ -2869,7 +2874,7 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
     const [{ data: used, error: usedErr }, { data: limit, error: limitErr }, { data: sub }] = await Promise.all([
       supabase.rpc("user_storage_used_bytes", { p_email: userEmail }),
       supabase.rpc("user_storage_limit_bytes", { p_email: userEmail }),
-      supabase.from("subscriptions").select("tier").eq("email", userEmail).maybeSingle(),
+      supabase.from("subscriptions").select("tier, status, current_period_end, payfast_token").eq("email", userEmail).maybeSingle(),
     ]);
     if (usedErr || limitErr) {
       setStatus(null);
@@ -2883,6 +2888,7 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
         pct_used: limitBytes ? (usedBytes / limitBytes) * 100 : 0,
       });
     }
+    setPlan(sub || null);
     setLoading(false);
   }
 
@@ -2966,6 +2972,35 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
     }
   }
 
+  async function cancelSubscription() {
+    if (!window.confirm(
+      "Cancel your subscription? Your recurring billing will stop and your account will drop back to the Free plan immediately — you'll lose access to any paid-tier features and storage above the free allowance."
+    )) {
+      return;
+    }
+    setCancelling(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/cancel-subscription`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session?.access_token || ""}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.ok) {
+        setBanner({ type: "error", text: json.error || "Couldn't cancel — please try again." });
+        setCancelling(false);
+        return;
+      }
+      setBanner({ type: json.warning ? "error" : "connected", text: json.warning || "Subscription cancelled — you're back on the Free plan." });
+      await loadStatus();
+    } catch (err) {
+      console.error("cancel subscription failed", err);
+      setBanner({ type: "error", text: "Couldn't cancel — please try again." });
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   // Tier key is "firm" internally (displayed to users as "Company" — see
   // TIER_LABEL) — matches base_storage_bytes() in the database.
   const isCompanyTier = status?.tier === "firm";
@@ -2987,6 +3022,34 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
       {banner && (
         <div style={{ ...styles.integrationsBanner, ...(banner.type === "error" ? styles.integrationsBannerError : {}) }}>
           {banner.text}
+        </div>
+      )}
+
+      {plan && (plan.tier === "contractor" || plan.tier === "firm") && (
+        <div style={{ ...styles.integrationsCard, maxWidth: 1180, margin: "0 auto 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73", marginBottom: 4 }}>
+                Plan &amp; billing
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>
+                {TIER_LABEL[plan.tier] || plan.tier}
+                {" — "}
+                <span style={{ fontWeight: 400, color: plan.status === "active" ? "#1D5C8A" : "#6E6E73" }}>
+                  {plan.status === "active" ? "Active, billed monthly" : plan.status === "cancelled" ? "Cancelled" : plan.status || "Unknown"}
+                </span>
+              </div>
+            </div>
+            {plan.status === "active" && (
+              <button
+                style={{ ...styles.importBtn, color: "#C1462B", borderColor: "#C1462B" }}
+                disabled={cancelling}
+                onClick={cancelSubscription}
+              >
+                {cancelling ? "Cancelling…" : "Cancel subscription"}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
