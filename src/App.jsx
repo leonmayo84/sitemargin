@@ -2772,11 +2772,21 @@ function StorageMeter({ email }) {
     let cancelled = false;
     async function loadStatus() {
       setLoading(true);
-      const { data, error } = await supabase.from("storage_status").select("*").eq("email", email).single();
-      if (!cancelled) {
-        if (!error) setStatus(data);
-        setLoading(false);
-      }
+      const [usedRes, limitRes, tierRes] = await Promise.all([
+        supabase.rpc("user_storage_used_bytes", { p_email: email }),
+        supabase.rpc("user_storage_limit_bytes", { p_email: email }),
+        supabase.from("subscriptions").select("tier").eq("email", email).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      const used = usedRes.data ?? 0;
+      const limit = limitRes.data ?? 25 * 1024 * 1024;
+      setStatus({
+        used_bytes: used,
+        limit_bytes: limit,
+        pct_used: limit > 0 ? (used / limit) * 100 : 0,
+        tier: tierRes.data?.tier ?? "free",
+      });
+      setLoading(false);
     }
     loadStatus();
     return () => { cancelled = true; };
