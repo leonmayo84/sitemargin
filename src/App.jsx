@@ -687,6 +687,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
     ["subcontractors", "Subcontractors"],
     ["templates", "Templates"],
     ["integrations", "Accounting"],
+    ["storage", "Storage"],
   ];
   const closeAnd = (fn) => () => { setMenuOpen(false); if (fn) fn(); };
 
@@ -1063,6 +1064,9 @@ function AppShell({ userEmail, onSignOut }) {
   if (route.page === "integrations") {
     return <IntegrationsView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={companyLogoUrl} />;
   }
+  if (route.page === "storage") {
+    return <StorageView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={companyLogoUrl} />;
+  }
   return (
     <Dashboard
       onOpen={(id) => setRoute({ page: "project", projectId: id })}
@@ -1091,7 +1095,21 @@ function AuthGate() {
   const [sendState, setSendState] = useState("idle"); // idle | sending | sent | error
   const [errorMsg, setErrorMsg] = useState("");
   const [checkoutTier, setCheckoutTier] = useState(null); // which plan button is loading
+  // Marketing-site "Get started" buttons (pricing.html) link here with
+  // ?tier=<slug> so a click carries its intent all the way through sign-up
+  // AND, for an already-signed-in visitor, straight to checkout — arriving
+  // with this param is itself the deliberate signal, tracked separately
+  // from a plain leftover in localStorage (see arrivedWithTierIntentRef).
+  const arrivedWithTierIntentRef = useRef(false);
   const [selectedTier, setSelectedTier] = useState(() => {
+    try {
+      const urlTier = new URLSearchParams(window.location.search).get("tier");
+      if (urlTier === "contractor" || urlTier === "firm" || urlTier === "homeowner" || urlTier === "free") {
+        arrivedWithTierIntentRef.current = true;
+        try { localStorage.setItem("sm_selected_tier", urlTier); } catch {}
+        return urlTier;
+      }
+    } catch {}
     try { return localStorage.getItem("sm_selected_tier") || null; } catch { return null; }
   });
   // "Log in" (marketing site + app menu) links here with ?login=1 so
@@ -1119,6 +1137,18 @@ function AuthGate() {
   const [gateMenuOpen, setGateMenuOpen] = useState(false);
   const gateMenuWrapRef = useRef(null);
   const emailInputRef = useRef(null);
+
+  // Strip ?tier= from the URL once it's been read into state above, so a
+  // page refresh or the back button doesn't re-trigger the same intent.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.has("tier")) return;
+      params.delete("tier");
+      const qs = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if (!gateMenuOpen) return;
@@ -1185,22 +1215,26 @@ function AuthGate() {
     const hasActiveSub = sub?.status === "active";
     setSubscription(sub || null);
 
-    // A pending paid-tier selection from the pricing page (chooseTier writes
-    // it to localStorage) should only ever trigger an automatic checkout
-    // redirect right after a genuine sign-in/sign-up action — never on a
-    // plain page load or background token refresh of an already-open
-    // session. Gating on authEvent === "SIGNED_IN" (rather than also
-    // firing on the initial getSession() restore or TOKEN_REFRESHED) is
-    // what that requires. This value is consumed — and cleared — exactly
-    // once per checkAccess call regardless of outcome, specifically so a
-    // stale leftover value (e.g. someone who clicked a paid tier once and
-    // never finished checkout) can't keep re-triggering a broken checkout
-    // attempt on every later visit, which is what happened before this fix.
+    // A pending paid-tier selection should only ever trigger an automatic
+    // checkout redirect when there's a genuine, fresh signal that this is
+    // what the person wants right now — either they just signed in/up
+    // (authEvent === "SIGNED_IN"), or they landed on this exact page load
+    // via a marketing-site "Get started" link carrying ?tier=... (tracked
+    // by arrivedWithTierIntentRef, set only during this component's very
+    // first render). It must NOT fire on a plain page load or background
+    // token refresh of an already-open session — otherwise a stale
+    // leftover value (someone who clicked a paid tier once and never
+    // finished checkout) keeps re-triggering a broken checkout attempt on
+    // every later visit, which is what happened before this fix. Both the
+    // localStorage value and the ref are consumed exactly once here,
+    // regardless of outcome.
     const pendingTier = selectedTier;
+    const hadExplicitIntent = authEvent === "SIGNED_IN" || arrivedWithTierIntentRef.current;
+    arrivedWithTierIntentRef.current = false;
     try { localStorage.removeItem("sm_selected_tier"); } catch {}
 
     if (signup?.access_granted || hasActiveSub) {
-      if (authEvent === "SIGNED_IN" && !hasActiveSub && (pendingTier === "contractor" || pendingTier === "firm")) {
+      if (hadExplicitIntent && !hasActiveSub && (pendingTier === "contractor" || pendingTier === "firm")) {
         setStatus("redirecting");
       } else {
         setSelectedTier(null);
@@ -2777,6 +2811,213 @@ function IntegrationsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
           ))}
         </div>
       )}
+
+      <AppFooter />
+    </div>
+  );
+}
+
+/* ============================== STORAGE VIEW ============================== */
+
+const STORAGE_UPGRADES_INDIVIDUAL = [
+  { tier: "individual_100mb", label: "100MB", price: "R99 once off" },
+  { tier: "individual_250mb", label: "250MB", price: "R199 once off" },
+];
+const STORAGE_UPGRADES_COMPANY = [
+  { tier: "company_1gb", label: "1GB", price: "R299 once off" },
+  { tier: "company_10gb", label: "10GB", price: "R469 once off" },
+];
+const STORAGE_TIER_LABELS = {
+  individual_100mb: "100MB",
+  individual_250mb: "250MB",
+  company_1gb: "1GB",
+  company_10gb: "10GB",
+};
+
+function formatStorageBytes(bytes) {
+  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)}GB`;
+  return `${Math.round(bytes / (1024 * 1024))}MB`;
+}
+
+function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [upgrading, setUpgrading] = useState(null);
+  const [banner, setBanner] = useState(null);
+
+  async function loadStatus() {
+    setLoading(true);
+    // storage_status is a view built FROM subscriptions — an account with
+    // no subscriptions row (i.e. everyone still on the free tier, which is
+    // most signups, since subscriptions only gets a row on paid checkout)
+    // gets no row back at all and the page would render blank. Calling the
+    // two underlying functions directly works for every account regardless
+    // of subscription status, matching how base_storage_bytes() already
+    // defaults an unknown/missing tier to the 25MB free allowance.
+    const [{ data: used, error: usedErr }, { data: limit, error: limitErr }, { data: sub }] = await Promise.all([
+      supabase.rpc("user_storage_used_bytes", { p_email: userEmail }),
+      supabase.rpc("user_storage_limit_bytes", { p_email: userEmail }),
+      supabase.from("subscriptions").select("tier").eq("email", userEmail).maybeSingle(),
+    ]);
+    if (usedErr || limitErr) {
+      setStatus(null);
+    } else {
+      const usedBytes = used ?? 0;
+      const limitBytes = limit ?? 0;
+      setStatus({
+        tier: sub?.tier || "free",
+        used_bytes: usedBytes,
+        limit_bytes: limitBytes,
+        pct_used: limitBytes ? (usedBytes / limitBytes) * 100 : 0,
+      });
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => { loadStatus(); }, [userEmail]);
+
+  // storage-checkout's return_url/cancel_url bounce back here with
+  // ?storage=success|cancelled&purchase_id=... — same pattern as the
+  // Accounting tab's ?accounting= banner above. On success, poll briefly
+  // since the PayFast ITN that flips the purchase to 'complete' can land a
+  // few seconds after the redirect.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get("storage");
+    if (!result) return;
+    const purchaseId = params.get("purchase_id");
+    params.delete("storage"); params.delete("purchase_id");
+    const qs = params.toString();
+    window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
+
+    if (result === "cancelled") {
+      setBanner({ type: "error", text: "Upgrade cancelled — no payment was made, your storage limit hasn't changed." });
+      return;
+    }
+    if (result !== "success") return;
+
+    let cancelled = false;
+    let attempts = 0;
+    async function poll() {
+      attempts += 1;
+      if (!purchaseId) {
+        setBanner({ type: "connected", text: "Payment received — confirming with PayFast, your storage limit will update shortly." });
+        return;
+      }
+      const { data } = await supabase.from("storage_purchases").select("upgrade_tier, status").eq("id", purchaseId).maybeSingle();
+      if (cancelled) return;
+      if (data?.status === "complete") {
+        setBanner({ type: "connected", text: `Storage upgraded — your new limit is ${STORAGE_TIER_LABELS[data.upgrade_tier] || "higher"}.` });
+        loadStatus();
+      } else if (attempts < 8) {
+        setTimeout(poll, 2000);
+      } else {
+        setBanner({ type: "connected", text: "PayFast is still confirming your payment — check back in a minute if your limit hasn't updated." });
+      }
+    }
+    poll();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function upgrade(tier) {
+    setUpgrading(tier);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/storage-checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session?.access_token || ""}` },
+        body: JSON.stringify({ email: userEmail, upgrade_tier: tier }),
+      });
+      const json = await res.json();
+      if (!json.fields || !json.payfast_url) {
+        setBanner({ type: "error", text: json.error || "Couldn't start the upgrade — please try again." });
+        setUpgrading(null);
+        return;
+      }
+      // PayFast requires an actual form POST, not a GET redirect — build
+      // and submit one invisibly, same as the marketing site's checkout.
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = json.payfast_url;
+      Object.entries(json.fields).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden"; input.name = key; input.value = String(value);
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+    } catch (err) {
+      console.error("storage upgrade failed", err);
+      setBanner({ type: "error", text: "Couldn't start the upgrade — please try again." });
+      setUpgrading(null);
+    }
+  }
+
+  // Tier key is "firm" internally (displayed to users as "Company" — see
+  // TIER_LABEL) — matches base_storage_bytes() in the database.
+  const isCompanyTier = status?.tier === "firm";
+  const upgradeOptions = isCompanyTier ? STORAGE_UPGRADES_COMPANY : STORAGE_UPGRADES_INDIVIDUAL;
+  const pct = status ? Math.min(Number(status.pct_used) || 0, 100) : 0;
+  const barColor = pct >= 90 ? "#C1462B" : pct >= 70 ? "#B8862F" : "#1D5C8A";
+
+  return (
+    <div style={styles.page}>
+      <GlobalStyles />
+      <PageHeader title="Storage" current="storage" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
+
+      <div style={styles.explainer}>
+        Every plan includes a storage allowance for attachments, photos, and documents across your projects. Once-off
+        upgrades raise your limit permanently — they don't expire and don't stack with each other, the highest one you've
+        bought is your new ceiling.
+      </div>
+
+      {banner && (
+        <div style={{ ...styles.integrationsBanner, ...(banner.type === "error" ? styles.integrationsBannerError : {}) }}>
+          {banner.text}
+        </div>
+      )}
+
+      <div style={{ ...styles.integrationsCard, maxWidth: 1180, margin: "0 auto" }}>
+        {loading ? (
+          <div style={{ fontSize: 13, color: "#6E6E73" }}>Loading storage usage…</div>
+        ) : !status ? (
+          <div style={{ fontSize: 13, color: "#6E6E73" }}>Couldn't load your storage usage — please refresh.</div>
+        ) : (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 700 }}>Storage used</span>
+              <span style={{ fontSize: 13, color: "#6E6E73" }}>
+                {formatStorageBytes(status.used_bytes)} of {formatStorageBytes(status.limit_bytes)}
+              </span>
+            </div>
+            <div style={{ height: 8, background: "#F2F2F5", borderRadius: 4, overflow: "hidden", marginBottom: 16 }}>
+              <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 4, transition: "width 0.3s ease" }} />
+            </div>
+            {pct >= 70 && (
+              <p style={{ fontSize: 13, color: "#6E6E73", margin: "0 0 14px" }}>
+                {pct >= 90 ? "You're almost out of space — upgrade to keep uploading." : "You're close to your limit — consider upgrading."}
+              </p>
+            )}
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73", marginBottom: 10 }}>
+              {isCompanyTier ? "Company upgrades" : "Upgrade options"}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {upgradeOptions.map((opt) => (
+                <button
+                  key={opt.tier}
+                  style={{ ...styles.importBtn, display: "flex", flexDirection: "column", alignItems: "flex-start", padding: "10px 14px" }}
+                  disabled={upgrading === opt.tier}
+                  onClick={() => upgrade(opt.tier)}
+                >
+                  <span style={{ fontWeight: 600 }}>{upgrading === opt.tier ? "Redirecting…" : opt.label}</span>
+                  <span style={{ fontSize: 12, color: "#6E6E73", fontWeight: 400 }}>{opt.price}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
       <AppFooter />
     </div>
