@@ -98,13 +98,142 @@ const CATEGORY_COLOR = { Labour: "#3D6FA6", Materials: "#B8862F", "Labour & Mate
 // toggle treatment rather than inventing colours the rest of the product
 // doesn't use.
 const MODULE_COLOR = {
-  ledger: { solid: "#C2571F", tint: "rgba(194,87,31,0.09)" },       // budget
-  schedule: { solid: "#3B6FA6", tint: "rgba(59,111,166,0.09)" },     // schedule
-  documents: { solid: "#7A5FBF", tint: "rgba(122,95,191,0.09)" },    // docs
-  payments: { solid: "#3F8A5D", tint: "rgba(63,138,93,0.09)" },      // payments
-  plans: { solid: "#2E8C82", tint: "rgba(46,140,130,0.09)" },        // plans
-  changeorders: { solid: "#C6902E", tint: "rgba(198,144,46,0.09)" }, // change orders
+  // "banner" is the pastel background used by ModuleBanner below (a flat
+  // tint, not the tab's translucent rgba() — reads more solid at the larger
+  // size a full-width banner is shown at than the same alpha does on a
+  // small pill button).
+  ledger: { solid: "#C2571F", tint: "rgba(194,87,31,0.09)", banner: "#FCEFE8" },       // budget
+  schedule: { solid: "#3B6FA6", tint: "rgba(59,111,166,0.09)", banner: "#EAF1F8" },     // schedule
+  documents: { solid: "#7A5FBF", tint: "rgba(122,95,191,0.09)", banner: "#F1EDF9" },    // docs
+  payments: { solid: "#3F8A5D", tint: "rgba(63,138,93,0.09)", banner: "#EAF3EE" },      // payments
+  plans: { solid: "#2E8C82", tint: "rgba(46,140,130,0.09)", banner: "#E7F3F2" },        // plans
+  changeorders: { solid: "#C6902E", tint: "rgba(198,144,46,0.09)", banner: "#FBF3E5" }, // change orders
 };
+
+// Per-module copy + decorative artwork for ModuleBanner — the icon and
+// mini-chart mirror the matching tool tile on sitemargin.co.za's homepage
+// ("Six tools, six colours") at a scaled-down size, so a module reads as
+// visually continuous between the marketing site and the app itself.
+const MODULE_INFO = {
+  ledger: {
+    label: "Cost & Progress",
+    sub: "Variance against budget, updated as line items move.",
+    icon: <path d="M12 2v20M17 6H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />,
+    chart: (c) => (
+      <>
+        <path d="M4 46 L38 40 L72 44 L106 26 L140 30 L174 12 L216 6" stroke={c} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M4 46 L38 40 L72 44 L106 26 L140 30 L174 12 L216 6 L216 60 L4 60 Z" fill={c} opacity="0.12" />
+      </>
+    ),
+  },
+  schedule: {
+    label: "Schedule",
+    sub: "Every milestone against the date it's actually due.",
+    icon: <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M3 9h18M8 3v3M16 3v3" /></>,
+    chart: (c) => (
+      <>
+        <rect x="4" y="10" width="212" height="8" rx="4" fill={c} opacity="0.85" />
+        <rect x="4" y="26" width="212" height="8" rx="4" fill={c} opacity="0.2" /><rect x="4" y="26" width="138" height="8" rx="4" fill={c} opacity="0.85" />
+        <rect x="4" y="42" width="212" height="8" rx="4" fill={c} opacity="0.2" /><rect x="4" y="42" width="62" height="8" rx="4" fill={c} opacity="0.85" />
+        <line x1="150" y1="0" x2="150" y2="60" stroke={c} strokeWidth="1.5" strokeDasharray="3 3" opacity="0.5" />
+      </>
+    ),
+  },
+  documents: {
+    label: "Documents",
+    sub: "Every drawing, contract, and RFI in one register.",
+    icon: <><path d="M6 3h9l4 4v14a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z" /><path d="M9 12h6M9 16h6" /></>,
+    chart: (c) => (
+      <>
+        <rect x="20" y="18" width="26" height="38" rx="5" fill={c} opacity="0.85" />
+        <rect x="94" y="30" width="26" height="26" rx="5" fill={c} opacity="0.85" />
+        <rect x="168" y="6" width="26" height="50" rx="5" fill={c} opacity="0.85" />
+      </>
+    ),
+  },
+  payments: {
+    label: "Payments & Retention",
+    sub: "Retention held, and released.",
+    icon: <><circle cx="12" cy="12" r="9" /><path d="M9 12h6M12 9v6" /></>,
+    chart: (c, pct) => {
+      const frac = Math.max(0, Math.min(100, pct ?? 0)) / 100;
+      const circumference = 2 * Math.PI * 22;
+      return (
+        <g transform="translate(36,30)">
+          <circle r="22" fill="none" stroke={c} strokeWidth="7" opacity="0.2" />
+          <circle r="22" fill="none" stroke={c} strokeWidth="7" strokeLinecap="round"
+            strokeDasharray={`${circumference * frac} ${circumference}`} transform="rotate(-90)" />
+        </g>
+      );
+    },
+  },
+  plans: {
+    label: "Plans",
+    sub: "Every reference document on the project.",
+    icon: <path d="M4 20V4l8 4 8-4v16l-8-4z" />,
+    chart: (c) => (
+      <>
+        <path d="M4 50 L46 50 L46 38 L92 38 L92 26 L146 26 L146 12 L216 12" stroke={c} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="46" cy="38" r="3.5" fill={c} /><circle cx="92" cy="26" r="3.5" fill={c} /><circle cx="146" cy="12" r="3.5" fill={c} />
+      </>
+    ),
+  },
+  changeorders: {
+    label: "Change Orders",
+    sub: "Scope changes, priced and logged.",
+    icon: <path d="M17 2l4 4-4 4M3 11V9a4 4 0 014-4h14M7 22l-4-4 4-4M21 13v2a4 4 0 01-4 4H3" />,
+    chart: (c) => (
+      <>
+        <rect x="12" y="40" width="30" height="16" rx="4" fill={c} opacity="0.6" />
+        <rect x="66" y="30" width="30" height="26" rx="4" fill={c} opacity="0.72" />
+        <rect x="120" y="18" width="30" height="38" rx="4" fill={c} opacity="0.85" />
+        <rect x="174" y="6" width="30" height="50" rx="4" fill={c} opacity="1" />
+      </>
+    ),
+  },
+};
+
+// Small colour-coded header shown at the top of each of the six modules
+// (Cost & Progress, Schedule, Documents, Payments & Retention, Plans,
+// Change Orders) — mirrors the matching tool tile from the marketing
+// site's homepage, scaled down, with a real live stat instead of a
+// marketing placeholder. `stat`/`statLabel` are computed by the caller
+// from actual project data; `chartArg` is an optional extra passed through
+// to that module's chart renderer (only "payments" uses it, for the donut's
+// fill fraction).
+function ModuleBanner({ moduleKey, stat, statLabel, chartArg }) {
+  const mc = MODULE_COLOR[moduleKey];
+  const info = MODULE_INFO[moduleKey];
+  if (!mc || !info) return null;
+  return (
+    <div
+      className="no-print"
+      style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        borderRadius: 14, padding: "16px 22px", position: "relative", overflow: "hidden",
+        boxShadow: "0 1px 6px rgba(0,0,0,0.04)", maxWidth: 1180, margin: "0 auto 16px",
+        background: mc.banner,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 14, zIndex: 1 }}>
+        <div style={{ width: 38, height: 38, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: mc.solid }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8">{info.icon}</svg>
+        </div>
+        <div>
+          <p style={{ fontSize: 15, fontWeight: 700, margin: "0 0 2px" }}>{info.label}</p>
+          <p style={{ fontSize: 12.5, margin: 0, color: "#6E6E73" }}>{info.sub}</p>
+        </div>
+      </div>
+      <svg style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 220, opacity: 0.5 }} viewBox="0 0 220 60" preserveAspectRatio="none">
+        {info.chart(mc.solid, chartArg)}
+      </svg>
+      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 20, fontWeight: 700, zIndex: 1, textAlign: "right", color: mc.solid }}>
+        {stat}
+        <span style={{ display: "block", fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "#6E6E73", marginTop: 2 }}>{statLabel}</span>
+      </div>
+    </div>
+  );
+}
 
 // Display labels for the pricing-tier keys used across the gate screen —
 // matches sitemargin.co.za's own pricing page (Free/Contractor/Company/Home
@@ -4018,6 +4147,12 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       </div>
 
       {view === "ledger" && (
+        <>
+          <ModuleBanner
+            moduleKey="ledger"
+            stat={`${totals.variance >= 0 ? "+" : "-"}${fmt(Math.abs(totals.variance))}`}
+            statLabel={totals.variance > 0 ? "over budget" : "under budget"}
+          />
         <div style={styles.ledger}>
           <div style={styles.ledgerHeaderRow}>
             <span style={{ ...styles.thCell, flex: 2.4 }}>Line item</span>
@@ -4172,6 +4307,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             <button style={styles.addBtn} onClick={addItem}>+ Add line</button>
           </div>
         </div>
+        </>
       )}
 
       {view === "charts" && (
@@ -4273,6 +4409,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       )}
 
       {view === "payments" && (
+        <>
+          <ModuleBanner
+            moduleKey="payments"
+            stat={`${totals.certified ? Math.round((totals.paidToDate / totals.certified) * 100) : 0}%`}
+            statLabel="released"
+            chartArg={totals.certified ? (totals.paidToDate / totals.certified) * 100 : 0}
+          />
         <div style={{ ...styles.ledger, overflowX: "auto" }}>
           <input
             ref={paymentDocInputRef}
@@ -4357,9 +4500,16 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             <span style={{ ...styles.tdCell, flex: 1.3 }}></span>
           </div>
         </div>
+        </>
       )}
 
       {view === "changeorders" && (
+        <>
+          <ModuleBanner
+            moduleKey="changeorders"
+            stat={`${approvedCoTotal >= 0 ? "+" : "-"}${fmt(Math.abs(approvedCoTotal))}`}
+            statLabel="net approved variations"
+          />
         <div style={{ ...styles.ledger, overflowX: "auto" }}>
           <div style={{ ...styles.ledgerHeaderRow, minWidth: 860 }}>
             <span style={{ ...styles.thCell, flex: 2.2 }}>Description</span>
@@ -4428,6 +4578,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             <button style={styles.addBtn} onClick={addChangeOrder}>+ Add change order</button>
           </div>
         </div>
+        </>
       )}
 
       {view === "purchaseorders" && (
@@ -4589,8 +4740,10 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         const rangeEnd = dates.length ? new Date(Math.max(...dates)) : today;
         const totalDays = Math.max(1, Math.round((rangeEnd - rangeStart) / 86400000) + 1);
         const dfmt = (d) => d.toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" });
+        const openTaskCount = scheduleTasks.filter((t) => Number(t.percent_complete || 0) < 100).length;
         return (
           <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+            <ModuleBanner moduleKey="schedule" stat={String(openTaskCount)} statLabel={openTaskCount === 1 ? "task open" : "tasks open"} />
             <div className="no-print" style={{ ...styles.addRow, flexWrap: "nowrap", borderRadius: 18, marginBottom: 16 }}>
               <input style={{ ...styles.addInput, flex: 1.6, minWidth: 0 }} placeholder="Task name (e.g. Roof trusses)" value={taskName} onChange={(e) => setTaskName(e.target.value)} />
               <select style={{ ...styles.addInput, flex: 1.4, minWidth: 0 }} value={taskLineItemId} onChange={(e) => setTaskLineItemId(e.target.value)}>
@@ -4662,6 +4815,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
       {view === "documents" && (
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+          <ModuleBanner moduleKey="documents" stat={String(documents.length)} statLabel={documents.length === 1 ? "file" : "files"} />
           <input
             ref={documentsInputRef}
             type="file"
@@ -4715,6 +4869,12 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       )}
 
       {view === "plans" && (
+        <>
+          <ModuleBanner
+            moduleKey="plans"
+            stat={String((project?.plans || []).length)}
+            statLabel={(project?.plans || []).length === 1 ? "file" : "files"}
+          />
         <div style={styles.ledger}>
           <input
             ref={plansInputRef}
@@ -4750,6 +4910,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             <button style={styles.addBtn} onClick={() => plansInputRef.current?.click()}>+ Upload documents</button>
           </div>
         </div>
+        </>
       )}
 
       {view === "trend" && (
