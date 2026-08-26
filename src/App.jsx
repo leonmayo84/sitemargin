@@ -3595,6 +3595,12 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const attachTargetItem = useRef(null);
   const plansInputRef = useRef(null);
   const saveTimers = useRef({});
+  // Client company logo shown on the Quote tab's letterhead — stored per
+  // project (not per account, unlike the contractor's own logo above) since
+  // a contractor quotes different clients on different jobs.
+  const clientLogoInputRef = useRef(null);
+  const [clientLogoUploading, setClientLogoUploading] = useState(false);
+  const [clientLogoError, setClientLogoError] = useState(null);
 
   async function loadAll() {
     const [{ data: proj }, { data: lineItems }, { data: cos }, { data: snaps }, { data: subsData }, { data: temps }, { data: pos }, { data: tends }, { data: tasks }, { data: docs }] =
@@ -3682,6 +3688,38 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     saveTimers.current[itemId] = setTimeout(async () => {
       await supabase.from("line_items").update(patch).eq("id", itemId);
     }, 500);
+  }
+
+  async function handleClientLogoFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!/^image\/(png|jpeg|jpg|svg\+xml|webp)$/.test(file.type)) {
+      setClientLogoError("Please choose a PNG, JPG, SVG, or WEBP image.");
+      return;
+    }
+    if (file.size > 1_500_000) {
+      setClientLogoError("That image is a bit large — please use something under 1.5MB.");
+      return;
+    }
+    setClientLogoError(null);
+    setClientLogoUploading(true);
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const { error } = await supabase.from("projects_v2").update({ client_logo_data_url: dataUrl }).eq("id", projectId);
+    setClientLogoUploading(false);
+    if (error) { setClientLogoError("Couldn't save the logo — please try again."); return; }
+    setProject((p) => ({ ...p, client_logo_data_url: dataUrl }));
+  }
+
+  async function removeClientLogo() {
+    if (!window.confirm("Remove the client logo from this quote?")) return;
+    await supabase.from("projects_v2").update({ client_logo_data_url: null }).eq("id", projectId);
+    setProject((p) => ({ ...p, client_logo_data_url: null }));
   }
 
   async function addItem() {
@@ -4677,6 +4715,37 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
       {view === "quote" && (
         <div style={styles.quoteSheet}>
+          <input
+            ref={clientLogoInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/svg+xml,image/webp"
+            onChange={handleClientLogoFile}
+            style={{ display: "none" }}
+          />
+          <div className="no-print" style={styles.quoteClientEditRow}>
+            <span style={styles.quoteClientEditLabel}>Quoting to</span>
+            <input
+              style={{ ...styles.addInput, flex: "1 1 220px", maxWidth: 280 }}
+              placeholder="Client / company name"
+              value={project.client_name || ""}
+              onChange={(e) => {
+                const client_name = e.target.value;
+                setProject((p) => ({ ...p, client_name }));
+                if (saveTimers.current.clientName) clearTimeout(saveTimers.current.clientName);
+                saveTimers.current.clientName = setTimeout(() => {
+                  supabase.from("projects_v2").update({ client_name }).eq("id", projectId);
+                }, 500);
+              }}
+            />
+            <button style={styles.miniLinkBlock} disabled={clientLogoUploading} onClick={() => clientLogoInputRef.current?.click()}>
+              {clientLogoUploading ? "Uploading…" : project.client_logo_data_url ? "Change client logo" : "+ Add client logo"}
+            </button>
+            {project.client_logo_data_url && (
+              <button style={styles.miniLinkBlock} onClick={removeClientLogo}>Remove logo</button>
+            )}
+            {clientLogoError && <span style={{ fontSize: 11.5, color: "#C1462B" }}>{clientLogoError}</span>}
+          </div>
+
           <div style={styles.quoteHead}>
             <div>
               <div style={styles.quoteEyebrow}>QUOTATION</div>
@@ -4687,6 +4756,18 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               <div>Valid for 30 days from date of issue</div>
             </div>
           </div>
+
+          {(project.client_logo_data_url || project.client_name) && (
+            <div style={styles.quoteClientBlock}>
+              <div style={styles.quoteEyebrow}>PREPARED FOR</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                {project.client_logo_data_url && (
+                  <img src={project.client_logo_data_url} alt={`${project.client_name || "Client"} logo`} style={styles.quoteClientLogo} />
+                )}
+                {project.client_name && <div style={styles.quoteClientName}>{project.client_name}</div>}
+              </div>
+            </div>
+          )}
 
           {categoryRollup.map((cat) => {
             const catItems = items.filter((i) => (i.category || "Other") === cat.category);
@@ -5673,6 +5754,11 @@ const styles = {
   quoteRow: { display: "flex", padding: "6px 0", fontSize: 14, color: "#1D1D1F" },
   quoteTotalRow: { display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 600, color: "#1D1D1F", borderTop: "2px solid #1D1D1F", paddingTop: 14, marginTop: 10 },
   quoteFootnote: { fontSize: 11.5, color: "#6E6E73", marginTop: 30, lineHeight: 1.6, borderTop: "1px solid #F2F2F5", paddingTop: 16 },
+  quoteClientEditRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 18, flexWrap: "wrap" },
+  quoteClientEditLabel: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73" },
+  quoteClientBlock: { marginBottom: 24, paddingBottom: 20, borderBottom: "1px solid #F2F2F5" },
+  quoteClientLogo: { height: 40, width: "auto", maxWidth: 160, objectFit: "contain", borderRadius: 4 },
+  quoteClientName: { fontSize: 15, fontWeight: 600, color: "#1D1D1F" },
 
   modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 },
   modalCard: { background: "#FFFFFF", borderRadius: 18, maxWidth: 760, width: "100%", maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 50px rgba(0,0,0,0.25)" },
