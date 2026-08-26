@@ -86,8 +86,18 @@ const STATUS = {
   over: { label: "OVER", color: "#C1462B", bg: "rgba(193,70,43,0.12)" },
 };
 
-const CATEGORIES = ["Labour", "Materials", "Labour & Materials", "Subcontractors", "Other"];
-const CATEGORY_COLOR = { Labour: "#3D6FA6", Materials: "#B8862F", "Labour & Materials": "#4FA8A0", Subcontractors: "#8B5FA3", Other: "#6E6E73" };
+const CATEGORIES = ["Groundworks & Structural", "Plumbing", "Electrical", "Joinery & Carpentry", "Tiling & Finishes", "Roofing", "External Works", "Provisional Sums", "Other"];
+const CATEGORY_COLOR = {
+  "Groundworks & Structural": "#6B7A8F",
+  Plumbing: "#3D6FA6",
+  Electrical: "#B8862F",
+  "Joinery & Carpentry": "#8B6F4E",
+  "Tiling & Finishes": "#4FA8A0",
+  Roofing: "#A0522D",
+  "External Works": "#5B8C5A",
+  "Provisional Sums": "#8B5FA3",
+  Other: "#6E6E73",
+};
 
 // Same six hues as the tool tiles on sitemargin.co.za's homepage ("Six tools,
 // six colours — so you always know which one you're in"), applied here to
@@ -429,10 +439,14 @@ function pdfRowsToItems(rows) {
 
 
 const CATEGORY_KEYWORDS = {
-  "Labour & Materials": ["supply and install", "supply & install", "supply and fix", "supply & fix", "labour and materials", "labour & materials"],
-  Labour: ["labour", "labor", "wages", "preliminaries", "prelim"],
-  Materials: ["material", "concrete", "steel", "earthwork", "excavation", "masonry", "roofing", "brickwork", "supply"],
-  Subcontractors: ["subcontract", "sub-contract", "nominated", "specialist"],
+  "Groundworks & Structural": ["excavation", "earthwork", "foundation", "footing", "concrete", "steel", "structural", "groundwork", "masonry", "brickwork", "slab"],
+  Plumbing: ["plumbing", "plumber", "drainage", "sanitary ware", "sewer", "water supply"],
+  Electrical: ["electrical", "electrician", "wiring", "lighting", "led ", "distribution board", "db board"],
+  "Joinery & Carpentry": ["joinery", "carpentry", "cabinet", "cupboard", "shopfitting", "timber"],
+  "Tiling & Finishes": ["tiling", "tile", "paint", "painting", "plaster", "grout", "flooring", "finishes"],
+  Roofing: ["roofing", "roof ", "waterproofing", "gutter", "fascia"],
+  "External Works": ["external works", "paving", "landscaping", "fencing", "driveway", "site works"],
+  "Provisional Sums": ["provisional sum", "prov sum", "pc sum", "contingency", "nominated", "specialist"],
 };
 
 function inferCategoryFromText(text) {
@@ -653,6 +667,94 @@ function ProgressScatter({ items }) {
       <p style={{ fontSize: 12, color: "#6E6E73", marginTop: 10, maxWidth: 420 }}>
         Anything above the dashed line is spending faster than it's progressing. The further above, the more urgent.
       </p>
+    </div>
+  );
+}
+
+function TopOverruns({ items }) {
+  const overruns = items
+    .filter((i) => Number(i.budget) > 0 && Number(i.actual) > Number(i.budget))
+    .map((i) => ({
+      ...i,
+      variance: Number(i.actual) - Number(i.budget),
+      pctOver: ((Number(i.actual) - Number(i.budget)) / Number(i.budget)) * 100,
+    }))
+    .sort((a, b) => b.variance - a.variance)
+    .slice(0, 6);
+
+  if (overruns.length === 0) return <EmptyChart label="Nothing is over budget right now." />;
+  const maxVariance = Math.max(...overruns.map((i) => i.variance), 1);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {overruns.map((item) => {
+        const w = (item.variance / maxVariance) * 100;
+        return (
+          <div key={item.id}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+              <span style={{ fontSize: 12.5, color: "#4A4A4F" }}>{item.name}</span>
+              <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: "#C1462B" }}>
+                +{fmtShort(item.variance)} · +{item.pctOver.toFixed(0)}%
+              </span>
+            </div>
+            <div style={{ height: 8, background: "#F2F2F5", borderRadius: 3 }}>
+              <div style={{ width: `${w}%`, height: "100%", background: "#C1462B", borderRadius: 3 }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ClaimsCertifiedChart({ items }) {
+  const relevant = items.filter(
+    (i) => Number(i.claimed) > 0 || Number(i.certified) > 0 || Number(i.actual) > 0
+  );
+  if (relevant.length === 0) {
+    return <EmptyChart label="Log claimed and certified amounts on line items (via Details) to see this chart." />;
+  }
+  const max = Math.max(
+    ...relevant.map((i) => Math.max(Number(i.claimed) || 0, Number(i.certified) || 0, Number(i.actual) || 0)),
+    1
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {relevant.map((item) => {
+        const claimedPct = ((Number(item.claimed) || 0) / max) * 100;
+        const certifiedPct = ((Number(item.certified) || 0) / max) * 100;
+        const paidPct = ((Number(item.actual) || 0) / max) * 100;
+        const gap = (Number(item.claimed) || 0) - (Number(item.certified) || 0);
+        return (
+          <div key={item.id}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+              <span style={{ fontSize: 12.5, color: "#4A4A4F" }}>{item.name}</span>
+              {gap > 0 && (
+                <span style={{ fontSize: 10.5, fontFamily: "'IBM Plex Mono', monospace", color: "#B8862F" }}>
+                  {fmtShort(gap)} awaiting sign-off
+                </span>
+              )}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <div style={{ height: 6, background: "#F2F2F5", borderRadius: 3 }}>
+                <div style={{ width: `${claimedPct}%`, height: "100%", background: "#B8862F", borderRadius: 3 }} />
+              </div>
+              <div style={{ height: 6, background: "#F2F2F5", borderRadius: 3 }}>
+                <div style={{ width: `${certifiedPct}%`, height: "100%", background: "#3D6FA6", borderRadius: 3 }} />
+              </div>
+              <div style={{ height: 6, background: "#F2F2F5", borderRadius: 3 }}>
+                <div style={{ width: `${paidPct}%`, height: "100%", background: "#4C7A5C", borderRadius: 3 }} />
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      <div style={{ display: "flex", gap: 16, marginTop: 4, flexWrap: "wrap" }}>
+        <LegendDot color="#B8862F" label="Claimed" />
+        <LegendDot color="#3D6FA6" label="Certified" />
+        <LegendDot color="#4C7A5C" label="Paid (actual)" />
+      </div>
     </div>
   );
 }
@@ -4798,6 +4900,16 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                 })}
               </div>
             )}
+          </div>
+          <div style={styles.chartCard}>
+            <div style={styles.chartTitle}>Top overruns</div>
+            <div style={styles.chartSub}>Line items furthest over budget.</div>
+            <TopOverruns items={items} />
+          </div>
+          <div style={styles.chartCard}>
+            <div style={styles.chartTitle}>Claims vs certified vs paid</div>
+            <div style={styles.chartSub}>Spot claims still waiting on sign-off.</div>
+            <ClaimsCertifiedChart items={items} />
           </div>
         </div>
       )}
