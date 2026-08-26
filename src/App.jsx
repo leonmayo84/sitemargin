@@ -1139,7 +1139,7 @@ function AuthGate() {
     emailInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
-  async function checkAccess(currentSession) {
+  async function checkAccess(currentSession, authEvent) {
     if (!currentSession) {
       setStatus("signedout");
       return;
@@ -1185,16 +1185,25 @@ function AuthGate() {
     const hasActiveSub = sub?.status === "active";
     setSubscription(sub || null);
 
+    // A pending paid-tier selection from the pricing page (chooseTier writes
+    // it to localStorage) should only ever trigger an automatic checkout
+    // redirect right after a genuine sign-in/sign-up action — never on a
+    // plain page load or background token refresh of an already-open
+    // session. Gating on authEvent === "SIGNED_IN" (rather than also
+    // firing on the initial getSession() restore or TOKEN_REFRESHED) is
+    // what that requires. This value is consumed — and cleared — exactly
+    // once per checkAccess call regardless of outcome, specifically so a
+    // stale leftover value (e.g. someone who clicked a paid tier once and
+    // never finished checkout) can't keep re-triggering a broken checkout
+    // attempt on every later visit, which is what happened before this fix.
+    const pendingTier = selectedTier;
+    try { localStorage.removeItem("sm_selected_tier"); } catch {}
+
     if (signup?.access_granted || hasActiveSub) {
-      // Every signed-in email is auto-granted Free access above, which used
-      // to win unconditionally here — so picking "Contractor" or "Company"
-      // on the pricing grid, then signing up, just dropped you straight
-      // into the app on Free with no payment ever presented. If they chose
-      // a paid tier before signing in and don't already have an active
-      // subscription, send them to PayFast checkout now instead.
-      if (!hasActiveSub && (selectedTier === "contractor" || selectedTier === "firm")) {
+      if (authEvent === "SIGNED_IN" && !hasActiveSub && (pendingTier === "contractor" || pendingTier === "firm")) {
         setStatus("redirecting");
       } else {
+        setSelectedTier(null);
         setStatus("approved");
       }
     } else {
@@ -1203,7 +1212,7 @@ function AuthGate() {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => checkAccess(data.session));
+    supabase.auth.getSession().then(({ data }) => checkAccess(data.session, "INITIAL_SESSION"));
     const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (event === "PASSWORD_RECOVERY") {
         // A recovery-flow session, not a real sign-in — hold here and show
@@ -1212,7 +1221,7 @@ function AuthGate() {
         setRecoveryMode(true);
         return;
       }
-      checkAccess(newSession);
+      checkAccess(newSession, event);
     });
     return () => listener.subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
