@@ -39,6 +39,18 @@ async function openExternalLink(url) {
 const fmt = (n) =>
   new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(n || 0);
 
+// Same output as fmt(), but as two tightly-spaced spans ("R" + amount)
+// instead of one string — the space Intl inserts between symbol and amount
+// reads as an oversized gap once it lands in a monospace font at small sizes.
+function Money({ value, style }) {
+  const amount = new Intl.NumberFormat("en-ZA", { maximumFractionDigits: 0 }).format(value || 0);
+  return (
+    <span style={{ display: "inline-flex", alignItems: "baseline", justifyContent: "flex-end", gap: 3, ...style }}>
+      <span>R</span><span>{amount}</span>
+    </span>
+  );
+}
+
 // A plain-looking reference link (JBCC, CIDB, SANS, etc.) that routes
 // through openExternalLink on native so it opens in an in-app browser tab
 // instead of kicking the user out to a separate browser app.
@@ -2962,6 +2974,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
   }
 
   async function removeTemplateItem(templateId, itemId) {
+    if (!window.confirm("Remove this item from the template?")) return;
     setItemsByTemplate((prev) => ({ ...prev, [templateId]: (prev[templateId] || []).filter((i) => i.id !== itemId) }));
     await supabase.from("template_items").delete().eq("id", itemId);
   }
@@ -3828,6 +3841,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const attachTargetItem = useRef(null);
   const plansInputRef = useRef(null);
   const saveTimers = useRef({});
+  const pendingSaves = useRef({});
+  function flushPending(key) {
+    const pending = pendingSaves.current[key];
+    if (!pending) return;
+    delete pendingSaves.current[key];
+    supabase.from(pending.table).update(pending.patch).eq("id", pending.id);
+  }
   // Quote tab: its own Download menu (PDF/Excel/Word) plus a ref around the
   // printable quote content so Word export can grab it. The quote's "client
   // logo" is just the contractor's own company logo (logoUrl, set once from
@@ -3871,6 +3891,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   }
 
   useEffect(() => { loadAll(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [projectId]);
+
+  useEffect(() => {
+    return () => {
+      Object.keys(pendingSaves.current).forEach((key) => flushPending(key));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const approvedCoTotal = useMemo(
     () => changeOrders.filter((c) => c.status === "approved").reduce((s, c) => s + Number(c.amount || 0), 0),
@@ -3918,10 +3945,10 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
   function scheduleSave(itemId, patch) {
     setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, ...patch } : i)));
+    const key = `item:${itemId}`;
+    pendingSaves.current[key] = { table: "line_items", id: itemId, patch: { ...(pendingSaves.current[key]?.patch || {}), ...patch } };
     if (saveTimers.current[itemId]) clearTimeout(saveTimers.current[itemId]);
-    saveTimers.current[itemId] = setTimeout(async () => {
-      await supabase.from("line_items").update(patch).eq("id", itemId);
-    }, 500);
+    saveTimers.current[itemId] = setTimeout(() => flushPending(key), 500);
   }
 
   // Quote export — mirrors the Cost & Progress ledger's Download menu
@@ -4230,6 +4257,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   }
 
   async function removePlan(path) {
+    if (!window.confirm("Delete this plan? This can't be undone.")) return;
     const newPlans = (project?.plans || []).filter((p) => p.path !== path);
     await supabase.from("projects_v2").update({ plans: newPlans }).eq("id", projectId);
     setProject((prev) => ({ ...prev, plans: newPlans }));
@@ -4273,6 +4301,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   }
 
   async function removeChangeOrder(id) {
+    if (!window.confirm("Delete this change order? This can't be undone.")) return;
     setChangeOrders((prev) => prev.filter((c) => c.id !== id));
     await supabase.from("change_orders").delete().eq("id", id);
   }
@@ -4307,6 +4336,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   }
 
   async function removePurchaseOrder(id) {
+    if (!window.confirm("Delete this purchase order? This can't be undone.")) return;
     setPurchaseOrders((prev) => prev.filter((p) => p.id !== id));
     await supabase.from("purchase_orders").delete().eq("id", id);
   }
@@ -4335,6 +4365,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   }
 
   async function removeTender(id) {
+    if (!window.confirm("Delete this tender and all its bids? This can't be undone.")) return;
     setTenders((prev) => prev.filter((t) => t.id !== id));
     setTenderBids((prev) => prev.filter((b) => b.tender_id !== id));
     await supabase.from("tenders").delete().eq("id", id);
@@ -4365,6 +4396,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   }
 
   async function removeBid(id) {
+    if (!window.confirm("Delete this bid? This can't be undone.")) return;
     setTenderBids((prev) => prev.filter((b) => b.id !== id));
     await supabase.from("tender_bids").delete().eq("id", id);
   }
@@ -4419,6 +4451,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   }
 
   async function removeScheduleTask(id) {
+    if (!window.confirm("Delete this task? This can't be undone.")) return;
     setScheduleTasks((prev) => prev.filter((t) => t.id !== id));
     await supabase.from("schedule_tasks").delete().eq("id", id);
   }
@@ -4469,6 +4502,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   }
 
   async function removeDocument(doc) {
+    if (!window.confirm("Delete this document? This can't be undone.")) return;
     setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
     await supabase.from("document_files").delete().eq("id", doc.id);
     await supabase.storage.from("documents").remove([doc.file_path]);
@@ -4619,10 +4653,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               onChange={(e) => {
                 const name = e.target.value;
                 setProject((p) => ({ ...p, name }));
+                pendingSaves.current["project:name"] = { table: "projects_v2", id: projectId, patch: { name } };
                 if (saveTimers.current.projectName) clearTimeout(saveTimers.current.projectName);
-                saveTimers.current.projectName = setTimeout(() => {
-                  supabase.from("projects_v2").update({ name }).eq("id", projectId);
-                }, 500);
+                saveTimers.current.projectName = setTimeout(() => flushPending("project:name"), 500);
               }}
             />
           </div>
@@ -4892,17 +4925,28 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                         <input style={styles.addInput} type="date" value={item.completed_date || ""}
                           onChange={(e) => scheduleSave(item.id, { completed_date: e.target.value || null })} />
                       </label>
-                      <label style={styles.detailField}>
-                        <span style={styles.detailLabel}>Claimed / Certified</span>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <input style={{ ...styles.addInput, width: "50%" }} type="number" placeholder="Claimed" value={item.claimed ?? ""}
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => scheduleSave(item.id, { claimed: Number(e.target.value) || 0 })} />
-                          <input style={{ ...styles.addInput, width: "50%" }} type="number" placeholder="Certified" value={item.certified ?? ""}
-                            onFocus={(e) => e.target.select()}
-                            onChange={(e) => scheduleSave(item.id, { certified: Number(e.target.value) || 0 })} />
+                      <div style={styles.detailField}>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <label style={{ display: "flex", flexDirection: "column", gap: 5, flex: 1 }}>
+                            <span style={styles.detailLabel}>Claimed</span>
+                            <div style={styles.currencyInputWrap}>
+                              <span style={styles.currencyPrefix}>R</span>
+                              <input style={{ ...styles.addInput, border: "none", padding: 0, flex: 1 }} type="number" value={item.claimed ?? ""}
+                                onFocus={(e) => e.target.select()}
+                                onChange={(e) => scheduleSave(item.id, { claimed: Number(e.target.value) || 0 })} />
+                            </div>
+                          </label>
+                          <label style={{ display: "flex", flexDirection: "column", gap: 5, flex: 1 }}>
+                            <span style={styles.detailLabel}>Certified</span>
+                            <div style={styles.currencyInputWrap}>
+                              <span style={styles.currencyPrefix}>R</span>
+                              <input style={{ ...styles.addInput, border: "none", padding: 0, flex: 1 }} type="number" value={item.certified ?? ""}
+                                onFocus={(e) => e.target.select()}
+                                onChange={(e) => scheduleSave(item.id, { certified: Number(e.target.value) || 0 })} />
+                            </div>
+                          </label>
                         </div>
-                      </label>
+                      </div>
                     </div>
 
                     <div style={{ marginTop: 12 }}>
@@ -4939,23 +4983,23 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
       {view === "charts" && (
         <div style={styles.chartGrid}>
-          <div style={styles.chartCard}>
-            <div style={styles.chartTitle}>Budget vs actual</div>
+          <div style={styles.chartCardGreen}>
+            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "#4C7A5C" }} />Budget vs actual</div>
             <div style={styles.chartSub}>Largest eight line items by budget.</div>
             <BarChartBudgetVsActual items={items} />
           </div>
-          <div style={styles.chartCard}>
-            <div style={styles.chartTitle}>Where the money went</div>
+          <div style={styles.chartCardBlue}>
+            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "#3D6FA6" }} />Where the money went</div>
             <div style={styles.chartSub}>Actual spend split by category.</div>
             <DonutCategorySplit rollup={categoryRollup} />
           </div>
-          <div style={styles.chartCard}>
-            <div style={styles.chartTitle}>Progress against spend</div>
+          <div style={styles.chartCardRed}>
+            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "#C1462B" }} />Progress against spend</div>
             <div style={styles.chartSub}>Progress bar vs spend bar, per line item.</div>
             <ProgressBars items={items} />
           </div>
-          <div style={styles.chartCard}>
-            <div style={styles.chartTitle}>Category variance</div>
+          <div style={styles.chartCardGold}>
+            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "#B8862F" }} />Category variance</div>
             <div style={styles.chartSub}>Positive bars are overruns.</div>
             {categoryRollup.length === 0 ? (
               <EmptyChart label="Add line items to see category variance." />
@@ -4987,13 +5031,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               </div>
             )}
           </div>
-          <div style={styles.chartCard}>
-            <div style={styles.chartTitle}>Top overruns</div>
+          <div style={styles.chartCardRed}>
+            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "#C1462B" }} />Top overruns</div>
             <div style={styles.chartSub}>Line items furthest over budget.</div>
             <TopOverruns items={items} />
           </div>
-          <div style={styles.chartCard}>
-            <div style={styles.chartTitle}>Claims vs certified vs paid</div>
+          <div style={styles.chartCardGreen}>
+            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "#4C7A5C" }} />Claims vs certified vs paid</div>
             <div style={styles.chartSub}>Spot claims still waiting on sign-off.</div>
             <ClaimsCertifiedChart items={items} />
           </div>
@@ -5011,10 +5055,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               onChange={(e) => {
                 const client_name = e.target.value;
                 setProject((p) => ({ ...p, client_name }));
+                pendingSaves.current["project:clientName"] = { table: "projects_v2", id: projectId, patch: { client_name } };
                 if (saveTimers.current.clientName) clearTimeout(saveTimers.current.clientName);
-                saveTimers.current.clientName = setTimeout(() => {
-                  supabase.from("projects_v2").update({ client_name }).eq("id", projectId);
-                }, 500);
+                saveTimers.current.clientName = setTimeout(() => flushPending("project:clientName"), 500);
               }}
             />
             <div ref={quoteDownloadMenuRef} style={{ position: "relative", marginLeft: "auto" }}>
@@ -5101,15 +5144,15 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             style={{ display: "none" }}
             onChange={handlePaymentDocUpload}
           />
-          <div style={{ ...styles.ledgerHeaderRow, minWidth: 980 }}>
-            <span style={{ ...styles.thCell, flex: 2.4 }}>Line item</span>
-            <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>Claimed</span>
-            <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>Certified</span>
-            <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>Retention held</span>
-            <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>Paid to date</span>
-            <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>Uncertified</span>
+          <div style={{ ...styles.ledgerHeaderRow, minWidth: 1140 }}>
+            <span style={{ ...styles.thCell, flex: 2.2 }}>Line item</span>
+            <span style={{ ...styles.thCell, flex: 1.5, textAlign: "right" }}>Claimed</span>
+            <span style={{ ...styles.thCell, flex: 1.5, textAlign: "right" }}>Certified</span>
+            <span style={{ ...styles.thCell, flex: 1.5, textAlign: "right" }}>Retention held</span>
+            <span style={{ ...styles.thCell, flex: 1.5, textAlign: "right" }}>Paid to date</span>
+            <span style={{ ...styles.thCell, flex: 1.5, textAlign: "right" }}>Uncertified</span>
             <span style={{ ...styles.thCell, flex: 1.1, textAlign: "center" }}>Payment date</span>
-            <span style={{ ...styles.thCell, flex: 1.3, textAlign: "center" }}>Document</span>
+            <span style={{ ...styles.thCell, flex: 1.1, textAlign: "center" }}>Document</span>
           </div>
           {items.map((item) => {
             const certified = Number(item.certified || 0);
@@ -5117,9 +5160,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             const retentionHeld = certified * (totals.retentionPct / 100);
             const uncertified = claimed - certified;
             return (
-              <div key={item.id} style={{ ...styles.row, minWidth: 980 }}>
-                <span style={{ ...styles.tdCell, flex: 2.4, fontWeight: 500 }}>{item.name}</span>
-                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>
+              <div key={item.id} style={{ ...styles.row, minWidth: 1140 }}>
+                <span style={{ ...styles.tdCell, flex: 2.2, fontWeight: 500 }}>{item.name}</span>
+                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>
                   {editingCell === `${item.id}:claimed` ? (
                     <input autoFocus style={styles.inlineInput} value={editValue} type="number"
                       onFocus={(e) => e.target.select()}
@@ -5127,10 +5170,10 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                       onBlur={() => saveEdit(item.id, "claimed")}
                       onKeyDown={(e) => e.key === "Enter" && saveEdit(item.id, "claimed")} />
                   ) : (
-                    <button style={styles.actualButton} onClick={() => startEdit(item.id, "claimed", item.claimed)}>{fmt(claimed)}</button>
+                    <button style={styles.actualButton} onClick={() => startEdit(item.id, "claimed", item.claimed)}><Money value={claimed} /></button>
                   )}
                 </span>
-                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>
+                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>
                   {editingCell === `${item.id}:certified` ? (
                     <input autoFocus style={styles.inlineInput} value={editValue} type="number"
                       onFocus={(e) => e.target.select()}
@@ -5138,12 +5181,12 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                       onBlur={() => saveEdit(item.id, "certified")}
                       onKeyDown={(e) => e.key === "Enter" && saveEdit(item.id, "certified")} />
                   ) : (
-                    <button style={styles.actualButton} onClick={() => startEdit(item.id, "certified", item.certified)}>{fmt(certified)}</button>
+                    <button style={styles.actualButton} onClick={() => startEdit(item.id, "certified", item.certified)}><Money value={certified} /></button>
                   )}
                 </span>
-                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#B8862F" }}>{fmt(retentionHeld)}</span>
-                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#4C7A5C" }}>{fmt(certified - retentionHeld)}</span>
-                <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: uncertified > 0 ? "#C1462B" : "#6E6E73" }}>{fmt(uncertified)}</span>
+                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#B8862F" }}><Money value={retentionHeld} /></span>
+                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#4C7A5C" }}><Money value={certified - retentionHeld} /></span>
+                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: uncertified > 0 ? "#C1462B" : "#6E6E73" }}><Money value={uncertified} /></span>
                 <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "center" }} className="no-print">
                   <input
                     type="date"
@@ -5155,7 +5198,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                 <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }} className="print-only-status">
                   {item.payment_date ? new Date(item.payment_date + "T00:00:00").toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </span>
-                <span style={{ ...styles.tdCell, flex: 1.3, textAlign: "center" }}>
+                <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "center" }}>
                   {item.payment_doc_path ? (
                     <button onClick={() => openPaymentDoc(item)} style={{ ...styles.attachmentLink, background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 12 }}>
                       📎 {item.payment_doc_name}
@@ -5169,15 +5212,15 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               </div>
             );
           })}
-          <div style={{ ...styles.row, background: "#F5F5F7", fontWeight: 600, minWidth: 980 }}>
-            <span style={{ ...styles.tdCell, flex: 2.4 }}>Totals</span>
-            <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.claimed)}</span>
-            <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.certified)}</span>
-            <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#B8862F" }}>{fmt(totals.retentionHeld)}</span>
-            <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#4C7A5C" }}>{fmt(totals.paidToDate)}</span>
-            <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: totals.uncertified > 0 ? "#C1462B" : "#6E6E73" }}>{fmt(totals.uncertified)}</span>
+          <div style={{ ...styles.row, background: "#F5F5F7", fontWeight: 600, minWidth: 1140 }}>
+            <span style={{ ...styles.tdCell, flex: 2.2 }}>Totals</span>
+            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}><Money value={totals.claimed} /></span>
+            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}><Money value={totals.certified} /></span>
+            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#B8862F" }}><Money value={totals.retentionHeld} /></span>
+            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#4C7A5C" }}><Money value={totals.paidToDate} /></span>
+            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: totals.uncertified > 0 ? "#C1462B" : "#6E6E73" }}><Money value={totals.uncertified} /></span>
             <span style={{ ...styles.tdCell, flex: 1.1 }}></span>
-            <span style={{ ...styles.tdCell, flex: 1.3 }}></span>
+            <span style={{ ...styles.tdCell, flex: 1.1 }}></span>
           </div>
         </div>
         </>
@@ -6019,11 +6062,11 @@ const styles = {
   toggleBtnActive: { background: "#1D1D1F", color: "#FFFFFF", fontWeight: 600 },
 
   ledger: { maxWidth: 1180, margin: "0 auto", background: "#FFFFFF", borderRadius: 18, overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" },
-  ledgerHeaderRow: { display: "flex", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid #E8E8ED", background: "#F5F5F7", minWidth: 640 },
+  ledgerHeaderRow: { display: "flex", alignItems: "center", gap: 14, padding: "10px 14px", borderBottom: "1px solid #E8E8ED", background: "#F5F5F7", minWidth: 640 },
   thCell: { fontSize: 11, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase" },
-  row: { display: "flex", alignItems: "center", padding: "12px 14px", borderBottom: "1px solid #F2F2F5", minWidth: 640 },
+  row: { display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", borderBottom: "1px solid #F2F2F5", minWidth: 640 },
   tdCell: { fontSize: 14, paddingRight: 8 },
-  actualButton: { background: "none", border: "none", color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, cursor: "pointer", borderBottom: "1px dashed #6E6E73", padding: 0 },
+  actualButton: { display: "block", width: "100%", textAlign: "right", background: "none", border: "none", color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, cursor: "pointer", borderBottom: "1px dashed #6E6E73", padding: 0 },
   inlineInput: { width: "100%", background: "#FFFFFF", border: "1px solid #1D5C8A", borderRadius: 8, color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, padding: "2px 6px", textAlign: "right" },
   miniLink: { background: "none", border: "none", color: "#6E6E73", fontSize: 10.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
   miniLinkBlock: { background: "none", border: "none", color: "#3D6FA6", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginTop: 4 },
@@ -6083,12 +6126,19 @@ const styles = {
   detailPanel: { background: "#F5F5F7", padding: "16px 18px", borderBottom: "1px solid #F2F2F5" },
   detailGrid: { display: "grid", gridTemplateColumns: "minmax(170px,2.6fr) minmax(75px,0.85fr) minmax(70px,0.75fr) minmax(110px,1.15fr) minmax(110px,1.15fr) minmax(190px,3fr)", gap: 12, overflowX: "auto" },
   detailField: { display: "flex", flexDirection: "column", gap: 5 },
+  currencyInputWrap: { display: "flex", alignItems: "center", gap: 4, background: "#FFFFFF", border: "1px solid #D9D9DE", borderRadius: 8, padding: "0 8px" },
+  currencyPrefix: { fontSize: 12.5, color: "#8E8E93" },
   detailLabel: { fontSize: 10.5, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase" },
   notesTextarea: { width: "100%", minHeight: 60, background: "#F5F5F7", border: "1px solid transparent", borderRadius: 10, color: "#1D1D1F", fontSize: 13, padding: "8px 10px", fontFamily: "'Inter', sans-serif", resize: "vertical", marginTop: 5 },
   attachmentLink: { fontSize: 12, color: "#3D6FA6", textDecoration: "none" },
 
   chartGrid: { maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 14 },
   chartCard: { background: "#FFFFFF", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
+  chartCardGreen: { background: "radial-gradient(120% 100% at 100% 0%, rgba(76,122,92,0.10), rgba(76,122,92,0) 55%), #FFFFFF", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid #4C7A5C" },
+  chartCardBlue: { background: "radial-gradient(120% 100% at 100% 0%, rgba(61,111,166,0.10), rgba(61,111,166,0) 55%), #FFFFFF", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid #3D6FA6" },
+  chartCardRed: { background: "radial-gradient(120% 100% at 100% 0%, rgba(193,70,43,0.09), rgba(193,70,43,0) 55%), #FFFFFF", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid #C1462B" },
+  chartCardGold: { background: "radial-gradient(120% 100% at 100% 0%, rgba(184,134,47,0.11), rgba(184,134,47,0) 55%), #FFFFFF", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid #B8862F" },
+  chartDot: { display: "inline-block", width: 8, height: 8, borderRadius: "50%", marginRight: 7, position: "relative", top: -1 },
   chartTitle: { fontSize: 18, fontWeight: 600, marginBottom: 2 },
   chartSub: { fontSize: 12, color: "#6E6E73", marginBottom: 16 },
 
