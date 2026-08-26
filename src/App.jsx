@@ -1101,6 +1101,14 @@ function AuthGate() {
   // with this param is itself the deliberate signal, tracked separately
   // from a plain leftover in localStorage (see arrivedWithTierIntentRef).
   const arrivedWithTierIntentRef = useRef(false);
+  // supabase-js fires the auth listener once immediately with the current
+  // session (event "INITIAL_SESSION"), in addition to the manual
+  // getSession() call below — so checkAccess runs twice on every load. The
+  // second, redundant call was overwriting the first call's "redirecting"
+  // status back to "approved" before the checkout redirect ever fired
+  // (arrivedWithTierIntentRef had already been consumed by the first call).
+  // This guard makes only the first INITIAL_SESSION call count.
+  const initialCheckedRef = useRef(false);
   const [selectedTier, setSelectedTier] = useState(() => {
     try {
       const urlTier = new URLSearchParams(window.location.search).get("tier");
@@ -1173,6 +1181,10 @@ function AuthGate() {
     if (!currentSession) {
       setStatus("signedout");
       return;
+    }
+    if (authEvent === "INITIAL_SESSION") {
+      if (initialCheckedRef.current) return;
+      initialCheckedRef.current = true;
     }
     setSession(currentSession);
     const userEmailAddr = currentSession.user.email;
