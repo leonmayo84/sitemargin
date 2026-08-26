@@ -687,7 +687,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
     ["subcontractors", "Subcontractors"],
     ["templates", "Templates"],
     ["integrations", "Accounting"],
-    ["storage", "Storage"],
+    ["storage", "Plan and Storage"],
   ];
   const closeAnd = (fn) => () => { setMenuOpen(false); if (fn) fn(); };
 
@@ -3011,7 +3011,7 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
   return (
     <div style={styles.page}>
       <GlobalStyles />
-      <PageHeader title="Storage" current="storage" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
+      <PageHeader title="Plan and Storage" current="storage" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
 
       <div style={styles.explainer}>
         Every plan includes a storage allowance for attachments, photos, and documents across your projects. Once-off
