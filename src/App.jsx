@@ -662,13 +662,22 @@ function TrendChart({ snapshots }) {
   const values = snapshots.map((s) => Number(s.variance));
   const max = Math.max(...values, 0);
   const min = Math.min(...values, 0);
-  const range = max - min || 1;
+  // When every snapshot so far has the same variance (most commonly all
+  // zero, on a project's first one or two snapshots before anything has
+  // moved), max - min collapses to 0. Falling back to a range of 1 in that
+  // case still anchors the line/zero-marker using the real min, which for
+  // an all-zero run pins everything to the very bottom edge of the
+  // viewBox — effectively invisible. Centering instead keeps a flat trend
+  // visible as a flat line through the middle rather than a sliver at the
+  // edge.
+  const flat = max === min;
+  const range = flat ? 1 : max - min;
   const points = snapshots.map((s, i) => {
     const x = (i / Math.max(snapshots.length - 1, 1)) * W;
-    const y = H - ((Number(s.variance) - min) / range) * H;
+    const y = flat ? H / 2 : H - ((Number(s.variance) - min) / range) * H;
     return `${x},${y}`;
   }).join(" ");
-  const zeroY = H - ((0 - min) / range) * H;
+  const zeroY = flat ? H / 2 : H - ((0 - min) / range) * H;
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 80, display: "block" }} preserveAspectRatio="none">
@@ -4312,7 +4321,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       .from("snapshots")
       .insert({ project_id: projectId, budget: totals.revisedBudget, actual: totals.actual, variance: totals.variance })
       .select().single();
-    if (!error && data) setSnapshots((prev) => [...prev, data]);
+    if (!error && data) {
+      setSnapshots((prev) => [...prev, data]);
+      setImportMessage({ type: "success", text: `Snapshot logged — ${fmt(totals.actual)} actual, ${totals.variance >= 0 ? "+" : ""}${fmt(totals.variance)} variance.` });
+    } else {
+      setImportMessage({ type: "error", text: "Couldn't log that snapshot — please try again." });
+    }
+    setTimeout(() => setImportMessage(null), 6000);
   }
 
   if (!loaded || !project) {
