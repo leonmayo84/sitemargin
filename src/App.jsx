@@ -2456,6 +2456,14 @@ function IntegrationsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
   const [connecting, setConnecting] = useState(null);
   const [syncing, setSyncing] = useState(null);
   const [banner, setBanner] = useState(null);
+  // Sage (South Africa) has no OAuth redirect — the user types their own
+  // Sage username/password into a form right here, which calls
+  // accounting-sage-za-connect. A Sage login with more than one company
+  // returns a list to choose from instead of connecting immediately.
+  const [sageForm, setSageForm] = useState({ username: "", password: "" });
+  const [sageCompanies, setSageCompanies] = useState(null);
+  const [sageConnecting, setSageConnecting] = useState(false);
+  const [sageError, setSageError] = useState(null);
 
   async function loadAll() {
     setLoading(true);
@@ -2511,6 +2519,41 @@ function IntegrationsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
       console.error("accounting connect failed", err);
       setBanner({ type: "error", text: "Couldn't start the connection." });
       setConnecting(null);
+    }
+  }
+
+  async function sageConnect(companyId) {
+    setSageConnecting(true);
+    setSageError(null);
+    try {
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/accounting-sage-za-connect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: userEmail,
+          username: sageForm.username,
+          password: sageForm.password,
+          ...(companyId ? { companyId } : {}),
+        }),
+      });
+      const json = await res.json();
+      if (json.companies) {
+        // More than one company on this login — show the picker instead of
+        // guessing which one the user meant.
+        setSageCompanies(json.companies);
+      } else if (json.connected) {
+        setSageCompanies(null);
+        setSageForm({ username: "", password: "" });
+        setBanner({ type: "connected", text: `Sage connected — ${json.company?.name || "your company"} is ready to sync.` });
+        loadAll();
+      } else {
+        setSageError(json.error || "Couldn't connect to Sage.");
+      }
+    } catch (err) {
+      console.error("sage connect failed", err);
+      setSageError("Couldn't reach Sage — please try again.");
+    } finally {
+      setSageConnecting(false);
     }
   }
 
@@ -2606,6 +2649,54 @@ function IntegrationsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                     <button style={styles.removeBtn} onClick={() => disconnect(conn)}>Disconnect</button>
                   </div>
                 </>
+              ) : p.key === "sage" ? (
+                <div>
+                  {sageCompanies ? (
+                    <>
+                      <div style={{ fontSize: 12.5, color: "#6E6E73", marginBottom: 8 }}>
+                        This Sage login has more than one company — pick which one to connect:
+                      </div>
+                      {sageCompanies.map((c) => (
+                        <button
+                          key={c.id}
+                          style={{ ...styles.importBtn, display: "block", width: "100%", textAlign: "left", marginBottom: 6 }}
+                          disabled={sageConnecting}
+                          onClick={() => sageConnect(c.id)}
+                        >
+                          {c.name}
+                        </button>
+                      ))}
+                      <button style={styles.removeBtn} onClick={() => { setSageCompanies(null); setSageError(null); }}>Cancel</button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 12.5, color: "#6E6E73", marginBottom: 8 }}>
+                        Sign in with your own Sage Business Cloud Accounting (South Africa) username and password.
+                      </div>
+                      <input
+                        style={{ ...styles.addInput, width: "100%", marginBottom: 6 }}
+                        placeholder="Sage username"
+                        value={sageForm.username}
+                        onChange={(e) => setSageForm((f) => ({ ...f, username: e.target.value }))}
+                      />
+                      <input
+                        style={{ ...styles.addInput, width: "100%", marginBottom: 6 }}
+                        placeholder="Sage password"
+                        type="password"
+                        value={sageForm.password}
+                        onChange={(e) => setSageForm((f) => ({ ...f, password: e.target.value }))}
+                      />
+                      {sageError && <div style={{ fontSize: 12.5, color: "#B3261E", marginBottom: 6 }}>{sageError}</div>}
+                      <button
+                        style={styles.importBtn}
+                        disabled={sageConnecting || !sageForm.username || !sageForm.password}
+                        onClick={() => sageConnect(null)}
+                      >
+                        {sageConnecting ? "Connecting…" : "Connect Sage"}
+                      </button>
+                    </>
+                  )}
+                </div>
               ) : (
                 <button style={styles.importBtn} disabled={connecting === p.key} onClick={() => connect(p.key)}>
                   {connecting === p.key ? "Redirecting…" : `Connect ${p.label}`}

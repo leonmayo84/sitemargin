@@ -6,10 +6,28 @@
 // a time) and accounting-sync-all (called by a daily pg_cron job across
 // every connected user). Both call syncConnection() below for the per-
 // connection work so the matching/fetch logic only lives in one place.
+//
+// IMPORTANT: Xero and Sage are NOT the same shape of integration.
+//   - Xero uses OAuth2 (authorization code + refresh tokens), same as any
+//     normal international app — see PROVIDERS.xero and the
+//     accounting-oauth-start/-callback functions.
+//   - Sage, for South African customers, does NOT use OAuth at all. Sage's
+//     international product (api.accounting.sage.com, OAuth via
+//     www.sageone.com) runs on a completely different platform than the
+//     South African edition of "Sage Business Cloud Accounting" — SA isn't
+//     even in the country list on Sage's OAuth app registration. The SA
+//     product's real API lives at accounting.sageone.co.za and authenticates
+//     with the end user's own Sage login (username + password) via HTTP
+//     Basic Auth on every single request, plus one app-wide developer API
+//     key (SAGE_ZA_API_KEY) appended as a query param. There is no session
+//     token and no refresh step. See sageZaListCompanies() below and the
+//     accounting-sage-za-connect function.
 
 export type Provider = "xero" | "sage";
 
-export const PROVIDERS: Record<Provider, {
+// OAuth2 config — Xero only. Sage has no OAuth flow in this codebase (see
+// note above), so it's deliberately not part of this map anymore.
+export const PROVIDERS: Record<"xero", {
   authorizeUrl: string;
   tokenUrl: string;
   scopes: string;
@@ -19,21 +37,18 @@ export const PROVIDERS: Record<Provider, {
   xero: {
     authorizeUrl: "https://login.xero.com/identity/connect/authorize",
     tokenUrl: "https://identity.xero.com/connect/token",
-    scopes: "openid profile email accounting.transactions.read accounting.contacts.read offline_access",
+    // NOTE: the old broad "accounting.transactions.read" scope was retired for
+    // apps created after Xero's granular-scopes cutover (Mar 2026) — this app
+    // was created Aug 2026, so Xero rejects it with invalid_scope. Using the
+    // granular equivalents instead: invoices (bills), bank transactions, and
+    // payments cover everything syncConnection's fetchXeroInvoices() reads.
+    scopes: "openid profile email accounting.invoices.read accounting.banktransactions.read accounting.payments.read accounting.contacts.read offline_access",
     clientId: Deno.env.get("XERO_CLIENT_ID") ?? "",
     clientSecret: Deno.env.get("XERO_CLIENT_SECRET") ?? "",
   },
-  sage: {
-    authorizeUrl: "https://www.sageone.com/oauth2/auth/central",
-    tokenUrl: "https://oauth.accounting.sage.com/token",
-    // Sage Business Cloud Accounting's public API only offers this one scope today.
-    scopes: "full_access",
-    clientId: Deno.env.get("SAGE_CLIENT_ID") ?? "",
-    clientSecret: Deno.env.get("SAGE_CLIENT_SECRET") ?? "",
-  },
 };
 
-export function redirectUri(provider: Provider): string {
+export function redirectUri(provider: "xero"): string {
   const base = Deno.env.get("SUPABASE_URL")!;
   return `${base}/functions/v1/accounting-oauth-callback?provider=${provider}`;
 }
@@ -43,16 +58,16 @@ export function redirectUri(provider: Provider): string {
 // session attached — knows which user to attach the connection to. Not a
 // secret, just an anti-CSRF nonce plus routing info, so a plain base64 blob
 // is enough rather than a signed token.
-export function encodeState(email: string, provider: Provider): string {
+export function encodeState(email: string, provider: "xero"): string {
   return btoa(JSON.stringify({ email, provider, nonce: crypto.randomUUID() }));
 }
 
-export function decodeState(state: string): { email: string; provider: Provider } {
+export function decodeState(state: string): { email: string; provider: "xero" } {
   const parsed = JSON.parse(atob(state));
   return { email: parsed.email, provider: parsed.provider };
 }
 
-export async function exchangeCodeForToken(provider: Provider, code: string) {
+export async function exchangeCodeForToken(provider: "xero", code: string) {
   const cfg = PROVIDERS[provider];
   const body = new URLSearchParams({
     grant_type: "authorization_code",
@@ -71,7 +86,7 @@ export async function exchangeCodeForToken(provider: Provider, code: string) {
   return res.json() as Promise<{ access_token: string; refresh_token: string; expires_in: number }>;
 }
 
-export async function refreshToken(provider: Provider, refresh_token: string) {
+export async function refreshToken(provider: "xero", refresh_token: string) {
   const cfg = PROVIDERS[provider];
   const body = new URLSearchParams({ grant_type: "refresh_token", refresh_token });
   const res = await fetch(cfg.tokenUrl, {
@@ -84,6 +99,59 @@ export async function refreshToken(provider: Provider, refresh_token: string) {
   });
   if (!res.ok) throw new Error(`${provider} token refresh failed: ${res.status} ${await res.text()}`);
   return res.json() as Promise<{ access_token: string; refresh_token: string; expires_in: number }>;
+}
+
+// ---------------------------------------------------------------------
+// Sage ZA (accounting.sageone.co.za) — Basic Auth + developer API key.
+// No OAuth, no session/bearer tokens. See the big comment at the top of
+// this file for why this is a separate product from international Sage.
+// ---------------------------------------------------------------------
+
+const SAGE_ZA_BASE = "https://accounting.sageone.co.za/api/1.1.3";
+const SAGE_ZA_API_KEY = Deno.env.get("SAGE_ZA_API_KEY") ?? "";
+
+export type SageZaCompany = { id: string; name: string };
+
+function sageZaAuthHeader(username: string, password: string): string {
+  return `Basic ${btoa(`${username}:${password}`)}`;
+}
+
+// Lists the Sage companies a given Sage login can access. Confirmed
+// endpoint per Sage's developer community: GET company/Get. Response shape
+// is defensively parsed (array vs. { Company: [...] } vs. { companies: [...] })
+// since the authoritative spec (resellers.accounting.sageone.co.za/api/2.0.0/)
+// is login-gated and couldn't be verified without real credentials — if
+// Sage's actual response shape differs, this is the first place to check.
+export async function sageZaListCompanies(username: string, password: string): Promise<SageZaCompany[]> {
+  if (!SAGE_ZA_API_KEY) throw new Error("Sage isn't configured yet — ask SiteMargin to finish setting up Sage.");
+  const res = await fetch(`${SAGE_ZA_BASE}/company/Get?apikey=${encodeURIComponent(SAGE_ZA_API_KEY)}`, {
+    headers: { Authorization: sageZaAuthHeader(username, password), Accept: "application/json" },
+  });
+  if (res.status === 401) throw new Error("Sage rejected that username or password.");
+  if (!res.ok) throw new Error(`Sage company list failed: ${res.status} ${await res.text()}`);
+  const body = await res.json();
+  const list = Array.isArray(body) ? body : body?.Company ?? body?.companies ?? [];
+  return (list as any[]).map((c) => ({
+    id: String(c.ID ?? c.Id ?? c.id),
+    name: c.Name ?? c.name ?? "Sage company",
+  }));
+}
+
+// Sage ZA's purchases/paid-bills endpoint isn't wired up yet — the
+// authoritative endpoint spec is only reachable once you're logged into
+// Sage's developer portal with a real API key, which this codebase doesn't
+// have (see the Sage ZA card's "how to get access" copy in the app). Rather
+// than guess a path and silently pull wrong or empty data, this throws a
+// clear, specific error that syncConnection() below catches and surfaces
+// without marking the connection itself broken.
+const SAGE_ZA_SYNC_NOT_WIRED_UP = "SAGE_ZA_SYNC_NOT_WIRED_UP";
+async function fetchSageZaPurchases(
+  _username: string,
+  _password: string,
+  _companyId: string,
+  _since: string | null
+): Promise<NormalizedTxn[]> {
+  throw new Error(SAGE_ZA_SYNC_NOT_WIRED_UP);
 }
 
 // ---------------------------------------------------------------------
@@ -128,26 +196,6 @@ async function fetchXeroInvoices(access_token: string, tenant_id: string, since:
   }));
 }
 
-// Sage Business Cloud Accounting API v3.1 — purchase invoices. Same caveat
-// as Xero above: field names are Sage's documented shape but unverified
-// against a live response from here.
-async function fetchSageInvoices(access_token: string, business_id: string, since: string | null): Promise<NormalizedTxn[]> {
-  const params = new URLSearchParams({ business: business_id, items_per_page: "200" });
-  if (since) params.set("updated_or_created_since", since);
-  const url = `https://api.accounting.sage.com/v3.1/purchase_invoices?${params}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${access_token}`, Accept: "application/json" } });
-  if (!res.ok) throw new Error(`Sage invoices fetch failed: ${res.status} ${await res.text()}`);
-  const body = await res.json();
-  return (body.$items ?? []).map((inv: any) => ({
-    external_id: inv.id,
-    contact_name: inv.contact?.displayed_as ?? null,
-    description: inv.reference ?? inv.notes ?? null,
-    category_hint: inv.ledger_account?.displayed_as ?? null,
-    amount: Number(inv.total_amount ?? 0),
-    txn_date: inv.date ?? null,
-  }));
-}
-
 function normalize(s: string | null | undefined): string {
   return (s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -166,38 +214,52 @@ export function findMatch(txn: NormalizedTxn, lineItems: LineItemRef[]): LineIte
   return candidates.length === 1 ? candidates[0] : null;
 }
 
-// Runs a full sync for one accounting_connections row: refreshes the token
-// if needed, fetches invoices since the connection's last sync, upserts
-// accounting_transactions, recomputes `actual` on every touched line item,
-// and updates the connection's last_synced_at/status. Never throws for a
-// per-connection failure — callers get { error } back and can decide
-// whether to keep going with other connections.
+// Runs a full sync for one accounting_connections row: refreshes the Xero
+// token if needed (Sage has no token to refresh), fetches invoices since
+// the connection's last sync, upserts accounting_transactions, recomputes
+// `actual` on every touched line item, and updates the connection's
+// last_synced_at/status. Never throws for a per-connection failure —
+// callers get { error } back and can decide whether to keep going with
+// other connections.
 export async function syncConnection(
   supabase: any,
-  conn: { id: string; owner_email: string; provider: Provider; access_token: string; refresh_token: string; token_expires_at: string | null; tenant_id: string; last_synced_at: string | null },
+  conn: {
+    id: string;
+    owner_email: string;
+    provider: Provider;
+    access_token: string | null;
+    refresh_token: string | null;
+    token_expires_at: string | null;
+    tenant_id: string;
+    last_synced_at: string | null;
+    sage_username?: string | null;
+    sage_password?: string | null;
+  },
   lineItems: LineItemRef[]
 ): Promise<{ pulled: number; matched: number; error?: string }> {
   const p = conn.provider;
   try {
-    let accessToken = conn.access_token;
-    const expiresAt = conn.token_expires_at ? new Date(conn.token_expires_at).getTime() : 0;
-    if (!expiresAt || expiresAt < Date.now() + 60_000) {
-      const refreshed = await refreshToken(p, conn.refresh_token);
-      accessToken = refreshed.access_token;
-      await supabase
-        .from("accounting_connections")
-        .update({
-          access_token: refreshed.access_token,
-          refresh_token: refreshed.refresh_token,
-          token_expires_at: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
-        })
-        .eq("id", conn.id);
-    }
+    let txns: NormalizedTxn[];
 
-    const txns =
-      p === "xero"
-        ? await fetchXeroInvoices(accessToken, conn.tenant_id, conn.last_synced_at)
-        : await fetchSageInvoices(accessToken, conn.tenant_id, conn.last_synced_at);
+    if (p === "xero") {
+      let accessToken = conn.access_token ?? "";
+      const expiresAt = conn.token_expires_at ? new Date(conn.token_expires_at).getTime() : 0;
+      if (!expiresAt || expiresAt < Date.now() + 60_000) {
+        const refreshed = await refreshToken("xero", conn.refresh_token ?? "");
+        accessToken = refreshed.access_token;
+        await supabase
+          .from("accounting_connections")
+          .update({
+            access_token: refreshed.access_token,
+            refresh_token: refreshed.refresh_token,
+            token_expires_at: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
+          })
+          .eq("id", conn.id);
+      }
+      txns = await fetchXeroInvoices(accessToken, conn.tenant_id, conn.last_synced_at);
+    } else {
+      txns = await fetchSageZaPurchases(conn.sage_username ?? "", conn.sage_password ?? "", conn.tenant_id, conn.last_synced_at);
+    }
 
     let matchedCount = 0;
     for (const txn of txns) {
@@ -247,6 +309,13 @@ export async function syncConnection(
 
     return { pulled: txns.length, matched: matchedCount };
   } catch (err) {
+    if (String((err as any)?.message) === SAGE_ZA_SYNC_NOT_WIRED_UP) {
+      // Not a broken connection — the connection itself (username/password/
+      // company) is fine and saved. The sync step just isn't built yet.
+      // Leave the connection's status alone so the app doesn't show it as
+      // errored.
+      return { pulled: 0, matched: 0, error: "Sage sync isn't switched on yet for South African accounts — this is on our list, your connection is saved and ready for when it is." };
+    }
     console.error(`syncConnection (${p}, ${conn.owner_email}) error:`, err);
     await supabase.from("accounting_connections").update({ status: "error", last_error: String(err) }).eq("id", conn.id);
     return { pulled: 0, matched: 0, error: String(err) };
