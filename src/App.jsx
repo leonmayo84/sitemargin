@@ -658,7 +658,16 @@ function ProgressScatter({ items }) {
 }
 
 function TrendChart({ snapshots }) {
-  const W = 100, H = 30;
+  // No preserveAspectRatio="none" here (unlike a bare trend line, which
+  // has no shape to distort) — this chart draws circles and text, and
+  // stretching x/y independently to fill an arbitrary container width
+  // would render the points as ellipses and squash the labels. Leaving
+  // the default "meet" behaviour and sizing the wrapper only by width
+  // (no fixed height) keeps everything scaling uniformly, the same way
+  // ProgressScatter's viewBox does elsewhere in this file.
+  const W = 1000, H = 220;
+  const marginTop = 34, marginBottom = 14;
+  const plotTop = marginTop, plotBottom = H - marginBottom;
   const values = snapshots.map((s) => Number(s.variance));
   const max = Math.max(...values, 0);
   const min = Math.min(...values, 0);
@@ -666,23 +675,71 @@ function TrendChart({ snapshots }) {
   // zero, on a project's first one or two snapshots before anything has
   // moved), max - min collapses to 0. Falling back to a range of 1 in that
   // case still anchors the line/zero-marker using the real min, which for
-  // an all-zero run pins everything to the very bottom edge of the
-  // viewBox — effectively invisible. Centering instead keeps a flat trend
-  // visible as a flat line through the middle rather than a sliver at the
-  // edge.
+  // an all-zero run pins everything to the very bottom of the plot area —
+  // effectively invisible. Centering instead keeps a flat trend visible
+  // as a flat line through the middle rather than a sliver at the edge.
   const flat = max === min;
   const range = flat ? 1 : max - min;
-  const points = snapshots.map((s, i) => {
-    const x = (i / Math.max(snapshots.length - 1, 1)) * W;
-    const y = flat ? H / 2 : H - ((Number(s.variance) - min) / range) * H;
-    return `${x},${y}`;
-  }).join(" ");
-  const zeroY = flat ? H / 2 : H - ((0 - min) / range) * H;
+  const coords = snapshots.map((s, i) => ({
+    x: (i / Math.max(snapshots.length - 1, 1)) * W,
+    y: flat ? (plotTop + plotBottom) / 2 : plotBottom - ((Number(s.variance) - min) / range) * (plotBottom - plotTop),
+    variance: Number(s.variance),
+  }));
+  const points = coords.map((c) => `${c.x},${c.y}`).join(" ");
+  const areaPoints = `0,${plotBottom} ${points} ${W},${plotBottom}`;
+  const zeroY = flat ? (plotTop + plotBottom) / 2 : plotBottom - ((0 - min) / range) * (plotBottom - plotTop);
+  // Colour follows the latest snapshot's own status — over budget is red,
+  // on/under budget is green — the same convention used everywhere else
+  // in the app (line items, the trend table's Variance column, etc.),
+  // rather than whether the trend is improving or worsening, which the
+  // callout line above the chart speaks to instead.
+  const latest = values[values.length - 1];
+  const color = latest > 0 ? "#C1462B" : "#4C7A5C";
+  const fillId = "trendAreaFill";
+  // Labelling every point gets unreadable past a handful of snapshots —
+  // only the first and last carry a value once there are more than five.
+  const labelAll = coords.length <= 5;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 80, display: "block" }} preserveAspectRatio="none">
-      <line x1="0" y1={zeroY} x2={W} y2={zeroY} stroke="#E8E8ED" strokeWidth="0.5" strokeDasharray="1,1" />
-      <polyline points={points} fill="none" stroke="#1D5C8A" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", display: "block" }}>
+      <defs>
+        <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.18" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <line x1="0" y1={zeroY} x2={W} y2={zeroY} stroke="#E8E8ED" strokeWidth="1.5" strokeDasharray="4,4" />
+      {/* Skip the label in the flat case — the line and the trend itself
+          sit on top of each other there, so "on budget" would collide
+          with the last point's own value label right above it. */}
+      {!flat && (
+        <text x={W} y={zeroY - 8} textAnchor="end" fontSize="12" fill="#9A9AA0" fontFamily="'IBM Plex Mono', monospace">on budget</text>
+      )}
+      <polygon points={areaPoints} fill={`url(#${fillId})`} />
+      <polyline points={points} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      {coords.map((c, i) => {
+        const isFirst = i === 0;
+        const isLast = i === coords.length - 1;
+        const showLabel = labelAll || isFirst || isLast;
+        return (
+          <React.Fragment key={i}>
+            <circle cx={c.x} cy={c.y} r="5" fill="#FFFFFF" stroke={color} strokeWidth="2.5" />
+            {showLabel && (
+              <text
+                x={c.x}
+                y={c.y - 14}
+                textAnchor={isFirst ? "start" : isLast ? "end" : "middle"}
+                fontSize="13"
+                fontWeight="700"
+                fill="#1D1D1F"
+                fontFamily="'IBM Plex Mono', monospace"
+              >
+                {c.variance >= 0 ? "+" : ""}{fmtShort(c.variance)}
+              </text>
+            )}
+          </React.Fragment>
+        );
+      })}
     </svg>
   );
 }
@@ -5357,24 +5414,36 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                 const first = snapshots[0];
                 const latest = snapshots[snapshots.length - 1];
                 const swing = Number(latest.variance) - Number(first.variance);
+                const swingAbs = fmt(Math.abs(swing));
+                const calloutText =
+                  swing > 0
+                    ? `Spend has been catching up to budget over your ${snapshots.length} check-ins — ${swingAbs} less headroom than when you started.`
+                    : swing < 0
+                    ? `You've pulled back ${swingAbs} versus where you started — trending in the right direction.`
+                    : `No change since your first check-in.`;
                 return (
-                  <div style={{ ...styles.summaryStrip, margin: "18px 0 0" }}>
-                    <SummaryCard
-                      label={`First logged — ${new Date(first.created_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}`}
-                      value={`${Number(first.variance) >= 0 ? "+" : ""}${fmt(first.variance)}`}
-                    />
-                    <SummaryCard
-                      label={`Latest — ${new Date(latest.created_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}`}
-                      value={`${Number(latest.variance) >= 0 ? "+" : ""}${fmt(latest.variance)}`}
-                      accent={Number(latest.variance) > 0 ? "#C1462B" : "#4C7A5C"}
-                    />
-                    <SummaryCard
-                      label="Swing since first snapshot"
-                      value={`${swing >= 0 ? "+" : ""}${fmt(swing)}`}
-                      accent={swing > 0 ? "#C1462B" : swing < 0 ? "#4C7A5C" : undefined}
-                    />
-                    <SummaryCard label="Snapshots logged" value={String(snapshots.length)} />
-                  </div>
+                  <>
+                    <div className="no-print" style={{ fontSize: 13, color: swing > 0 ? "#8A3D1E" : "#2E5C3E", background: swing > 0 ? "rgba(193,70,43,0.08)" : "rgba(76,122,92,0.1)", borderRadius: 10, padding: "10px 14px", marginTop: 14 }}>
+                      {swing > 0 ? "⚠ " : swing < 0 ? "✓ " : ""}{calloutText}
+                    </div>
+                    <div style={{ ...styles.summaryStrip, margin: "14px 0 0" }}>
+                      <SummaryCard
+                        label={`Starting point — ${new Date(first.created_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}`}
+                        value={`${Number(first.variance) >= 0 ? "+" : ""}${fmt(first.variance)}`}
+                      />
+                      <SummaryCard
+                        label={`Where you stand — ${new Date(latest.created_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}`}
+                        value={`${Number(latest.variance) >= 0 ? "+" : ""}${fmt(latest.variance)}`}
+                        accent={Number(latest.variance) > 0 ? "#C1462B" : "#4C7A5C"}
+                      />
+                      <SummaryCard
+                        label="Movement since you started"
+                        value={`${swing >= 0 ? "+" : ""}${fmt(swing)}`}
+                        accent={swing > 0 ? "#C1462B" : swing < 0 ? "#4C7A5C" : undefined}
+                      />
+                      <SummaryCard label="Times you've checked in" value={String(snapshots.length)} />
+                    </div>
+                  </>
                 );
               })()}
 
