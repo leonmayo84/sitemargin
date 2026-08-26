@@ -1246,7 +1246,7 @@ function AuthGate() {
     try { localStorage.removeItem("sm_selected_tier"); } catch {}
 
     if (signup?.access_granted || hasActiveSub) {
-      if (hadExplicitIntent && !hasActiveSub && (pendingTier === "contractor" || pendingTier === "firm")) {
+      if (hadExplicitIntent && !hasActiveSub && (pendingTier === "contractor" || pendingTier === "firm" || pendingTier === "homeowner")) {
         setStatus("redirecting");
       } else {
         setSelectedTier(null);
@@ -1414,7 +1414,7 @@ function AuthGate() {
   useEffect(() => {
     if (status !== "redirecting" || !session) return;
     const tier = selectedTier;
-    if (tier !== "contractor" && tier !== "firm") { setStatus("approved"); return; }
+    if (tier !== "contractor" && tier !== "firm" && tier !== "homeowner") { setStatus("approved"); return; }
     startCheckout(tier, session.user.email);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, session]);
