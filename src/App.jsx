@@ -2792,8 +2792,11 @@ function StorageMeter({ email }) {
     return () => { cancelled = true; };
   }, [email]);
 
+  const [upgradeError, setUpgradeError] = useState(null);
+
   async function handleUpgrade(tier) {
     setUpgrading(tier);
+    setUpgradeError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/storage-checkout`, {
@@ -2801,7 +2804,10 @@ function StorageMeter({ email }) {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
         body: JSON.stringify({ email, upgrade_tier: tier }),
       });
-      if (!res.ok) throw new Error("Checkout request failed");
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`Checkout request failed (${res.status}): ${body}`);
+      }
       const { payfast_url, fields } = await res.json();
       const form = document.createElement("form");
       form.method = "POST";
@@ -2817,6 +2823,7 @@ function StorageMeter({ email }) {
       form.submit();
     } catch (err) {
       console.error(err);
+      setUpgradeError(err.message || "Something went wrong starting checkout.");
       setUpgrading(null);
     }
   }
@@ -2830,7 +2837,7 @@ function StorageMeter({ email }) {
   const barColor = pct >= 90 ? "#D14343" : pct >= 70 ? "#E0A32C" : "#1D5A8C";
 
   return (
-    <div style={{ maxWidth: 420, background: "#EEF4F9", borderRadius: 16, padding: "1.25rem" }}>
+    <div style={{ background: "#EEF4F9", borderRadius: 16, padding: "1.25rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
         <span style={{ fontSize: 14, fontWeight: 700, color: "#14171A" }}>Storage</span>
         <span style={{ fontSize: 13, color: "#5B6472" }}>{formatStorageBytes(status.used_bytes)} of {formatStorageBytes(status.limit_bytes)}</span>
@@ -2843,7 +2850,7 @@ function StorageMeter({ email }) {
           {pct >= 90 ? "You're almost out of space. Upgrade to keep uploading." : "You're close to your limit. Upgrade for more space."}
         </p>
       )}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, maxWidth: 480 }}>
         {upgrades.map((opt) => (
           <button
             key={opt.tier}
@@ -2856,6 +2863,9 @@ function StorageMeter({ email }) {
           </button>
         ))}
       </div>
+      {upgradeError && (
+        <p style={{ fontSize: 12, color: "#D14343", margin: "10px 0 0" }}>{upgradeError}</p>
+      )}
     </div>
   );
 }
