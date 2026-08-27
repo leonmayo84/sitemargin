@@ -1175,10 +1175,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                     href={item.href}
                     className="sm-menu-item"
                     style={styles.menuSecondaryLink}
-                    onClick={(e) => {
-                      setMenuOpen(false);
-                      if (Capacitor.isNativePlatform()) { e.preventDefault(); openExternalLink(item.href); }
-                    }}
+                    onClick={() => setMenuOpen(false)}
                   >
                     {item.label}
                   </a>
@@ -1188,10 +1185,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                     href="https://sitemargin.co.za/terms.html"
                     className="sm-menu-item-dim"
                     style={styles.menuPanelDim}
-                    onClick={(e) => {
-                      setMenuOpen(false);
-                      if (Capacitor.isNativePlatform()) { e.preventDefault(); openExternalLink("https://sitemargin.co.za/terms.html"); }
-                    }}
+                    onClick={() => setMenuOpen(false)}
                   >
                     Terms
                   </a>
@@ -1199,10 +1193,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                     href="https://sitemargin.co.za/privacy.html"
                     className="sm-menu-item-dim"
                     style={styles.menuPanelDim}
-                    onClick={(e) => {
-                      setMenuOpen(false);
-                      if (Capacitor.isNativePlatform()) { e.preventDefault(); openExternalLink("https://sitemargin.co.za/privacy.html"); }
-                    }}
+                    onClick={() => setMenuOpen(false)}
                   >
                     Privacy
                   </a>
@@ -1970,18 +1961,14 @@ function AuthGate() {
                       key={item.label}
                       className="sm-menu-item"
                       style={styles.menuPanelLink}
-                      onClick={() => {
-                        setGateMenuOpen(false);
-                        if (Capacitor.isNativePlatform()) { openExternalLink(item.href); return; }
-                        window.location.href = item.href;
-                      }}
+                      onClick={() => { setGateMenuOpen(false); window.location.href = item.href; }}
                     >
                       {item.label}
                     </button>
                   ))}
                   <div style={styles.menuPanelDimRow}>
-                    <button className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => { setGateMenuOpen(false); if (Capacitor.isNativePlatform()) { openExternalLink("https://sitemargin.co.za/terms.html"); return; } window.location.href = "https://sitemargin.co.za/terms.html"; }}>Terms</button>
-                    <button className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => { setGateMenuOpen(false); if (Capacitor.isNativePlatform()) { openExternalLink("https://sitemargin.co.za/privacy.html"); return; } window.location.href = "https://sitemargin.co.za/privacy.html"; }}>Privacy</button>
+                    <button className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => { setGateMenuOpen(false); window.location.href = "https://sitemargin.co.za/terms.html"; }}>Terms</button>
+                    <button className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => { setGateMenuOpen(false); window.location.href = "https://sitemargin.co.za/privacy.html"; }}>Privacy</button>
                   </div>
                   <div style={styles.menuFooter}>
                     <div style={styles.menuFooterBrandRow}>
