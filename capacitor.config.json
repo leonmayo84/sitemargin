@@ -2,15 +2,15 @@
   "appId": "za.co.sitemargin.app",
   "appName": "SiteMargin",
   "webDir": "dist",
-  "backgroundColor": "#F5EFE2",
+  "backgroundColor": "#F5F5F7",
   "android": {
-    "backgroundColor": "#F5EFE2"
+    "backgroundColor": "#F5F5F7"
   },
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 800,
       "launchAutoHide": true,
-      "backgroundColor": "#F5EFE2",
+      "backgroundColor": "#F5F5F7",
       "androidScaleType": "CENTER_INSIDE",
       "showSpinner": false,
       "splashFullScreen": false,

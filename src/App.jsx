@@ -36,6 +36,20 @@ async function openExternalLink(url) {
   window.open(url, "_blank", "noopener");
 }
 
+// For a payment/OAuth hand-off, as opposed to opening a link the user clicked.
+// On the web this must stay a same-tab redirect: the page is meant to be
+// replaced, and window.open() called after an await has lost the user-gesture
+// context so popup blockers eat it. On native the WebView refuses to navigate
+// off the app's own origin, so assigning location.href there did nothing at
+// all — which is why checkout looked broken only in the mobile build.
+async function openExternalRedirect(url) {
+  if (Capacitor.isNativePlatform()) {
+    await openExternalLink(url);
+    return;
+  }
+  window.location.href = url;
+}
+
 const fmt = (n) =>
   new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(n || 0);
 
@@ -1154,6 +1168,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                       { label: "Pricing", href: "https://sitemargin.co.za/pricing.html" },
                       { label: "About", href: "https://sitemargin.co.za/about.html" },
                       { label: "Contact", href: "https://sitemargin.co.za/contact.html" },
+                      { label: "Construction Library", href: "https://sitemargin.co.za/construction-library.html" },
                     ].map((item) => (
                       <a
                         key={item.label}
@@ -1785,7 +1800,7 @@ function AuthGate() {
       const json = await res.json();
       if (json.redirectUrl) {
         try { localStorage.removeItem("sm_selected_tier"); } catch {}
-        window.location.href = json.redirectUrl;
+        await openExternalRedirect(json.redirectUrl);
       } else {
         setErrorMsg(json.error || "Couldn't start checkout — please try again.");
         setCheckoutTier(null);
@@ -1922,6 +1937,7 @@ function AuthGate() {
                     { label: "Pricing", href: "https://sitemargin.co.za/pricing.html" },
                     { label: "About", href: "https://sitemargin.co.za/about.html" },
                     { label: "Contact", href: "https://sitemargin.co.za/contact.html" },
+                    { label: "Construction Library", href: "https://sitemargin.co.za/construction-library.html" },
                   ].map((item) => (
                     <button
                       key={item.label}
@@ -3323,7 +3339,7 @@ function IntegrationsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
         body: JSON.stringify({ email: userEmail, provider }),
       });
       const json = await res.json();
-      if (json.url) window.location.href = json.url;
+      if (json.url) await openExternalRedirect(json.url);
       else { setBanner({ type: "error", text: json.error || "Couldn't start the connection." }); setConnecting(null); }
     } catch (err) {
       console.error("accounting connect failed", err);
