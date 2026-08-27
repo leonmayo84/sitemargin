@@ -7,7 +7,7 @@
     "backgroundColor": "#F5F5F7"
   },
   "server": {
-    "allowNavigation": ["sitemargin.co.za", "www.sitemargin.co.za"]
+    "allowNavigation": ["sitemargin.co.za", "www.sitemargin.co.za", "app.sitemargin.co.za"]
   },
   "plugins": {
     "SplashScreen": {
