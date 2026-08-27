@@ -1158,34 +1158,55 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                     smaller and muted rather than matching Projects/
                     Subcontractors/Templates — so the panel reads as "your
                     app" first and "more from SiteMargin" second, instead of
-                    seven identical-weight links with no hierarchy. Web-only,
-                    same native-webview-hijack reasoning as the footer. */}
-                {!Capacitor.isNativePlatform() && (
-                  <>
-                    <div style={styles.menuSectionLabel}>More from SiteMargin</div>
-                    {[
-                      { label: "What's inside", href: "https://sitemargin.co.za/whats-inside.html" },
-                      { label: "Pricing", href: "https://sitemargin.co.za/pricing.html" },
-                      { label: "About", href: "https://sitemargin.co.za/about.html" },
-                      { label: "Contact", href: "https://sitemargin.co.za/contact.html" },
-                      { label: "Construction Library", href: "https://sitemargin.co.za/construction-library.html" },
-                    ].map((item) => (
-                      <a
-                        key={item.label}
-                        href={item.href}
-                        className="sm-menu-item"
-                        style={styles.menuSecondaryLink}
-                        onClick={() => setMenuOpen(false)}
-                      >
-                        {item.label}
-                      </a>
-                    ))}
-                    <div style={styles.menuPanelDimRow}>
-                      <a href="https://sitemargin.co.za/terms.html" className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => setMenuOpen(false)}>Terms</a>
-                      <a href="https://sitemargin.co.za/privacy.html" className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => setMenuOpen(false)}>Privacy</a>
-                    </div>
-                  </>
-                )}
+                    seven identical-weight links with no hierarchy. On native
+                    these route through openExternalLink (an in-app Custom
+                    Tab overlay) instead of a plain href, which would hijack
+                    the app's own webview out to a separate browser app. */}
+                <div style={styles.menuSectionLabel}>More from SiteMargin</div>
+                {[
+                  { label: "What's inside", href: "https://sitemargin.co.za/whats-inside.html" },
+                  { label: "Pricing", href: "https://sitemargin.co.za/pricing.html" },
+                  { label: "About", href: "https://sitemargin.co.za/about.html" },
+                  { label: "Contact", href: "https://sitemargin.co.za/contact.html" },
+                  { label: "Construction Library", href: "https://sitemargin.co.za/construction-library.html" },
+                ].map((item) => (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    className="sm-menu-item"
+                    style={styles.menuSecondaryLink}
+                    onClick={(e) => {
+                      setMenuOpen(false);
+                      if (Capacitor.isNativePlatform()) { e.preventDefault(); openExternalLink(item.href); }
+                    }}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+                <div style={styles.menuPanelDimRow}>
+                  <a
+                    href="https://sitemargin.co.za/terms.html"
+                    className="sm-menu-item-dim"
+                    style={styles.menuPanelDim}
+                    onClick={(e) => {
+                      setMenuOpen(false);
+                      if (Capacitor.isNativePlatform()) { e.preventDefault(); openExternalLink("https://sitemargin.co.za/terms.html"); }
+                    }}
+                  >
+                    Terms
+                  </a>
+                  <a
+                    href="https://sitemargin.co.za/privacy.html"
+                    className="sm-menu-item-dim"
+                    style={styles.menuPanelDim}
+                    onClick={(e) => {
+                      setMenuOpen(false);
+                      if (Capacitor.isNativePlatform()) { e.preventDefault(); openExternalLink("https://sitemargin.co.za/privacy.html"); }
+                    }}
+                  >
+                    Privacy
+                  </a>
+                </div>
                 <div style={styles.menuFooter}>
                   <div style={styles.menuFooterBrandRow}>
                     <svg style={styles.menuFooterLogoMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
@@ -1527,7 +1548,7 @@ function AuthGate() {
   // "Log in" (marketing site + app menu) links here with ?login=1 so
   // returning users land on a plain sign-in screen instead of the full
   // marketing pitch + pricing grid meant for new sign-ups.
-  const [isLoginIntent] = useState(() => {
+  const [isLoginIntent, setIsLoginIntent] = useState(() => {
     try { return new URLSearchParams(window.location.search).get("login") === "1"; } catch { return false; }
   });
   // Password is an alternative to the magic link, not a replacement — most
@@ -1912,6 +1933,12 @@ function AuthGate() {
                 className="sm-gate-nav-btn"
                 href={isLoginIntent ? "https://app.sitemargin.co.za" : "https://app.sitemargin.co.za/?login=1"}
                 style={styles.gateNavBtn}
+                onClick={(e) => {
+                  if (Capacitor.isNativePlatform()) {
+                    e.preventDefault();
+                    setIsLoginIntent((v) => !v);
+                  }
+                }}
               >
                 {isLoginIntent ? "Sign up" : "Log in"}
               </a>
@@ -1943,14 +1970,18 @@ function AuthGate() {
                       key={item.label}
                       className="sm-menu-item"
                       style={styles.menuPanelLink}
-                      onClick={() => { setGateMenuOpen(false); window.location.href = item.href; }}
+                      onClick={() => {
+                        setGateMenuOpen(false);
+                        if (Capacitor.isNativePlatform()) { openExternalLink(item.href); return; }
+                        window.location.href = item.href;
+                      }}
                     >
                       {item.label}
                     </button>
                   ))}
                   <div style={styles.menuPanelDimRow}>
-                    <button className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => { setGateMenuOpen(false); window.location.href = "https://sitemargin.co.za/terms.html"; }}>Terms</button>
-                    <button className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => { setGateMenuOpen(false); window.location.href = "https://sitemargin.co.za/privacy.html"; }}>Privacy</button>
+                    <button className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => { setGateMenuOpen(false); if (Capacitor.isNativePlatform()) { openExternalLink("https://sitemargin.co.za/terms.html"); return; } window.location.href = "https://sitemargin.co.za/terms.html"; }}>Terms</button>
+                    <button className="sm-menu-item-dim" style={styles.menuPanelDim} onClick={() => { setGateMenuOpen(false); if (Capacitor.isNativePlatform()) { openExternalLink("https://sitemargin.co.za/privacy.html"); return; } window.location.href = "https://sitemargin.co.za/privacy.html"; }}>Privacy</button>
                   </div>
                   <div style={styles.menuFooter}>
                     <div style={styles.menuFooterBrandRow}>
@@ -1966,13 +1997,21 @@ function AuthGate() {
                     <div style={styles.menuPanelActions}>
                       <button
                         style={styles.menuPanelGhost}
-                        onClick={() => { setGateMenuOpen(false); window.location.href = "https://app.sitemargin.co.za/?login=1"; }}
+                        onClick={() => {
+                          setGateMenuOpen(false);
+                          if (Capacitor.isNativePlatform()) { setIsLoginIntent(true); return; }
+                          window.location.href = "https://app.sitemargin.co.za/?login=1";
+                        }}
                       >
                         Log in
                       </button>
                       <button
                         style={styles.menuPanelSolid}
-                        onClick={() => { setGateMenuOpen(false); window.location.href = "https://app.sitemargin.co.za"; }}
+                        onClick={() => {
+                          setGateMenuOpen(false);
+                          if (Capacitor.isNativePlatform()) { setIsLoginIntent(false); return; }
+                          window.location.href = "https://app.sitemargin.co.za";
+                        }}
                       >
                         Sign up free
                       </button>
