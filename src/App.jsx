@@ -2014,13 +2014,19 @@ function AuthGate() {
       <div style={styles.gateWrap}>
         {status === "signedout" && sendState !== "sent" && !isLoginIntent && (
           <div style={styles.heroWrap}>
-            <div style={styles.eyebrow}>COST VARIANCE INTELLIGENCE · FOR SOUTH AFRICAN CONTRACTORS</div>
+            <div style={styles.eyebrow}>COST VARIANCE, LIVE · FOR SOUTH AFRICAN CONTRACTORS</div>
             <h1 style={{ ...styles.dashTitle, margin: "10px 0 14px" }}>
-              Know you're <em style={styles.heroEm}>over budget</em> before your client does.
+              Every rand, accounted for <em style={styles.heroEm}>the moment it moves.</em>
             </h1>
             <p style={styles.heroSub}>
-              Stop finding out about cost overruns at month-end. SiteMargin flags budget risk the moment it
-              happens — built for contractors who don't have time for enterprise QS software.
+              Budget, payments, and progress in one sheet — updated on site, not reconciled at month-end.
+            </p>
+            {/* Mirrors the hero-proof line on sitemargin.co.za's own homepage — kept as static
+                text here (rather than wired to a live count) since this screen ships inside the
+                app bundle and can't fetch a fresh number on load. Update alongside index.html's
+                #customerCount data-count when that figure changes. */}
+            <p style={{ ...styles.gateText, fontSize: 13.5, fontWeight: 600, color: "#6E6E73", marginTop: -14, marginBottom: 26 }}>
+              23 South African contractors already on site
             </p>
 
             <div style={styles.mockSheet}>
@@ -2029,9 +2035,9 @@ function AuthGate() {
                 <span>Tolerance</span>
               </div>
               {[
-                { name: "Concrete & foundations", nums: "R448,000 / R420,000", pct: "+6.7%", fill: 76, color: "#C1462B", bg: "rgba(193,70,43,0.1)", tag: "OVER" },
-                { name: "Plumbing rough-in", nums: "R126,000 / R118,000", pct: "+6.8%", fill: 76, color: "#B8862F", bg: "rgba(184,134,47,0.1)", tag: "WATCH" },
-                { name: "Structural steel", nums: "R298,000 / R310,000", pct: "-3.9%", fill: 68, color: "#4C7A5C", bg: "rgba(76,122,92,0.1)", tag: "ON TRACK" },
+                { name: "Electrical", nums: "R128,000 / R100,000", pct: "+28.0%", fill: 82, color: "#C1462B", bg: "rgba(193,70,43,0.1)", tag: "OVER" },
+                { name: "Plumbing", nums: "R80,000 / R85,200", pct: "-6.1%", fill: 58, color: "#4C7A5C", bg: "rgba(76,122,92,0.1)", tag: "ON TRACK" },
+                { name: "Roofing & Waterproofing", nums: "R80,000 / R92,000", pct: "-13.0%", fill: 50, color: "#4C7A5C", bg: "rgba(76,122,92,0.1)", tag: "ON TRACK" },
               ].map((row) => (
                 <div key={row.name} style={styles.mockRow}>
                   <span style={styles.mockName}>{row.name}</span>
