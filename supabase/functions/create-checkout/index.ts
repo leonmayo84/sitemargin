@@ -1,125 +1,190 @@
 // supabase/functions/create-checkout/index.ts
 //
-// Builds a signed PayFast payment request server-side, where the passphrase
-// can stay secret. The frontend calls this function with { email, tier },
-// and gets back a URL to redirect the user to for PayFast's hosted checkout
-// (which itself offers Apple Pay, Google Pay, cards, and EFT as options).
+// Called from the app when a signed-in user clicks "Subscribe" on a plan.
+// Builds a signed PayFast checkout request, records a pending subscription
+// row so payfast-itn has something to match against once payment completes,
+// and returns the URL the browser should redirect to.
+//
+// The actual activation happens in payfast-itn (server-to-server), never
+// here — this function only ever hands back a redirect URL.
+//
+// NOTE: live host changed from www.payfast.co.za to payment.payfast.io —
+// confirmed via PayFast's own "Generate Pay Now Buttons" tool, whose
+// generated form posts to payment.payfast.io/eng/process.
+//
+// NOTE: this function is called directly via browser fetch() from
+// app.sitemargin.co.za (a different origin than the Supabase functions
+// domain), with a custom Authorization header + JSON content-type — that
+// combination always triggers a CORS preflight (OPTIONS) request. Fixed by
+// adding the same corsHeaders/OPTIONS handling already used in
+// storage-checkout.
 
 import { createHash } from "node:crypto";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { TIERS } from "../_shared/tiers.ts";
 
-const PAYFAST_MERCHANT_ID = Deno.env.get("PAYFAST_MERCHANT_ID")!;
-const PAYFAST_MERCHANT_KEY = Deno.env.get("PAYFAST_MERCHANT_KEY")!;
-const PAYFAST_PASSPHRASE = Deno.env.get("PAYFAST_PASSPHRASE")!;
-const PAYFAST_MODE = Deno.env.get("PAYFAST_MODE") ?? "live"; // "live" | "sandbox"
-const APP_URL = Deno.env.get("APP_URL") ?? "https://app.sitemargin.co.za";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const PAYFAST_MERCHANT_ID = Deno.env.get("PAYFAST_MERCHANT_ID");
+const PAYFAST_MERCHANT_KEY = Deno.env.get("PAYFAST_MERCHANT_KEY");
+const PAYFAST_PASSPHRASE = Deno.env.get("PAYFAST_PASSPHRASE");
+const PAYFAST_MODE = Deno.env.get("PAYFAST_MODE") ?? "live";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const APP_ORIGIN = Deno.env.get("APP_ORIGIN") ?? "https://app.sitemargin.co.za";
 
-// PayFast requires values urlencoded PHP-style (spaces as '+', not %20).
+const PLAN_PRICE: Record<string, string> = {
+  contractor: "199.00",
+  firm: "599.00",
+  homeowner: "899.00",
+};
+const PLAN_NAME: Record<string, string> = {
+  contractor: "SiteMargin — Contractor",
+  firm: "SiteMargin — Firm",
+  homeowner: "SiteMargin — Home Owner",
+};
+// Contractor/Firm are recurring monthly subscriptions; Home Owner is a
+// once-off project purchase (R899/project, per pricing.html) — PayFast
+// treats these very differently: a once-off payment must NOT carry any of
+// the subscription_type/recurring_amount/frequency/cycles/billing_date
+// fields, or PayFast tries to set up recurring billing on a plan that was
+// never meant to repeat.
+const RECURRING_TIERS = new Set(["contractor", "firm"]);
+
 function pfEncode(value: string): string {
   return encodeURIComponent(value).replace(/%20/g, "+");
 }
 
-function buildSignature(fields: [string, string][], passphrase: string): string {
-  const parts = fields
-    .filter(([, v]) => v !== undefined && v !== null && v !== "")
-    .map(([k, v]) => `${k}=${pfEncode(String(v))}`);
+function signFields(fields: Record<string, string>, passphrase: string): string {
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(fields)) {
+    if (value === "" || value === undefined || value === null) continue;
+    parts.push(`${key}=${pfEncode(String(value))}`);
+  }
   const paramString = parts.join("&") + `&passphrase=${pfEncode(passphrase)}`;
   return createHash("md5").update(paramString).digest("hex");
 }
 
 Deno.serve(async (req) => {
-  const cors = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  };
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  if (!PAYFAST_MERCHANT_ID || !PAYFAST_MERCHANT_KEY || !PAYFAST_PASSPHRASE) {
+    console.error("create-checkout: missing PAYFAST_MERCHANT_ID / PAYFAST_MERCHANT_KEY / PAYFAST_PASSPHRASE secret");
+    return new Response(
+      JSON.stringify({ error: "Payments aren't configured yet — contact support." }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 
   try {
-    const { email, tier } = await req.json();
-
-    if (!email || !TIERS[tier]) {
-      return new Response(JSON.stringify({ error: "Missing or invalid email/tier." }), {
-        status: 400,
-        headers: { ...cors, "Content-Type": "application/json" },
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const token = authHeader.replace("Bearer ", "");
+    if (!token) {
+      return new Response(JSON.stringify({ error: "Please sign in again." }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-    // Rate limit: block more than 5 checkout attempts from the same email
-    // within 5 minutes, so this endpoint can't be spammed against PayFast.
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+    if (userErr || !userData?.user?.email) {
+      return new Response(JSON.stringify({ error: "Please sign in again." }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const email = userData.user.email;
+
+    const body = await req.json().catch(() => ({}));
+    const tier = body?.tier;
+    if (!PLAN_PRICE[tier]) {
+      return new Response(JSON.stringify({ error: "Unknown plan selected." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const since = new Date(Date.now() - 60_000).toISOString();
     const { count } = await supabase
       .from("checkout_rate_limits")
       .select("id", { count: "exact", head: true })
       .eq("email", email)
-      .gte("created_at", fiveMinutesAgo);
-
+      .gte("created_at", since);
     if ((count ?? 0) >= 5) {
-      return new Response(JSON.stringify({ error: "Too many checkout attempts — please wait a few minutes and try again." }), {
-        status: 429,
-        headers: { ...cors, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Too many attempts — please wait a moment and try again." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
     await supabase.from("checkout_rate_limits").insert({ email });
 
-    const mPaymentId = `sm_${crypto.randomUUID()}`;
+    const mPaymentId = crypto.randomUUID();
 
-    // Record the pending subscription attempt so the ITN webhook has something to match against.
-    await supabase.from("subscriptions").upsert(
+    const { error: upsertErr } = await supabase.from("subscriptions").upsert(
       {
         email,
         tier,
-        status: "inactive",
+        status: "pending",
         m_payment_id: mPaymentId,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "email" }
     );
+    if (upsertErr) {
+      console.error("create-checkout: failed to record pending subscription", upsertErr);
+      return new Response(JSON.stringify({ error: "Couldn't start checkout — please try again." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const { amount, label, recurring } = TIERS[tier];
+    const host = PAYFAST_MODE === "sandbox" ? "sandbox.payfast.co.za" : "payment.payfast.io";
 
-    // Field order matters for PayFast's signature — this follows their
-    // documented order. The subscription fields (subscription_type onward)
-    // are what turns this into a recurring monthly charge; a once-off tier
-    // (e.g. homeowner) simply omits them and PayFast treats it as a normal
-    // single payment instead.
-    const fields: [string, string][] = [
-      ["merchant_id", PAYFAST_MERCHANT_ID],
-      ["merchant_key", PAYFAST_MERCHANT_KEY],
-      ["return_url", `${APP_URL}/?payment=success`],
-      ["cancel_url", `${APP_URL}/?payment=cancelled`],
-      ["notify_url", `${SUPABASE_URL}/functions/v1/payfast-itn`],
-      ["email_address", email],
-      ["m_payment_id", mPaymentId],
-      ["amount", amount],
-      ["item_name", label],
-      ...(recurring
-        ? ([
-            ["subscription_type", "1"],
-            ["recurring_amount", amount],
-            ["frequency", "3"], // monthly
-            ["cycles", "0"], // 0 = indefinite, until cancelled
-          ] as [string, string][])
-        : []),
-    ];
+    const fields: Record<string, string> = {
+      merchant_id: PAYFAST_MERCHANT_ID,
+      merchant_key: PAYFAST_MERCHANT_KEY,
+      return_url: `${APP_ORIGIN}/?checkout=success`,
+      cancel_url: `${APP_ORIGIN}/?checkout=cancelled`,
+      notify_url: `${SUPABASE_URL}/functions/v1/payfast-itn`,
+      email_address: email,
+      m_payment_id: mPaymentId,
+      amount: PLAN_PRICE[tier],
+      item_name: PLAN_NAME[tier],
+    };
+    if (RECURRING_TIERS.has(tier)) {
+      fields.subscription_type = "1";
+      fields.billing_date = new Date().toISOString().slice(0, 10);
+      fields.recurring_amount = PLAN_PRICE[tier];
+      fields.frequency = "3";
+      fields.cycles = "0";
+    }
 
-    const signature = buildSignature(fields, PAYFAST_PASSPHRASE);
-    const query = fields.map(([k, v]) => `${k}=${pfEncode(v)}`).join("&") + `&signature=${signature}`;
+    const signature = signFields(fields, PAYFAST_PASSPHRASE);
+    const query = new URLSearchParams({ ...fields, signature }).toString();
+    const redirectUrl = `https://${host}/eng/process?${query}`;
 
-    const base = PAYFAST_MODE === "sandbox" ? "https://sandbox.payfast.co.za/eng/process" : "https://www.payfast.co.za/eng/process";
-
-    return new Response(JSON.stringify({ redirectUrl: `${base}?${query}` }), {
-      headers: { ...cors, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ redirectUrl }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("create-checkout error:", err);
-    return new Response(JSON.stringify({ error: "Something went wrong building the checkout." }), {
+    return new Response(JSON.stringify({ error: "Couldn't start checkout — please try again." }), {
       status: 500,
-      headers: { ...cors, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
