@@ -2014,6 +2014,54 @@ function AuthGate() {
       <div style={styles.gateWrap}>
         {status === "signedout" && sendState !== "sent" && !isLoginIntent && (
           <div style={styles.heroWrap}>
+            <svg style={styles.heroBacksplash} viewBox="0 0 1600 600" preserveAspectRatio="xMidYMid slice" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <defs>
+                <pattern id="heroGrain" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+                  <circle cx="4" cy="4" r="1.1" fill="#B9BDC6" opacity="0.5" />
+                </pattern>
+                <pattern id="heroPerforated" x="0" y="0" width="14" height="14" patternUnits="userSpaceOnUse">
+                  <circle cx="7" cy="7" r="2.8" fill="#8B95A5" opacity="0.6" />
+                </pattern>
+                <pattern id="heroIsoGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M 40 0 L 0 20 L 40 40 L 80 20 Z" fill="none" stroke="#B9BDC6" strokeWidth="0.9" />
+                </pattern>
+                <linearGradient id="heroConcreteGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#EDEDF1" stopOpacity="0.95" />
+                  <stop offset="100%" stopColor="#DFDFE5" stopOpacity="0.65" />
+                </linearGradient>
+              </defs>
+              <rect x="0" y="0" width="1600" height="600" fill="#F5F5F7" />
+              <polygon points="0,0 860,150 680,600 0,600" fill="url(#heroConcreteGrad)" />
+              <polygon points="0,0 860,150 680,600 0,600" fill="url(#heroGrain)" />
+              <g stroke="#8B95A5" strokeWidth="1.7" opacity="0.6" fill="none">
+                <path d="M 700 0 Q 960 55 1600 5" />
+                <path d="M 730 0 Q 1000 85 1600 40" />
+                <path d="M 770 0 Q 1030 115 1600 75" />
+                <path d="M 810 0 Q 1060 145 1600 110" />
+                <path d="M 860 0 Q 1090 175 1600 145" />
+                <path d="M 910 0 Q 1120 205 1600 180" />
+                <path d="M 970 0 Q 1155 235 1600 220" />
+                <path d="M 1040 0 Q 1195 265 1600 260" />
+                <path d="M 1120 0 Q 1240 300 1600 300" />
+                <path d="M 1210 0 Q 1290 335 1600 340" />
+              </g>
+              <polygon points="760,0 1600,0 1600,320" fill="#F5F5F7" opacity="0.55" />
+              <polygon points="960,150 1600,280 1600,600 800,600" fill="url(#heroPerforated)" />
+              <g opacity="0.8">
+                <polygon points="380,600 1050,360 1600,500 1600,600" fill="url(#heroIsoGrid)" />
+                <g stroke="#1D5C8A" strokeWidth="1.8" fill="none" opacity="0.6">
+                  <path d="M 1160 470 L 1220 446 L 1280 470 L 1220 494 Z" />
+                  <path d="M 1160 470 L 1160 512 L 1220 536 L 1220 494" />
+                  <path d="M 1280 470 L 1280 512 L 1220 536" />
+                  <path d="M 1178 429 L 1220 412 L 1262 429 L 1220 446 Z" />
+                  <path d="M 1178 429 L 1178 459 L 1220 476 L 1220 446" />
+                  <path d="M 1262 429 L 1262 459 L 1220 476" />
+                  <path d="M 1178 405 L 1268 358 L 1268 333 L 1178 380 Z" />
+                  <path d="M 1220 412 L 1220 388" />
+                </g>
+              </g>
+            </svg>
+            <div style={styles.heroContent}>
             <div style={styles.eyebrow}>COST VARIANCE, LIVE</div>
             <h1 style={{ ...styles.dashTitle, margin: "10px 0 14px" }}>
               Every rand, accounted for <em style={styles.heroEm}>the moment it moves.</em>
@@ -2070,6 +2118,7 @@ function AuthGate() {
                 <span style={styles.heroBadgeDot} />
                 PO approved
               </div>
+            </div>
             </div>
           </div>
         )}
@@ -6069,7 +6118,9 @@ const styles = {
   gateNavActions: { display: "flex", alignItems: "center", gap: 10 },
   gateNavBtn: { fontSize: 13.5, fontWeight: 600, color: "#FFFFFF", textDecoration: "none", whiteSpace: "nowrap", background: "#1D5C8A", padding: "8px 16px", borderRadius: 100, display: "inline-block" },
   gateWrap: { maxWidth: 640, margin: "48px auto 0", padding: "0 16px" },
-  heroWrap: { marginBottom: 36, paddingBottom: 32, borderBottom: "1px solid #E8E8ED" },
+  heroWrap: { position: "relative", isolation: "isolate", overflow: "hidden", borderRadius: 24, background: "#F5F5F7", padding: "30px 20px 34px", marginBottom: 36 },
+  heroBacksplash: { position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 0, pointerEvents: "none" },
+  heroContent: { position: "relative", zIndex: 1 },
   heroEm: { fontStyle: "normal", color: "#1D5C8A" },
   heroSub: { fontSize: 16, color: "#4A4A4F", lineHeight: 1.6, marginBottom: 26 },
   heroCtas: { display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", margin: "6px 0 20px" },
