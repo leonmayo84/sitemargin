@@ -13,20 +13,24 @@ public class MainActivity extends BridgeActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
-    // Android 15+ (targetSdk 35+) makes edge-to-edge display mandatory by
-    // default — the WebView draws its content underneath the system status
-    // bar and any camera cutout instead of the system reserving its own
-    // space above it. setDecorFitsSystemWindows(true) alone was supposed to
-    // opt the whole window back out of edge-to-edge, and it did fix the
-    // app's own locally-bundled screens (the AuthGate hero) — but marketing
-    // pages loaded into the same WebView via allowNavigation (About,
-    // Pricing, etc.) kept showing the header colliding with the real status
-    // bar clock/camera cutout. Belt and suspenders: also apply the system
-    // bar insets as explicit padding directly on the WebView itself, so the
-    // reserved space doesn't depend on the framework's automatic
-    // fit-system-windows behavior being honored consistently across every
-    // page/navigation state — it's now enforced natively regardless of
-    // what URL is currently loaded inside the WebView.
+    // FOUND (2026-08-28): the real cause of the header/status-bar overlap on
+    // marketing pages (About, Pricing, etc. loaded cross-origin into this
+    // same WebView) was Capacitor's own built-in SystemBars core plugin
+    // (@capacitor/android, auto-registered — no separate install needed).
+    // By default it installs its own OnApplyWindowInsetsListener on the
+    // WebView's parent, and in its default "css" insets mode it (a) zeroes
+    // out the systemBars/displayCutout insets before they propagate to any
+    // child listener — including the one below, which is why it had zero
+    // effect no matter what it did — and (b) injects a `--safe-area-inset-*`
+    // CSS custom property into whatever document is currently loaded,
+    // expecting THAT PAGE's own CSS to consume it as padding. Our own
+    // bundled screens happened to look fine; sitemargin.co.za's marketing
+    // pages have no idea this convention exists, so their sticky navbar
+    // sits flush against the real top of the WebView every time.
+    // capacitor.config.json now sets SystemBars.insetsHandling to
+    // "disable", which turns off that competing listener entirely so the
+    // listener below is the only thing touching insets, for every page
+    // regardless of origin.
     WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
 
     WebView webView = getBridge().getWebView();
