@@ -2014,52 +2014,62 @@ function AuthGate() {
       <div style={styles.gateWrap}>
         {status === "signedout" && sendState !== "sent" && !isLoginIntent && (
           <div style={styles.heroWrap}>
-            <div style={styles.eyebrow}>COST VARIANCE, LIVE · FOR SOUTH AFRICAN CONTRACTORS</div>
+            <div style={styles.eyebrow}>COST VARIANCE, LIVE</div>
             <h1 style={{ ...styles.dashTitle, margin: "10px 0 14px" }}>
               Every rand, accounted for <em style={styles.heroEm}>the moment it moves.</em>
             </h1>
             <p style={styles.heroSub}>
               Budget, payments, and progress in one sheet — updated on site, not reconciled at month-end.
             </p>
+
+            <div style={styles.heroCtas}>
+              <button
+                type="button"
+                style={styles.heroBtnPrimary}
+                onClick={() => {
+                  emailInputRef.current?.focus();
+                  emailInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }}
+              >
+                Start your first project
+              </button>
+              <button
+                type="button"
+                style={styles.heroTextlink}
+                onClick={() => { window.location.href = "https://sitemargin.co.za/whats-inside.html"; }}
+              >
+                See it in 90 seconds ›
+              </button>
+            </div>
+
             {/* Mirrors the hero-proof line on sitemargin.co.za's own homepage — kept as static
                 text here (rather than wired to a live count) since this screen ships inside the
                 app bundle and can't fetch a fresh number on load. Update alongside index.html's
                 #customerCount data-count when that figure changes. */}
-            <p style={{ ...styles.gateText, fontSize: 13.5, fontWeight: 600, color: "#6E6E73", marginTop: -14, marginBottom: 26 }}>
-              23 South African contractors already on site
+            <p style={styles.heroProof}>
+              <span style={styles.heroProofCount}>23</span>
+              <span>South African contractors already on site</span>
             </p>
 
-            <div style={styles.mockSheet}>
-              <div style={styles.mockHead}>
-                <span>Line item</span>
-                <span>Tolerance</span>
-              </div>
-              {[
-                { name: "Electrical", nums: "R128,000 / R100,000", pct: "+28.0%", fill: 82, color: "#C1462B", bg: "rgba(193,70,43,0.1)", tag: "OVER" },
-                { name: "Plumbing", nums: "R80,000 / R85,200", pct: "-6.1%", fill: 58, color: "#4C7A5C", bg: "rgba(76,122,92,0.1)", tag: "ON TRACK" },
-                { name: "Roofing & Waterproofing", nums: "R80,000 / R92,000", pct: "-13.0%", fill: 50, color: "#4C7A5C", bg: "rgba(76,122,92,0.1)", tag: "ON TRACK" },
-              ].map((row) => (
-                <div key={row.name} style={styles.mockRow}>
-                  <span style={styles.mockName}>{row.name}</span>
-                  <span style={styles.mockNums}>{row.nums}</span>
-                  <span style={styles.mockGauge}>
-                    <div style={styles.gaugeTrack}>
-                      <div style={{ ...styles.gaugeFill, width: `${row.fill}%`, background: row.color }} />
+            <div style={styles.heroVisualWrap}>
+              <div style={styles.heroDiamondWrapper}>
+                <div style={styles.heroDiamondRing}>
+                  <div style={styles.heroDiamond}>
+                    <div style={styles.heroDiamondInner}>
+                      <div style={styles.heroDiamondFigure}>R870,000</div>
+                      <div style={styles.heroDiamondLabel}>Under budget</div>
                     </div>
-                    <span style={{ ...styles.gaugeLabel, color: row.color }}>{row.pct}</span>
-                  </span>
-                  <span style={{ ...styles.pill, color: row.color, background: row.bg }}>{row.tag}</span>
+                  </div>
                 </div>
-              ))}
-            </div>
-
-            <div style={styles.problemBlock}>
-              <div style={styles.pricingHead}>The problem</div>
-              <p style={{ ...styles.gateText, marginBottom: 0 }}>
-                Most overruns are visible weeks before anyone notices them. The number that gives it away isn't
-                the budget — it's the gap between money spent and work actually done. SiteMargin watches that gap
-                on every line item and tells you the moment it opens up.
-              </p>
+              </div>
+              <div style={{ ...styles.heroBadge, ...styles.heroBadgeTop }}>
+                <span style={styles.heroBadgeDot} />
+                Retention released
+              </div>
+              <div style={{ ...styles.heroBadge, ...styles.heroBadgeBottom }}>
+                <span style={styles.heroBadgeDot} />
+                PO approved
+              </div>
             </div>
           </div>
         )}
@@ -6062,6 +6072,22 @@ const styles = {
   heroWrap: { marginBottom: 36, paddingBottom: 32, borderBottom: "1px solid #E8E8ED" },
   heroEm: { fontStyle: "normal", color: "#1D5C8A" },
   heroSub: { fontSize: 16, color: "#4A4A4F", lineHeight: 1.6, marginBottom: 26 },
+  heroCtas: { display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", margin: "6px 0 20px" },
+  heroBtnPrimary: { background: "#1D5C8A", color: "#FFFFFF", fontWeight: 600, fontSize: 15, padding: "12px 24px", borderRadius: 100, border: "none", cursor: "pointer" },
+  heroTextlink: { fontSize: 15, fontWeight: 500, color: "#1D5C8A", background: "none", border: "none", padding: 0, cursor: "pointer" },
+  heroProof: { display: "flex", alignItems: "baseline", gap: 7, fontSize: 13.5, color: "#6E6E73", marginBottom: 30 },
+  heroProofCount: { fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, fontSize: 15.5, color: "#1D1D1F" },
+  heroVisualWrap: { position: "relative", height: 260, display: "flex", alignItems: "center", justifyContent: "center", margin: "4px 0 8px" },
+  heroDiamondWrapper: { position: "relative", zIndex: 1, display: "inline-flex", padding: 15, borderRadius: 50, background: "linear-gradient(150deg, #23272E 0%, #14171C 52%, #090B0E 100%)", transform: "rotate(45deg)", boxShadow: "17px 17px 30px -10px rgba(2,6,23,0.5), 10px 10px 18px -8px rgba(2,6,23,0.3), inset 0 1px 1px rgba(255,255,255,0.14)" },
+  heroDiamondRing: { display: "flex", padding: 5, borderRadius: 36, background: "linear-gradient(135deg, #CFFAFE 0%, #22D3EE 20%, #06B6D4 42%, #10B981 66%, #22C55E 84%, #86EFAC 100%)", boxShadow: "0 0 5px rgba(207,250,254,0.45)" },
+  heroDiamond: { width: 160, height: 160, background: "linear-gradient(150deg, #333740 0%, #272B32 45%, #1B1E24 100%)", borderRadius: 32, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "inset 0 1px 1px rgba(255,255,255,0.08), inset 0 -16px 34px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.5)" },
+  heroDiamondInner: { transform: "rotate(-45deg)", textAlign: "center" },
+  heroDiamondFigure: { fontWeight: 700, fontSize: 25, letterSpacing: "-0.7px", color: "#F2F6F9", whiteSpace: "nowrap", textShadow: "0 2px 18px rgba(34,211,238,0.28)" },
+  heroDiamondLabel: { fontSize: 10, fontWeight: 500, letterSpacing: "0.13em", color: "#AEB6BE", marginTop: 6, textTransform: "uppercase" },
+  heroBadge: { position: "absolute", zIndex: 1, display: "flex", alignItems: "center", gap: 7, background: "#FFFFFF", borderRadius: 100, padding: "9px 14px 9px 12px", fontSize: 12.5, fontWeight: 600, color: "#1D1D1F", boxShadow: "0 12px 28px rgba(0,0,0,0.12)" },
+  heroBadgeDot: { width: 7, height: 7, borderRadius: "50%", background: "#4C7A5C", flexShrink: 0 },
+  heroBadgeTop: { top: 4, left: "8%" },
+  heroBadgeBottom: { bottom: 20, right: "4%" },
   mockSheet: { background: "#FFFFFF", borderRadius: 18, padding: "16px 18px", boxShadow: "0 12px 34px rgba(0,0,0,0.08)", marginBottom: 28 },
   mockHead: { display: "flex", justifyContent: "space-between", fontSize: 11, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase", fontWeight: 600, paddingBottom: 10, marginBottom: 10, borderBottom: "1px solid #F2F2F5" },
   mockRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 0", borderBottom: "1px solid #F2F2F5", flexWrap: "wrap" },
