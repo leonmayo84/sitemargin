@@ -6003,6 +6003,15 @@ const styles = {
   // nor the drawer, so the pointer loses :hover crossing it and the drawer
   // snaps shut before it can be reached. No maxHeight/overflow either: the
   // drawer just sizes to its content so it never scrolls internally.
+  // FIX (2026-08-28): this drawer combined borderRadius + boxShadow + a
+  // transform (translateY + scale) on the open/close toggle — the exact
+  // same combination that corrupted sitemargin-site's own .menu-panel on
+  // software-rendered WebViews (GPU layer promoted for the transform,
+  // rasterised wrong against the radius+shadow). That fix dropped the
+  // transform there; this drawer never got the same treatment since it's a
+  // separate implementation (native app menu vs. the marketing site's own
+  // CSS) — bringing it in line here. Opacity/visibility-only fade, no
+  // transform, so no GPU layer promotion.
   menuDrawer: {
     position: "absolute", top: "100%", right: 0,
     width: "min(320px, 86vw)",
@@ -6011,11 +6020,10 @@ const styles = {
     zIndex: 200,
     display: "flex", flexDirection: "column",
     padding: "20px 20px 18px",
-    transformOrigin: "top right",
-    transform: "translateY(-6px) scale(0.97)", opacity: 0, visibility: "hidden", pointerEvents: "none",
-    transition: "transform 0.2s ease, opacity 0.16s ease",
+    opacity: 0, visibility: "hidden", pointerEvents: "none",
+    transition: "opacity 0.16s ease",
   },
-  menuDrawerOpen: { transform: "translateY(0) scale(1)", opacity: 1, visibility: "visible", pointerEvents: "auto" },
+  menuDrawerOpen: { opacity: 1, visibility: "visible", pointerEvents: "auto" },
   menuPanelInner: { width: "100%" },
   menuPanelLink: { display: "block", width: "calc(100% + 20px)", textAlign: "left", background: "none", fontSize: 17, fontWeight: 700, letterSpacing: "-0.01em", color: "#1D1D1F", border: "none", borderRadius: 10, padding: "7px 10px", margin: "0 -10px", cursor: "pointer", textDecoration: "none" },
   menuPanelLinkActive: { color: "#1D5C8A" },
