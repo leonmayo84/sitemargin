@@ -172,6 +172,7 @@ const MODULE_COLOR = {
   payments: { solid: "#3F8A5D", tint: "rgba(63,138,93,0.09)", banner: "#EAF3EE" },      // payments
   plans: { solid: "#2E8C82", tint: "rgba(46,140,130,0.09)", banner: "#E7F3F2" },        // plans
   changeorders: { solid: "#C6902E", tint: "rgba(198,144,46,0.09)", banner: "#FBF3E5" }, // change orders
+  clientreports: { solid: "#20344A", tint: "rgba(32,52,74,0.09)", banner: "#EAEEF2" }, // client reports
 };
 
 // Per-module copy + decorative artwork for ModuleBanner — the icon and
@@ -1697,15 +1698,38 @@ function AuthGate() {
     return window.location.hostname === "localhost" ? window.location.origin : PROD_ORIGIN;
   }
 
+  // supabase-js issues these auth calls with no built-in request timeout.
+  // On a mobile connection that stalls mid-request (backgrounded app,
+  // cellular handoff, dropped Wi-Fi) the underlying fetch can go quiet
+  // without ever resolving OR rejecting, and none of the handlers below
+  // had a catch -- so a stalled request left the button stuck reading
+  // "Logging in..."/"Sending..." forever, with no way out but reloading.
+  // This races the real call against a timeout and normalizes a thrown
+  // network error into the same { error } shape the handlers already
+  // expect, so every path -- success, real error, or silent hang --
+  // resolves the loading state.
+  const AUTH_TIMEOUT_MS = 15000;
+  function withAuthTimeout(promise) {
+    return Promise.race([
+      promise,
+      new Promise((resolve) =>
+        setTimeout(
+          () => resolve({ error: { message: "That's taking too long — check your connection and try again." } }),
+          AUTH_TIMEOUT_MS
+        )
+      ),
+    ]).catch((err) => ({ error: { message: err?.message || "Something went wrong — please try again." } }));
+  }
+
   async function sendMagicLink(e) {
     e.preventDefault();
     if (!email.trim()) return;
     setSendState("sending");
     setErrorMsg("");
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await withAuthTimeout(supabase.auth.signInWithOtp({
       email: email.trim(),
       options: { emailRedirectTo: authRedirectOrigin() },
-    });
+    }));
     if (error) {
       setSendState("error");
       setErrorMsg(error.message);
@@ -1725,7 +1749,7 @@ function AuthGate() {
     setPasswordState("sending");
     setErrorMsg("");
     if (isLoginIntent) {
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      const { error } = await withAuthTimeout(supabase.auth.signInWithPassword({ email: email.trim(), password }));
       if (error) {
         setPasswordState("error");
         setErrorMsg(error.message);
@@ -1733,11 +1757,11 @@ function AuthGate() {
       // On success the onAuthStateChange listener above picks up the new
       // session and checkAccess() takes it from here — nothing more to do.
     } else {
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await withAuthTimeout(supabase.auth.signUp({
         email: email.trim(),
         password,
         options: { emailRedirectTo: authRedirectOrigin() },
-      });
+      }));
       if (error) {
         setPasswordState("error");
         setErrorMsg(error.message);
@@ -1759,9 +1783,9 @@ function AuthGate() {
     }
     setForgotState("sending");
     setErrorMsg("");
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    const { error } = await withAuthTimeout(supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: `${authRedirectOrigin()}/?login=1`,
-    });
+    }));
     if (error) {
       setForgotState("error");
       setErrorMsg(error.message);
@@ -1779,7 +1803,7 @@ function AuthGate() {
     }
     setResetState("saving");
     setErrorMsg("");
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    const { error } = await withAuthTimeout(supabase.auth.updateUser({ password: newPassword }));
     if (error) {
       setResetState("error");
       setErrorMsg(error.message);
@@ -3967,6 +3991,55 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const [docLineItemId, setDocLineItemId] = useState("");
   const documentsInputRef = useRef(null);
   const DOC_CATEGORIES = ["Drawings", "Contracts", "Specifications", "Photos", "Correspondence", "Other"];
+  // Client Reports: a per-project saved configuration (which sections show,
+  // a note, recipients, and an optional recurring schedule) plus the ability
+  // to email it now or put it on a schedule. See report_profiles/report_sends
+  // — at most one saved profile per project for now (the most recently
+  // updated one loads below), rather than letting a project accumulate many.
+  const [reportProfile, setReportProfile] = useState(null);
+  const [reportSections, setReportSections] = useState({
+    cost_summary: true,
+    change_orders: true,
+    schedule: true,
+    trend: true,
+    payments: false,
+    purchase_orders: false,
+    documents: false,
+    subcontractors: false,
+  });
+  const [reportNote, setReportNote] = useState("");
+  const [reportRecipients, setReportRecipients] = useState([]);
+  const [reportRecipientDraft, setReportRecipientDraft] = useState("");
+  const [reportFrequency, setReportFrequency] = useState("none"); // none | weekly | monthly
+  const [reportSendDay, setReportSendDay] = useState(1); // weekly: 0(Sun)-6(Sat); monthly: 1-28
+  const [reportSaving, setReportSaving] = useState(false);
+  const [reportSending, setReportSending] = useState(false);
+  const [reportMessage, setReportMessage] = useState(null);
+
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("report_profiles")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setReportProfile(data);
+      setReportSections((prev) => ({ ...prev, ...(data.sections || {}) }));
+      setReportNote(data.note || "");
+      setReportRecipients(data.recipients || []);
+      setReportFrequency(data.frequency || "none");
+      setReportSendDay(data.send_day ?? 1);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
   const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
   const downloadMenuRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -4763,6 +4836,101 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     await supabase.from("snapshots").delete().eq("id", id);
   }
 
+  function reportRecipientList() {
+    const list = [...reportRecipients];
+    const draft = reportRecipientDraft.trim();
+    if (draft && !list.includes(draft)) list.push(draft);
+    return list;
+  }
+
+  function addReportRecipient() {
+    const email = reportRecipientDraft.trim().replace(/,$/, "");
+    if (email && !reportRecipients.includes(email)) setReportRecipients((r) => [...r, email]);
+    setReportRecipientDraft("");
+  }
+
+  // Deliberately simple: weekly always lands on the next occurrence of
+  // send_day (never today, even if today matches, to avoid an ambiguous
+  // "did today's send already go out" edge case); monthly clamps the day to
+  // 1-28 so every month has that date, sidestepping Feb/30-day-month
+  // handling entirely rather than getting it subtly wrong. The schedule
+  // runner (see the send-client-report / run-due-reports edge functions)
+  // recomputes next_send_at the same way after every actual send, so this
+  // approximation never drifts — it just re-derives from "now" each time.
+  function computeNextSendAt(frequency, sendDay) {
+    if (frequency === "none") return null;
+    const next = new Date();
+    next.setHours(8, 0, 0, 0);
+    if (frequency === "weekly") {
+      const targetDow = Number(sendDay) || 0;
+      const daysUntil = (targetDow - next.getDay() + 7) % 7;
+      next.setDate(next.getDate() + (daysUntil === 0 ? 7 : daysUntil));
+    } else {
+      const targetDom = Math.min(Math.max(Number(sendDay) || 1, 1), 28);
+      next.setDate(1);
+      next.setMonth(next.getMonth() + 1);
+      next.setDate(targetDom);
+    }
+    return next.toISOString();
+  }
+
+  async function saveReportProfile() {
+    setReportSaving(true);
+    const recipients = reportRecipientList();
+    const payload = {
+      project_id: projectId,
+      name: "Client Report",
+      sections: reportSections,
+      note: reportNote,
+      recipients,
+      frequency: reportFrequency,
+      send_day: reportFrequency === "none" ? null : reportSendDay,
+      next_send_at: computeNextSendAt(reportFrequency, reportSendDay),
+      updated_at: new Date().toISOString(),
+    };
+    const { data, error } = reportProfile
+      ? await supabase.from("report_profiles").update(payload).eq("id", reportProfile.id).select().single()
+      : await supabase.from("report_profiles").insert(payload).select().single();
+    setReportSaving(false);
+    if (error || !data) {
+      setReportMessage({ type: "error", text: "Couldn't save that — please try again." });
+    } else {
+      setReportProfile(data);
+      setReportRecipients(recipients);
+      setReportRecipientDraft("");
+      setReportMessage({ type: "success", text: "Report profile saved." });
+    }
+    setTimeout(() => setReportMessage(null), 6000);
+  }
+
+  async function sendReportNow() {
+    const recipients = reportRecipientList();
+    if (!recipients.length) {
+      setReportMessage({ type: "error", text: "Add at least one recipient email first." });
+      setTimeout(() => setReportMessage(null), 6000);
+      return;
+    }
+    setReportSending(true);
+    const { error } = await supabase.functions.invoke("send-client-report", {
+      body: {
+        project_id: projectId,
+        recipients,
+        sections: reportSections,
+        note: reportNote,
+        report_profile_id: reportProfile?.id ?? null,
+      },
+    });
+    setReportSending(false);
+    if (error) {
+      setReportMessage({ type: "error", text: "Couldn't send that report — please try again." });
+    } else {
+      setReportRecipients(recipients);
+      setReportRecipientDraft("");
+      setReportMessage({ type: "success", text: `Report sent to ${recipients.join(", ")}.` });
+    }
+    setTimeout(() => setReportMessage(null), 6000);
+  }
+
   if (!loaded || !project) {
     return (
       <div style={styles.page}>
@@ -4934,6 +5102,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             ["payments", "Payments & Retention"],
             ["charts", "Charts"],
             ["trend", "Trend"],
+            ["clientreports", "Client Reports"],
           ].map(([key, label]) => {
             const mc = MODULE_COLOR[key];
             const active = view === key;
@@ -5887,6 +6056,359 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         </div>
       )}
 
+      {view === "clientreports" && (() => {
+        const categoryTotals = {};
+        items.forEach((i) => {
+          const cat = i.category || "Other";
+          if (!categoryTotals[cat]) categoryTotals[cat] = { budget: 0, actual: 0 };
+          categoryTotals[cat].budget += Number(i.budget || 0);
+          categoryTotals[cat].actual += Number(i.actual || 0);
+        });
+        const categoryRows = Object.entries(categoryTotals).sort((a, b) => b[1].budget - a[1].budget);
+        const coRows = changeOrders.filter((co) => co.status !== "rejected");
+        const scheduleOverallPct = scheduleTasks.length
+          ? scheduleTasks.reduce((s, t) => s + Number(t.percent_complete || 0), 0) / scheduleTasks.length
+          : 0;
+        const currentPhase = [...scheduleTasks]
+          .filter((t) => Number(t.percent_complete || 0) < 100)
+          .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))[0];
+        const reportDate = new Date().toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" });
+
+        return (
+        <div style={{ display: "flex", gap: 20, alignItems: "flex-start", maxWidth: 1180, margin: "0 auto" }}>
+
+          {/* Preview — what the client will actually see */}
+          <div className="card" style={{ flex: 1.6, background: "#FFFFFF", borderRadius: 18, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+            <div style={{ background: "#20344A", padding: "36px 36px 30px", color: "#fff" }}>
+              <svg width="26" height="26" viewBox="0 0 48 48" style={{ marginBottom: 18 }}>
+                <rect x="4" y="8" width="28" height="8" fill="#fff" opacity="0.9" />
+                <rect x="34" y="8" width="10" height="8" fill="#fff" opacity="0.5" />
+                <rect x="4" y="20" width="40" height="8" fill="#fff" opacity="0.9" />
+                <rect x="4" y="32" width="40" height="8" fill="#fff" opacity="0.9" />
+              </svg>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 28, fontWeight: 700, lineHeight: 1.15 }}>{project.name}</div>
+              <div style={{ fontSize: 13.5, opacity: 0.75, marginTop: 8 }}>
+                {project.client_name ? `Client Report — prepared for ${project.client_name} · ${reportDate}` : `Client Report · ${reportDate}`}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", padding: "30px 36px", borderBottom: "1px solid #E8E8ED" }}>
+              <div style={{ flex: 1, paddingRight: 20 }}>
+                <div style={{ fontSize: 11, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.06em" }}>Budget</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 600, marginTop: 4 }}>{fmt(totals.revisedBudget)}</div>
+              </div>
+              <div style={{ width: 1, background: "#E8E8ED" }} />
+              <div style={{ flex: 1, padding: "0 20px" }}>
+                <div style={{ fontSize: 11, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.06em" }}>Actual to date</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 600, marginTop: 4 }}>{fmt(totals.actual)}</div>
+              </div>
+              <div style={{ width: 1, background: "#E8E8ED" }} />
+              <div style={{ flex: 1, paddingLeft: 20 }}>
+                <div style={{ fontSize: 11, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.06em" }}>Variance</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 600, marginTop: 4, color: totals.variance > 0 ? "#C1462B" : "#4C7A5C" }}>
+                  {totals.variance >= 0 ? "+" : ""}{fmt(totals.variance)}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: "8px 36px 30px" }}>
+              {reportSections.cost_summary && (
+                <>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "20px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Cost Summary by Category</div>
+                  {categoryRows.length === 0 ? (
+                    <div style={{ fontSize: 13, color: "#6E6E73", padding: "6px 0" }}>No line items yet.</div>
+                  ) : (
+                    <>
+                      <div style={{ textAlign: "right", fontSize: 10.5, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.04em", padding: "4px 0 2px" }}>Actual / Budget</div>
+                      {categoryRows.map(([cat, t]) => (
+                        <div key={cat} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}>
+                          <span>{cat}</span>
+                          <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(t.actual)} / {fmt(t.budget)}</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </>
+              )}
+
+              {reportSections.change_orders && (
+                <>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Change Orders</div>
+                  {coRows.length === 0 ? (
+                    <div style={{ fontSize: 13, color: "#6E6E73", padding: "6px 0" }}>No change orders logged.</div>
+                  ) : (
+                    coRows.map((co) => (
+                      <div key={co.id} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}>
+                        <span>{co.description} — {co.status}</span>
+                        <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{Number(co.amount) >= 0 ? "+" : ""}{fmt(co.amount)}</span>
+                      </div>
+                    ))
+                  )}
+                </>
+              )}
+
+              {reportSections.schedule && (
+                <>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Schedule Progress</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13.5, marginBottom: 8 }}>
+                    <span style={{ width: 130 }}>Overall</span>
+                    <div style={{ flex: 1, height: 3, background: "#F2F2F5" }}><div style={{ width: `${Math.min(100, scheduleOverallPct)}%`, height: "100%", background: "#20344A" }} /></div>
+                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", width: 36, textAlign: "right" }}>{Math.round(scheduleOverallPct)}%</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13.5, color: "#6E6E73" }}>
+                    <span style={{ width: 130 }}>Current phase</span>
+                    <span>{currentPhase ? currentPhase.name : "All tasks complete"}</span>
+                  </div>
+                </>
+              )}
+
+              {reportSections.trend && (
+                <>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Cost Trend</div>
+                  {snapshots.length === 0 ? (
+                    <div style={{ fontSize: 13, color: "#6E6E73", padding: "6px 0" }}>No snapshots logged yet — log one from the Trend tab.</div>
+                  ) : (
+                    <TrendChart snapshots={snapshots} />
+                  )}
+                </>
+              )}
+
+              {reportSections.payments && (
+                <>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Payments &amp; Retention</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}><span>Claimed to date</span><span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.claimed)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}><span>Certified to date</span><span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.certified)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}><span>Retention held ({totals.retentionPct}%)</span><span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.retentionHeld)}</span></div>
+                </>
+              )}
+
+              {reportSections.purchase_orders && (
+                <>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Purchase Orders</div>
+                  {purchaseOrders.length === 0 ? (
+                    <div style={{ fontSize: 13, color: "#6E6E73", padding: "6px 0" }}>No purchase orders yet.</div>
+                  ) : (
+                    purchaseOrders.map((po) => (
+                      <div key={po.id} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}>
+                        <span>{po.supplier_name} — {po.status}</span>
+                        <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(po.amount)}</span>
+                      </div>
+                    ))
+                  )}
+                </>
+              )}
+
+              {reportSections.documents && (
+                <>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Documents Shared</div>
+                  {documents.length === 0 ? (
+                    <div style={{ fontSize: 13, color: "#6E6E73", padding: "6px 0" }}>No documents uploaded yet.</div>
+                  ) : (
+                    documents.map((d) => (
+                      <div key={d.id} style={{ padding: "7px 0", fontSize: 13.5 }}>{d.name}</div>
+                    ))
+                  )}
+                </>
+              )}
+
+              {reportSections.subcontractors && (
+                <>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Subcontractors</div>
+                  {subs.length === 0 ? (
+                    <div style={{ fontSize: 13, color: "#6E6E73", padding: "6px 0" }}>None added yet.</div>
+                  ) : (
+                    subs.map((s) => (
+                      <div key={s.id} style={{ padding: "7px 0", fontSize: 13.5 }}>{s.name}{s.trade ? ` — ${s.trade}` : ""}</div>
+                    ))
+                  )}
+                </>
+              )}
+
+              {reportNote.trim() && (
+                <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid #E8E8ED", fontSize: 13.5, lineHeight: 1.65, fontStyle: "italic", color: "#3A3A3D" }}>
+                  "{reportNote}"
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: "16px 36px", borderTop: "1px solid #E8E8ED", display: "flex", justifyContent: "space-between", fontSize: 11, color: "#6E6E73" }}>
+              <span>site<span style={{ color: "#1D5C8A" }}>Margin</span> — Client report for {project.name}</span>
+              <span>Generated {reportDate}</span>
+            </div>
+          </div>
+
+          {/* Panel — sections, note, save/send/schedule */}
+          <div className="no-print" style={{ width: 340, flexShrink: 0, background: "#FFFFFF", borderRadius: 18, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: 22, position: "sticky", top: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Report sections</div>
+              <button
+                onClick={() => window.print()}
+                style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "1px solid #E8E8ED", borderRadius: 100, padding: "5px 11px", fontSize: 12, fontWeight: 600, color: "#1D1D1F", cursor: "pointer" }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 6 2 18 2 18 9" />
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                  <rect x="6" y="14" width="12" height="8" />
+                </svg>
+                Print
+              </button>
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Always included</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0" }}>
+              <input type="checkbox" checked disabled style={{ width: 18, height: 18 }} />
+              <span style={{ fontSize: 13, color: "#6E6E73" }}>Project &amp; cost headline</span>
+            </div>
+
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.04em", margin: "14px 0 8px" }}>Recommended</div>
+            {[
+              ["cost_summary", "Cost summary by category"],
+              ["change_orders", "Change orders"],
+              ["schedule", "Schedule progress"],
+              ["trend", "Cost trend"],
+            ].map(([key, label]) => (
+              <label key={key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={!!reportSections[key]}
+                  onChange={() => setReportSections((s) => ({ ...s, [key]: !s[key] }))}
+                  style={{ width: 18, height: 18, accentColor: "#20344A" }}
+                />
+                <span style={{ fontSize: 13 }}>{label}</span>
+              </label>
+            ))}
+
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.04em", margin: "14px 0 8px" }}>Optional</div>
+            {[
+              ["payments", "Payments & retention detail"],
+              ["purchase_orders", "Purchase orders"],
+              ["documents", "Documents shared"],
+              ["subcontractors", "Subcontractors (name & trade)"],
+            ].map(([key, label]) => (
+              <label key={key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={!!reportSections[key]}
+                  onChange={() => setReportSections((s) => ({ ...s, [key]: !s[key] }))}
+                  style={{ width: 18, height: 18, accentColor: "#20344A" }}
+                />
+                <span style={{ fontSize: 13, color: "#6E6E73" }}>{label}</span>
+              </label>
+            ))}
+
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.04em", margin: "16px 0 8px" }}>Note to client</div>
+            <textarea
+              value={reportNote}
+              onChange={(e) => setReportNote(e.target.value)}
+              placeholder="Add a line or two of context before this goes out…"
+              style={{ width: "100%", minHeight: 64, border: "1px solid #E8E8ED", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, fontFamily: "inherit", resize: "vertical" }}
+            />
+
+            <div style={{ height: 1, background: "#E8E8ED", margin: "18px 0" }} />
+
+            <button style={{ ...styles.importBtn, width: "100%", marginBottom: 10 }} disabled={reportSaving} onClick={saveReportProfile}>
+              {reportSaving ? "Saving…" : "Save profile"}
+            </button>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+              {reportRecipients.map((email) => (
+                <span key={email} style={{ display: "flex", alignItems: "center", gap: 6, background: "#FFFFFF", border: "1px solid #E8E8ED", borderRadius: 100, padding: "5px 6px 5px 10px", fontSize: 12 }}>
+                  {email}
+                  <button onClick={() => setReportRecipients((r) => r.filter((e) => e !== email))} style={{ background: "none", border: "none", color: "#6E6E73", cursor: "pointer", fontSize: 11, padding: 0 }}>✕</button>
+                </span>
+              ))}
+              <input
+                value={reportRecipientDraft}
+                onChange={(e) => setReportRecipientDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === ",") {
+                    e.preventDefault();
+                    addReportRecipient();
+                  }
+                }}
+                onBlur={addReportRecipient}
+                placeholder="client@email.com"
+                style={{ border: "1px solid #E8E8ED", borderRadius: 100, padding: "5px 12px", fontSize: 12, minWidth: 140 }}
+              />
+            </div>
+            <button style={{ ...styles.addBtn, width: "100%", background: "#20344A", marginBottom: 14 }} disabled={reportSending} onClick={sendReportNow}>
+              {reportSending ? "Sending…" : "Email now"}
+            </button>
+
+            {reportMessage && (
+              <div style={{ fontSize: 12.5, color: reportMessage.type === "error" ? "#C1462B" : "#4C7A5C", marginBottom: 14 }}>{reportMessage.text}</div>
+            )}
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Repeat this report</span>
+              <label style={{ position: "relative", display: "inline-block", width: 36, height: 20 }}>
+                <input
+                  type="checkbox"
+                  checked={reportFrequency !== "none"}
+                  onChange={(e) => setReportFrequency(e.target.checked ? "monthly" : "none")}
+                  style={{ position: "absolute", opacity: 0, width: "100%", height: "100%", margin: 0, cursor: "pointer" }}
+                />
+                <span style={{ position: "absolute", inset: 0, borderRadius: 100, background: reportFrequency !== "none" ? "#20344A" : "#DCDCE1", pointerEvents: "none", transition: "background 0.15s" }} />
+                <span style={{ position: "absolute", top: 2, left: reportFrequency !== "none" ? 18 : 2, width: 16, height: 16, borderRadius: 100, background: "#fff", pointerEvents: "none", transition: "left 0.15s" }} />
+              </label>
+            </div>
+
+            {reportFrequency !== "none" && (
+              <div style={{ background: "#F2F2F5", borderRadius: 12, padding: 14 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Frequency</div>
+                <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                  {["weekly", "monthly"].map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setReportFrequency(f)}
+                      style={{
+                        flex: 1, padding: "7px 0", borderRadius: 100, border: "none", cursor: "pointer",
+                        fontSize: 13, fontWeight: 600, textTransform: "capitalize",
+                        background: reportFrequency === f ? "#20344A" : "#FFFFFF",
+                        color: reportFrequency === f ? "#FFFFFF" : "#6E6E73",
+                        boxShadow: reportFrequency === f ? "none" : "0 1px 6px rgba(0,0,0,0.06)",
+                      }}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Send on</div>
+                {reportFrequency === "weekly" ? (
+                  <select
+                    value={reportSendDay}
+                    onChange={(e) => setReportSendDay(Number(e.target.value))}
+                    style={{ width: "100%", background: "#fff", border: "1px solid #E8E8ED", borderRadius: 8, padding: "8px 12px", fontSize: 13, marginBottom: 14 }}
+                  >
+                    {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((d, i) => (
+                      <option key={i} value={i}>{d}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <select
+                    value={reportSendDay}
+                    onChange={(e) => setReportSendDay(Number(e.target.value))}
+                    style={{ width: "100%", background: "#fff", border: "1px solid #E8E8ED", borderRadius: 8, padding: "8px 12px", fontSize: 13, marginBottom: 14 }}
+                  >
+                    {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                      <option key={d} value={d}>{d === 1 ? "1st" : d === 2 ? "2nd" : d === 3 ? "3rd" : `${d}th`} of the month</option>
+                    ))}
+                  </select>
+                )}
+
+                <div style={{ fontSize: 12, color: "#6E6E73" }}>
+                  Next send: {new Date(computeNextSendAt(reportFrequency, reportSendDay)).toLocaleDateString("en-ZA", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
+                  {" — save the profile to lock this in."}
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+        );
+      })()}
+
       <div className="print-only-footer" style={styles.docFooter}>
         <div style={styles.dfRow}>
           <div style={styles.dfBrand}>
@@ -6016,7 +6538,7 @@ const styles = {
   // 1180px too, so there's no visible seam on wider viewports. Matches
   // sitemargin.co.za's own nav (position:sticky; top:0) — this header used
   // to just scroll away with the page instead of staying put.
-  dashHeader: { maxWidth: 1180, margin: "0 auto 20px", position: "sticky", top: 0, background: "#F5F5F7", zIndex: 201 },
+  dashHeader: { maxWidth: 1180, margin: "0 auto 20px", position: "sticky", top: 0, paddingTop: 56, background: "#F5F5F7", zIndex: 201 },
   dashNavBar: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF", borderRadius: 18, padding: "10px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 22, gap: 16, flexWrap: "wrap" },
   dashNavRight: { display: "flex", alignItems: "center", gap: 14 },
   // Matches sitemargin.co.za's own .nav-app-link exactly (same font, size,
@@ -6109,7 +6631,7 @@ const styles = {
   // Sticky, same reasoning as dashHeader above — this already had the right
   // background band, it was just missing position:sticky, so it scrolled
   // out of view instead of staying put like sitemargin.co.za's own nav.
-  gateNavOuter: { position: "sticky", top: 0, zIndex: 201, background: "#F5F5F7" },
+  gateNavOuter: { position: "sticky", top: 0, paddingTop: 56, zIndex: 201, background: "#F5F5F7" },
   gateNavWrap: { maxWidth: 980, margin: "0 auto", padding: "0 20px" },
   gateNav: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF", borderRadius: 18, padding: "10px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", margin: "14px 0 0" },
   // Always-visible pill next to the hamburger — same idea as the marketing
