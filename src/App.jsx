@@ -310,6 +310,21 @@ const TIER_LABEL = {
   homeowner: "Home Owner",
 };
 
+// The small subscription-tier badge shown in every PageHeader (approved
+// direction "B" from the tier-badge mockup: a tinted pill with a colored
+// label, reusing the exact tint/solid pairing MODULE_COLOR already uses
+// for module banners elsewhere in the app — so this reads as another
+// piece of the app's own UI language rather than a new one). Free-tier
+// accounts read "Trial" here specifically (not "Free" as TIER_LABEL says
+// elsewhere) per the ask: distinguishable per tier, but quiet — the grey
+// trial tint is deliberately the least saturated of the four.
+const HEADER_TIER_BADGE = {
+  free: { label: "Trial", tint: "rgba(160,160,166,0.14)", color: "#83838A" },
+  contractor: { label: "Contractor", tint: "rgba(29,92,138,0.09)", color: "#1D5C8A" },
+  firm: { label: "Company", tint: "rgba(184,134,47,0.11)", color: "#B8862F" },
+  homeowner: { label: "Home Owner", tint: "rgba(76,122,92,0.10)", color: "#4C7A5C" },
+};
+
 function statusFor(budget, actual) {
   if (budget <= 0) return "ok";
   const ratio = actual / budget;
@@ -1092,6 +1107,31 @@ function GlobalStyles() {
 function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl, hideTitle, titleNode, logoNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuWrapRef = useRef(null);
+
+  // Self-fetched rather than threaded down as a prop: `subscription` today
+  // only lives inside AuthGate's own state and isn't passed to AppShell or
+  // any view, and PageHeader is already the one component every view
+  // shares (7 call sites) — so fetching tier here, keyed on the userEmail
+  // prop every call site already passes, makes the badge appear
+  // everywhere with a change in exactly one place instead of prop-drilling
+  // subscription through six separate view components. null while
+  // loading/signed-out keeps the badge hidden rather than flashing a
+  // wrong tier before the row comes back.
+  const [headerTier, setHeaderTier] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!userEmail) {
+        if (!cancelled) setHeaderTier(null);
+        return;
+      }
+      const { data } = await supabase.from("subscriptions").select("tier").eq("email", userEmail).maybeSingle();
+      if (cancelled) return;
+      setHeaderTier(data?.tier || "free");
+    })();
+    return () => { cancelled = true; };
+  }, [userEmail]);
+  const tierBadge = headerTier && HEADER_TIER_BADGE[headerTier];
   const tabs = [
     ["dashboard", "Projects"],
     ["subcontractors", "Subcontractors"],
@@ -1117,7 +1157,14 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
   return (
     <div style={styles.dashHeader}>
       <div style={styles.dashNavBar}>
-        <AppLogo />
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <AppLogo />
+          {tierBadge && (
+            <span style={{ ...styles.tierBadge, background: tierBadge.tint }}>
+              <span style={{ ...styles.tierBadgeLabel, color: tierBadge.color }}>{tierBadge.label}</span>
+            </span>
+          )}
+        </div>
         <div className="no-print" style={styles.dashNavRight}>
           {/* Mirrors the marketing site's always-visible "Go to App" button,
               in the same spot next to the hamburger — pointing the other
@@ -6549,6 +6596,12 @@ const styles = {
   pageHeaderEyebrow: { fontSize: 17, letterSpacing: "0.06em", color: "#1D5C8A", fontWeight: 800, textTransform: "uppercase", margin: 0 },
   dashTitleInput: { fontSize: "clamp(20px, 2.6vw, 26px)", fontWeight: 700, letterSpacing: "-0.02em", color: "#1D5C8A", background: "none", border: "none", borderBottom: "1px dashed #D9D9DE", padding: 0, width: "100%", minWidth: 0 },
   companyLogoMark: { height: "clamp(28px, 4.5vw, 44px)", width: "auto", maxWidth: 140, objectFit: "contain", borderRadius: 6 },
+  // Subscription-tier badge next to the wordmark (direction "B" from the
+  // tier-badge mockup) — background is set per-tier via HEADER_TIER_BADGE's
+  // `tint`, label color via its `color`; everything else here is constant
+  // across tiers so only two values ever vary at the call site.
+  tierBadge: { display: "inline-flex", alignItems: "center", borderRadius: 100, padding: "4px 11px" },
+  tierBadgeLabel: { fontSize: 10.5, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", whiteSpace: "nowrap" },
   logoTextBtn: { background: "none", border: "none", color: "#1D5C8A", fontSize: 11.5, fontWeight: 600, textAlign: "left", padding: 0, cursor: "pointer" },
   logoTextBtnMuted: { background: "none", border: "none", color: "#6E6E73", fontSize: 11, textAlign: "left", padding: 0, cursor: "pointer" },
   logoMenuPopover: { position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 30, background: "#FFFFFF", borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.14)", padding: 6, minWidth: 150, display: "flex", flexDirection: "column", gap: 2 },
