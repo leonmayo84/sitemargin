@@ -1,41 +1,18 @@
 package za.co.sitemargin.app;
 
-import android.os.Bundle;
-import android.util.Log;
-import android.webkit.WebView;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowCompat;
-import androidx.core.view.WindowInsetsCompat;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
-  @Override
-  protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-
-    Log.e("MAINACTIVITY_DIAG", "onCreate reached — build v5, listener about to attach");
-
-    WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
-
-    WebView webView = getBridge().getWebView();
-    ViewCompat.setOnApplyWindowInsetsListener(webView, (view, insets) -> {
-      Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-      Log.e(
-        "MAINACTIVITY_DIAG",
-        "insets listener FIRED — top=" + systemBars.top + " left=" + systemBars.left
-          + " right=" + systemBars.right + " bottom=" + systemBars.bottom
-      );
-      view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-      Log.e(
-        "MAINACTIVITY_DIAG",
-        "padding APPLIED — actual view padding now top=" + view.getPaddingTop()
-      );
-      return insets;
-    });
-
-    // Force an insets pass right away in case the listener never fires on
-    // its own for some reason on this device.
-    webView.post(() -> ViewCompat.requestApplyInsets(webView));
-  }
+  // Status-bar clearance is handled with a static top-padding baked
+  // directly into the CSS (see sitemargin-site/styles.css's .navbar and
+  // App.jsx's dashHeader/gateNavOuter) rather than any native insets
+  // listener or JS-injected CSS variable. Both of those approaches were
+  // tried and dropped: native View padding is invisible to the web
+  // content's own position:sticky math (header ran back up under the
+  // status bar on scroll), and live-updating the header's padding via an
+  // injected CSS custom property -- Capacitor's own SystemBars "css" mode
+  // -- corrupts (visibly doubled/ghosted text and icons) on this WebView's
+  // software rasterizer whenever the value changes after first paint,
+  // which happens on every cross-origin navigation. A static value never
+  // changes after paint, so neither failure mode applies.
 }
