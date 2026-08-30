@@ -292,7 +292,7 @@ function ModuleBanner({ moduleKey, stat, statLabel, chartArg }) {
       <svg style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 220, opacity: 0.5 }} viewBox="0 0 220 60" preserveAspectRatio="none">
         {info.chart(mc.solid, chartArg)}
       </svg>
-      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 20, fontWeight: 700, zIndex: 1, textAlign: "right", color: mc.solid }}>
+      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, zIndex: 1, textAlign: "right", color: mc.solid }}>
         {stat}
         <span style={{ display: "block", fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "#6E6E73", marginTop: 2 }}>{statLabel}</span>
       </div>
@@ -666,7 +666,7 @@ function BarChartBudgetVsActual({ items }) {
           <div key={item.id}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
               <span style={{ fontSize: 12.5, color: "#4A4A4F" }}>{item.name}</span>
-              <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: over ? "#C1462B" : "#4C7A5C" }}>
+              <span style={{ fontSize: 11.5, fontFamily: "'Space Grotesk', sans-serif", color: over ? "#C1462B" : "#4C7A5C" }}>
                 {fmtShort(item.actual)} / {fmtShort(item.budget)}
               </span>
             </div>
@@ -720,7 +720,7 @@ function DonutCategorySplit({ rollup }) {
           <div key={c.category} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
             <span style={{ width: 9, height: 9, borderRadius: "50%", background: CATEGORY_COLOR[c.category] }} />
             <span style={{ color: "#4A4A4F" }}>{c.category}</span>
-            <span style={{ marginLeft: "auto", fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#6E6E73" }}>
+            <span style={{ marginLeft: "auto", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#6E6E73" }}>
               {((c.actual / total) * 100).toFixed(0)}%
             </span>
           </div>
@@ -795,7 +795,7 @@ function TopOverruns({ items }) {
           </div>
           <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#1D1D1F" }}>{item.name}</div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "'IBM Plex Mono', monospace", color: "#C1462B" }}>+{fmtShort(item.variance)}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", color: "#C1462B" }}>+{fmtShort(item.variance)}</div>
             <div style={{ fontSize: 11, color: "#8E8E93" }}>+{item.pctOver.toFixed(0)}%</div>
           </div>
         </div>
@@ -830,7 +830,7 @@ function ClaimsCertifiedChart({ items }) {
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: "#1D1D1F" }}>{item.name}</span>
               {gap > 0 && (
-                <span style={{ fontSize: 10.5, fontFamily: "'IBM Plex Mono', monospace", color: "#B8862F" }}>
+                <span style={{ fontSize: 10.5, fontFamily: "'Space Grotesk', sans-serif", color: "#B8862F" }}>
                   {fmtShort(gap)} awaiting sign-off
                 </span>
               )}
@@ -841,7 +841,7 @@ function ClaimsCertifiedChart({ items }) {
                 <div style={{ flex: 1, height: 14, background: "#F2F2F5", borderRadius: 3, overflow: "hidden" }}>
                   <div style={{ width: `${(stage.value / stageMax) * 100}%`, height: "100%", background: stage.color, borderRadius: 3 }} />
                 </div>
-                <span style={{ fontSize: 10.5, fontFamily: "'IBM Plex Mono', monospace", color: "#4A4A4F", width: 60, flexShrink: 0 }}>{fmtShort(stage.value)}</span>
+                <span style={{ fontSize: 10.5, fontFamily: "'Space Grotesk', sans-serif", color: "#4A4A4F", width: 60, flexShrink: 0 }}>{fmtShort(stage.value)}</span>
               </div>
             ))}
           </div>
@@ -962,7 +962,7 @@ function ScoreBar({ label, score, detail }) {
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
         <span style={{ fontSize: 12, color: "#4A4A4F" }}>{label}</span>
-        <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", color }}>
+        <span style={{ fontSize: 12, fontFamily: "'Space Grotesk', sans-serif", color }}>
           {score == null ? "—" : Math.round(score)}
         </span>
       </div>
@@ -1394,7 +1394,7 @@ function ReferralRow() {
       </div>
       <div style={styles.referralQrBlock}>
         <ReferralQr />
-        <div style={styles.referralQrCaption}>Scan to visit<br /><b style={{ fontFamily: "'IBM Plex Mono', monospace" }}>sitemargin.co.za</b></div>
+        <div style={styles.referralQrCaption}>Scan to visit<br /><b style={{ fontFamily: "'Space Grotesk', sans-serif" }}>sitemargin.co.za</b></div>
       </div>
     </div>
   );
@@ -2082,7 +2082,7 @@ function AuthGate() {
           </div>
         </div>
       </div>
-      <div style={styles.gateWrap}>
+      <div style={{ ...styles.gateWrap, maxWidth: 1024 }}>
         {status === "signedout" && sendState !== "sent" && !isLoginIntent && (
           <div style={styles.heroWrap}>
             <svg style={styles.heroBacksplash} viewBox="0 0 1600 600" preserveAspectRatio="xMidYMid slice" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -2132,10 +2132,11 @@ function AuthGate() {
                 </g>
               </g>
             </svg>
-            <div style={styles.heroContent}>
+            <div style={styles.heroContent} className="sm-hero-grid">
+            <div>
             <div style={styles.eyebrow}>COST VARIANCE, LIVE</div>
             <h1 style={{ ...styles.dashTitle, margin: "10px 0 14px" }}>
-              Every rand, accounted for <em style={styles.heroEm}>the moment it moves.</em>
+              Every Rand, accounted for <em style={styles.heroEm}>the moment it <span style={styles.heroItal}>moves</span>.</em>
             </h1>
             <p style={styles.heroSub}>
               Budget, payments, and progress in one sheet — updated on site, not reconciled at month-end.
@@ -2144,13 +2145,14 @@ function AuthGate() {
             <div style={styles.heroCtas}>
               <button
                 type="button"
-                style={styles.heroBtnPrimary}
+                className="sm-dcta"
                 onClick={() => {
                   emailInputRef.current?.focus();
                   emailInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
                 }}
               >
                 Start your first project
+                <span className="sm-cap"><i><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A5F3FC" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></i></span>
               </button>
               <button
                 type="button"
@@ -2170,7 +2172,9 @@ function AuthGate() {
               <span>South African contractors already on site</span>
             </p>
 
-            <div style={styles.heroVisualWrap}>
+            </div>
+
+            <div style={styles.heroVisualWrap} className="sm-hero-visual">
               <div style={styles.heroDiamondWrapper}>
                 <div style={styles.heroDiamondRing}>
                   <div style={styles.heroDiamond}>
@@ -2194,7 +2198,10 @@ function AuthGate() {
           </div>
         )}
 
-        <h1 style={{ ...styles.dashTitle, marginBottom: 10 }}>
+        <h1
+          style={{ ...styles.dashTitle, marginBottom: 10 }}
+          className={status === "signedout" ? "sm-auth-head" : undefined}
+        >
           {status === "pending"
             ? "Almost there"
             : status === "denied"
@@ -2218,7 +2225,8 @@ function AuthGate() {
               </div>
             ) : (
               <>
-                <p style={styles.gateText}>
+                <div className="sm-auth-card">
+                <p style={{ ...styles.gateText, textAlign: "center" }}>
                   {authMode === "password"
                     ? isLoginIntent
                       ? "Enter your email and password to log in."
@@ -2243,10 +2251,10 @@ function AuthGate() {
                       placeholder="you@yourcompany.co.za"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      style={styles.addInput}
                     />
-                    <button type="submit" style={styles.addBtn} disabled={sendState === "sending"}>
+                    <button type="submit" className="sm-dcta sm-dcta-block" disabled={sendState === "sending"}>
                       {sendState === "sending" ? "Sending…" : "Send sign-in link"}
+                      <span className="sm-cap"><i><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A5F3FC" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></i></span>
                     </button>
                   </form>
                 ) : (
@@ -2258,7 +2266,6 @@ function AuthGate() {
                       placeholder="you@yourcompany.co.za"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      style={styles.addInput}
                     />
                     <input
                       type="password"
@@ -2267,7 +2274,6 @@ function AuthGate() {
                       placeholder="Password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      style={styles.addInput}
                       autoComplete={isLoginIntent ? "current-password" : "new-password"}
                     />
                     {!isLoginIntent && (
@@ -2278,11 +2284,10 @@ function AuthGate() {
                         placeholder="Confirm password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        style={styles.addInput}
                         autoComplete="new-password"
                       />
                     )}
-                    <button type="submit" style={styles.addBtn} disabled={passwordState === "sending"}>
+                    <button type="submit" className="sm-dcta sm-dcta-block" disabled={passwordState === "sending"}>
                       {passwordState === "sending"
                         ? isLoginIntent
                           ? "Logging in…"
@@ -2290,6 +2295,7 @@ function AuthGate() {
                         : isLoginIntent
                         ? "Log in"
                         : "Create account"}
+                      <span className="sm-cap"><i><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A5F3FC" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></i></span>
                     </button>
                   </form>
                 )}
@@ -2322,6 +2328,7 @@ function AuthGate() {
                     <>Already have an account? <a href="?login=1" style={styles.gateSwitchLink}>Log in</a></>
                   )}
                 </p>
+                </div>
               </>
             )}
             {(sendState === "error" || passwordState === "error" || forgotState === "error") && (
@@ -2330,37 +2337,60 @@ function AuthGate() {
             {!isLoginIntent && (
               <>
                 <div style={styles.pricingHead}>Pricing</div>
-                <div style={styles.checkoutGrid}>
-                  <div style={{ ...styles.checkoutCard, ...(selectedTier === "free" ? styles.checkoutCardSelected : {}) }}>
-                    <div style={styles.checkoutTier}>Free</div>
-                    <div style={styles.checkoutPrice}>R0</div>
-                    <div style={styles.checkoutDesc}>For trying it out on a single job. 1 active project, unlimited line items.</div>
-                    <button type="button" style={styles.tierCta} onClick={() => chooseTier("free")}>Get started</button>
+                <div className="sm-plans">
+
+                  <div className={"sm-plan sm-plan-free"} style={selectedTier === "free" ? styles.checkoutCardSelected : undefined}>
+                    <span className="sm-badge">Start free</span>
+                    <div className="sm-free-word">Free</div>
+                    <div className="sm-micro">No card needed</div>
+                    <div style={styles.checkoutDesc} className="sm-plan-desc">For trying it out on a single job. 1 active project, unlimited line items.</div>
+                    <button type="button" className="sm-dcta sm-dcta-block" onClick={() => chooseTier("free")}>
+                      Get started
+                      <span className="sm-cap"><i><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A5F3FC" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></i></span>
+                    </button>
                   </div>
-                  <div style={{ ...styles.checkoutCard, ...(selectedTier === "contractor" ? styles.checkoutCardSelected : {}) }}>
-                    <div style={styles.checkoutTier}>Contractor</div>
-                    <div style={styles.checkoutPrice}>
-                      R199<span style={styles.checkoutPriceUnit}>/month</span>
+
+                  <div className="sm-plan sm-plan-feat" style={selectedTier === "contractor" ? styles.checkoutCardSelected : undefined}>
+                    <span className="sm-badge">Most popular</span>
+                    <div className="sm-plan-head">
+                      <div style={{ ...styles.checkoutTier, color: "rgba(255,255,255,0.55)" }}>Contractor</div>
+                      <div style={{ ...styles.checkoutPrice, color: "#F2F6F9" }}>
+                        R199<span style={{ ...styles.checkoutPriceUnit, color: "rgba(255,255,255,0.6)" }}>/month</span>
+                      </div>
+                      <div style={{ ...styles.checkoutDesc, color: "rgba(255,255,255,0.68)", marginBottom: 0 }}>Unlimited projects, change orders, payments &amp; retention, PDF export.</div>
                     </div>
-                    <div style={styles.checkoutDesc}>Unlimited projects, change orders, payments &amp; retention, PDF export.</div>
-                    <button type="button" style={styles.tierCta} onClick={() => chooseTier("contractor")}>Get started</button>
+                    <div className="sm-plan-body">
+                      <button type="button" className="sm-dcta sm-dcta-block" onClick={() => chooseTier("contractor")}>
+                        Get started
+                        <span className="sm-cap"><i><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A5F3FC" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></i></span>
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ ...styles.checkoutCard, ...(selectedTier === "firm" ? styles.checkoutCardSelected : {}) }}>
+
+                  <div className="sm-plan" style={selectedTier === "firm" ? styles.checkoutCardSelected : undefined}>
                     <div style={styles.checkoutTier}>Company</div>
                     <div style={styles.checkoutPrice}>
                       R599<span style={styles.checkoutPriceUnit}>/month</span>
                     </div>
-                    <div style={styles.checkoutDesc}>Everything in Contractor, plus unlimited attachments and priority support.</div>
-                    <button type="button" style={styles.tierCta} onClick={() => chooseTier("firm")}>Get started</button>
+                    <div style={styles.checkoutDesc} className="sm-plan-desc">Everything in Contractor, plus unlimited attachments and priority support.</div>
+                    <button type="button" className="sm-dcta sm-dcta-block" onClick={() => chooseTier("firm")}>
+                      Get started
+                      <span className="sm-cap"><i><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A5F3FC" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></i></span>
+                    </button>
                   </div>
-                  <div style={{ ...styles.checkoutCard, ...(selectedTier === "homeowner" ? styles.checkoutCardSelected : {}) }}>
+
+                  <div className="sm-plan" style={selectedTier === "homeowner" ? styles.checkoutCardSelected : undefined}>
                     <div style={styles.checkoutTier}>Home Owner</div>
                     <div style={styles.checkoutPrice}>
                       R899<span style={styles.checkoutPriceUnit}>/project</span>
                     </div>
-                    <div style={styles.checkoutDesc}>Once-off, for managing your own build. Payments &amp; retention tracking, document register, PDF export.</div>
-                    <button type="button" style={styles.tierCta} onClick={() => chooseTier("homeowner")}>Get started</button>
+                    <div style={styles.checkoutDesc} className="sm-plan-desc">Once-off, for managing your own build. Payments &amp; retention tracking, document register, PDF export.</div>
+                    <button type="button" className="sm-dcta sm-dcta-block" onClick={() => chooseTier("homeowner")}>
+                      Get started
+                      <span className="sm-cap"><i><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A5F3FC" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></i></span>
+                    </button>
                   </div>
+
                 </div>
               </>
             )}
@@ -2947,10 +2977,10 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                   )}
                   {sub.name}
                 </span>
-                <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: scoreColor(score.overall) }}>{score.overall == null ? "—" : Math.round(score.overall)}</span>
-                <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: scoreColor(score.budgetScore) }}>{score.budgetScore == null ? "—" : Math.round(score.budgetScore)}</span>
-                <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: scoreColor(score.scheduleScore) }}>{score.scheduleScore == null ? "—" : Math.round(score.scheduleScore)}</span>
-                <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: scoreColor(score.qualityScore) }}>{score.qualityScore == null ? "—" : Math.round(score.qualityScore)}</span>
+                <span style={{ flex: 1, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: scoreColor(score.overall) }}>{score.overall == null ? "—" : Math.round(score.overall)}</span>
+                <span style={{ flex: 1, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: scoreColor(score.budgetScore) }}>{score.budgetScore == null ? "—" : Math.round(score.budgetScore)}</span>
+                <span style={{ flex: 1, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: scoreColor(score.scheduleScore) }}>{score.scheduleScore == null ? "—" : Math.round(score.scheduleScore)}</span>
+                <span style={{ flex: 1, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: scoreColor(score.qualityScore) }}>{score.qualityScore == null ? "—" : Math.round(score.qualityScore)}</span>
               </div>
             ))}
           </div>
@@ -2980,7 +3010,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ fontSize: 10, color: "#6E6E73", letterSpacing: "0.08em" }}>OVERALL</div>
-                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 600, color: scoreColor(score.overall) }}>
+                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 600, color: scoreColor(score.overall) }}>
                         {score.overall == null ? "—" : Math.round(score.overall)}
                       </div>
                     </div>
@@ -3062,7 +3092,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                           <div key={g.projectId} style={{ marginBottom: 14 }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
                               <span style={{ fontSize: 12.5, fontWeight: 600 }}>{g.projectName}</span>
-                              <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: scoreColor(gScore.overall) }}>
+                              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: scoreColor(gScore.overall) }}>
                                 {gScore.overall == null ? "—" : Math.round(gScore.overall)}
                               </span>
                             </div>
@@ -3071,7 +3101,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                               return (
                                 <div key={i.id} style={styles.subItemRow}>
                                   <span style={{ fontSize: 12.5, flex: 2 }}>{i.name}</span>
-                                  <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: Number(i.actual) > Number(i.budget) ? "#C1462B" : "#4C7A5C", flex: 1, textAlign: "right" }}>
+                                  <span style={{ fontSize: 11.5, fontFamily: "'Space Grotesk', sans-serif", color: Number(i.actual) > Number(i.budget) ? "#C1462B" : "#4C7A5C", flex: 1, textAlign: "right" }}>
                                     {fmtShort(i.actual)} / {fmtShort(i.budget)}
                                   </span>
                                   <span style={{ fontSize: 11, color: "#6E6E73", flex: 0.8, textAlign: "right" }}>
@@ -3353,7 +3383,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                   <div>
                     <div style={styles.projectName}>{t.name}</div>
                     {t.description && <div style={{ fontSize: 12, color: "#6E6E73", marginTop: 3 }}>{t.description}</div>}
-                    <div style={{ fontSize: 11.5, color: "#6E6E73", marginTop: 6, fontFamily: "'IBM Plex Mono', monospace" }}>
+                    <div style={{ fontSize: 11.5, color: "#6E6E73", marginTop: 6, fontFamily: "'Space Grotesk', sans-serif" }}>
                       {tItems.length} line item{tItems.length === 1 ? "" : "s"} · {fmt(total)}
                     </div>
                     {(t.tags || []).length > 0 && (
@@ -3404,7 +3434,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                           <span style={{ fontSize: 12.5 }}>{i.name}</span>
                         </span>
                         <span style={{ fontSize: 11.5, color: "#6E6E73", flex: 0.8 }}>{i.category}</span>
-                        <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", flex: 0.8, textAlign: "right" }}>{fmt(i.budget)}</span>
+                        <span style={{ fontSize: 12, fontFamily: "'Space Grotesk', sans-serif", flex: 0.8, textAlign: "right" }}>{fmt(i.budget)}</span>
                         <button style={{ ...styles.removeBtn, flex: 0.2, textAlign: "right" }} className="no-print" onClick={() => removeTemplateItem(t.id, i.id)}>✕</button>
                       </div>
                     ))}
@@ -3413,7 +3443,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                       <select style={{ ...styles.addInput, flex: 1 }} value={addingTo === t.id ? itemCategory : CATEGORIES[0]} onChange={(e) => { setAddingTo(t.id); setItemCategory(e.target.value); }}>
                         {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
-                      <input style={{ ...styles.addInput, flex: 0.9, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Budget (optional)" type="number" value={addingTo === t.id ? itemBudget : ""} onChange={(e) => { setAddingTo(t.id); setItemBudget(e.target.value); }} />
+                      <input style={{ ...styles.addInput, flex: 0.9, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }} placeholder="Budget (optional)" type="number" value={addingTo === t.id ? itemBudget : ""} onChange={(e) => { setAddingTo(t.id); setItemBudget(e.target.value); }} />
                       <button style={styles.addBtn} onClick={() => addTemplateItem(t.id)}>+ Add</button>
                       <button style={{ ...styles.addBtn, background: "#6E6E73" }} onClick={() => triggerImport(t.id)}>Import CSV / .xlsx</button>
                     </div>
@@ -3704,7 +3734,7 @@ function IntegrationsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                 <div style={{ fontWeight: 600, fontSize: 13.5 }}>{t.contact_name || t.description || "Transaction"}</div>
                 <div style={{ fontSize: 12, color: "#6E6E73" }}>{t.description}{t.txn_date ? ` · ${t.txn_date}` : ""}</div>
               </div>
-              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, minWidth: 100, textAlign: "right" }}>{fmt(t.amount)}</div>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, minWidth: 100, textAlign: "right" }}>{fmt(t.amount)}</div>
               <select style={{ ...styles.addInput, maxWidth: 240 }} defaultValue="" onChange={(e) => assignTransaction(t, e.target.value)}>
                 <option value="">Assign to line item…</option>
                 {lineItemOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
@@ -5216,8 +5246,8 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                       </button>
                     </div>
                   </span>
-                  <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(item.budget)}</span>
-                  <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>
+                  <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(item.budget)}</span>
+                  <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}>
                     {editingCell === `${item.id}:actual` ? (
                       <input autoFocus style={styles.inlineInput} value={editValue} type="number"
                         onFocus={(e) => e.target.select()}
@@ -5337,7 +5367,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             <select style={{ ...styles.addInput, flex: 1.2 }} value={newCategory} onChange={(e) => setNewCategory(e.target.value)}>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
-            <input style={{ ...styles.addInput, flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}
+            <input style={{ ...styles.addInput, flex: 1, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}
               placeholder="Budget (optional)" type="number" value={newBudget} onChange={(e) => setNewBudget(e.target.value)} />
             <button style={styles.addBtn} onClick={addItem}>+ Add line</button>
           </div>
@@ -5379,7 +5409,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                     <div key={c.category}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                         <span style={{ fontSize: 12.5, color: "#4A4A4F" }}>{c.category}</span>
-                        <span style={{ fontSize: 11.5, fontFamily: "'IBM Plex Mono', monospace", color: dotColor }}>
+                        <span style={{ fontSize: 11.5, fontFamily: "'Space Grotesk', sans-serif", color: dotColor }}>
                           {over ? "+" : ""}{fmtShort(c.variance)}
                         </span>
                       </div>
@@ -5477,12 +5507,12 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   {catItems.map((item) => (
                     <div key={item.id} style={styles.quoteRow}>
                       <span style={{ flex: 3 }}>{item.name}</span>
-                      <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(item.budget)}</span>
+                      <span style={{ flex: 1, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(item.budget)}</span>
                     </div>
                   ))}
                   <div style={{ ...styles.quoteRow, borderTop: "1px solid #E8E8ED", fontWeight: 600 }}>
                     <span style={{ flex: 3 }}>Subtotal — {cat.category}</span>
-                    <span style={{ flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(cat.budget)}</span>
+                    <span style={{ flex: 1, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(cat.budget)}</span>
                   </div>
                 </div>
               );
@@ -5490,7 +5520,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
             <div style={styles.quoteTotalRow}>
               <span>Total</span>
-              <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.budget)}</span>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(totals.budget)}</span>
             </div>
 
             <p style={styles.quoteFootnote}>
@@ -5535,7 +5565,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             return (
               <div key={item.id} style={{ ...styles.row, minWidth: 1140 }}>
                 <span style={{ ...styles.tdCell, flex: 2.2, fontWeight: 500 }}>{item.name}</span>
-                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>
+                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}>
                   {editingCell === `${item.id}:claimed` ? (
                     <input autoFocus style={styles.inlineInput} value={editValue} type="number"
                       onFocus={(e) => e.target.select()}
@@ -5546,7 +5576,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                     <button style={styles.actualButton} onClick={() => startEdit(item.id, "claimed", item.claimed)}><Money value={claimed} /></button>
                   )}
                 </span>
-                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>
+                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}>
                   {editingCell === `${item.id}:certified` ? (
                     <input autoFocus style={styles.inlineInput} value={editValue} type="number"
                       onFocus={(e) => e.target.select()}
@@ -5557,9 +5587,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                     <button style={styles.actualButton} onClick={() => startEdit(item.id, "certified", item.certified)}><Money value={certified} /></button>
                   )}
                 </span>
-                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#B8862F" }}><Money value={retentionHeld} /></span>
-                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#4C7A5C" }}><Money value={certified - retentionHeld} /></span>
-                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: uncertified > 0 ? "#C1462B" : "#6E6E73" }}><Money value={uncertified} /></span>
+                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: "#B8862F" }}><Money value={retentionHeld} /></span>
+                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: "#4C7A5C" }}><Money value={certified - retentionHeld} /></span>
+                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: uncertified > 0 ? "#C1462B" : "#6E6E73" }}><Money value={uncertified} /></span>
                 <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "center" }} className="no-print">
                   <input
                     type="date"
@@ -5568,7 +5598,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                     onChange={(e) => setPaymentDate(item.id, e.target.value)}
                   />
                 </span>
-                <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }} className="print-only-status">
+                <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "center", fontFamily: "'Space Grotesk', sans-serif" }} className="print-only-status">
                   {item.payment_date ? new Date(item.payment_date + "T00:00:00").toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </span>
                 <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "center" }}>
@@ -5587,11 +5617,11 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           })}
           <div style={{ ...styles.row, background: "#F5F5F7", fontWeight: 600, minWidth: 1140 }}>
             <span style={{ ...styles.tdCell, flex: 2.2 }}>Totals</span>
-            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}><Money value={totals.claimed} /></span>
-            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}><Money value={totals.certified} /></span>
-            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#B8862F" }}><Money value={totals.retentionHeld} /></span>
-            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: "#4C7A5C" }}><Money value={totals.paidToDate} /></span>
-            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace", color: totals.uncertified > 0 ? "#C1462B" : "#6E6E73" }}><Money value={totals.uncertified} /></span>
+            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}><Money value={totals.claimed} /></span>
+            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}><Money value={totals.certified} /></span>
+            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: "#B8862F" }}><Money value={totals.retentionHeld} /></span>
+            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: "#4C7A5C" }}><Money value={totals.paidToDate} /></span>
+            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: totals.uncertified > 0 ? "#C1462B" : "#6E6E73" }}><Money value={totals.uncertified} /></span>
             <span style={{ ...styles.tdCell, flex: 1.1 }}></span>
             <span style={{ ...styles.tdCell, flex: 1.1 }}></span>
           </div>
@@ -5628,7 +5658,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                 </select>
               </span>
               <span style={{ ...styles.tdCell, flex: 1, textAlign: "center" }} className="print-only-status">{co.priority || "Normal"}</span>
-              <span style={{ ...styles.tdCell, flex: 1, textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }} className="no-print">
+              <span style={{ ...styles.tdCell, flex: 1, textAlign: "center", fontFamily: "'Space Grotesk', sans-serif" }} className="no-print">
                 <input
                   style={{ ...styles.addInput, padding: "4px 6px", fontSize: 12, textAlign: "center" }}
                   placeholder="—"
@@ -5637,11 +5667,11 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   onBlur={(e) => setCoPoNumberValue(co.id, e.target.value.trim())}
                 />
               </span>
-              <span style={{ ...styles.tdCell, flex: 1, textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }} className="print-only-status">{co.po_number || "—"}</span>
-              <span style={{ ...styles.tdCell, flex: 1, textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }}>
+              <span style={{ ...styles.tdCell, flex: 1, textAlign: "center", fontFamily: "'Space Grotesk', sans-serif" }} className="print-only-status">{co.po_number || "—"}</span>
+              <span style={{ ...styles.tdCell, flex: 1, textAlign: "center", fontFamily: "'Space Grotesk', sans-serif" }}>
                 {co.co_date ? new Date(co.co_date + "T00:00:00").toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
               </span>
-              <span style={{ ...styles.tdCell, flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(co.amount)}</span>
+              <span style={{ ...styles.tdCell, flex: 1, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(co.amount)}</span>
               <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "center" }} className="no-print">
                 <select value={co.status} onChange={(e) => setCoStatus(co.id, e.target.value)}
                   style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: co.status === "approved" ? "#4C7A5C" : co.status === "rejected" ? "#C1462B" : "#B8862F" }}>
@@ -5670,7 +5700,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             </select>
             <input style={{ ...styles.addInput, flex: 1 }} placeholder="PO # (optional)" value={coPoNumber} onChange={(e) => setCoPoNumber(e.target.value)} />
             <input style={{ ...styles.addInput, flex: 1 }} type="date" value={coDate} onChange={(e) => setCoDate(e.target.value)} />
-            <input style={{ ...styles.addInput, flex: 1, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Amount" type="number" value={coAmount} onChange={(e) => setCoAmount(e.target.value)} />
+            <input style={{ ...styles.addInput, flex: 1, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }} placeholder="Amount" type="number" value={coAmount} onChange={(e) => setCoAmount(e.target.value)} />
             <button style={styles.addBtn} onClick={addChangeOrder}>+ Add change order</button>
           </div>
         </div>
@@ -5680,7 +5710,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       {view === "purchaseorders" && (
         <div style={{ ...styles.ledger, overflowX: "auto" }}>
           <div style={{ padding: "12px 16px", fontSize: 13, color: "#6E6E73", borderBottom: "1px solid #E8E8ED" }}>
-            Outstanding (not yet received): <strong style={{ color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(poOutstandingTotal)}</strong>
+            Outstanding (not yet received): <strong style={{ color: "#1D1D1F", fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(poOutstandingTotal)}</strong>
           </div>
           <div style={{ ...styles.ledgerHeaderRow, minWidth: 1180 }}>
             <span style={{ ...styles.thCell, flex: 1.4 }}>Supplier</span>
@@ -5698,13 +5728,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             return (
               <div key={po.id} style={{ ...styles.row, minWidth: 1180 }}>
                 <span style={{ ...styles.tdCell, flex: 1.4 }}>{po.supplier_name}</span>
-                <span style={{ ...styles.tdCell, flex: 0.9, fontFamily: "'IBM Plex Mono', monospace" }}>{po.po_number || "—"}</span>
+                <span style={{ ...styles.tdCell, flex: 0.9, fontFamily: "'Space Grotesk', sans-serif" }}>{po.po_number || "—"}</span>
                 <span style={{ ...styles.tdCell, flex: 1.8 }}>{po.description || "—"}</span>
                 <span style={{ ...styles.tdCell, flex: 1.4, color: "#6E6E73" }}>{linkedItem ? linkedItem.name : "—"}</span>
-                <span style={{ ...styles.tdCell, flex: 1, textAlign: "center", fontFamily: "'IBM Plex Mono', monospace" }}>
+                <span style={{ ...styles.tdCell, flex: 1, textAlign: "center", fontFamily: "'Space Grotesk', sans-serif" }}>
                   {po.order_date ? new Date(po.order_date + "T00:00:00").toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </span>
-                <span style={{ ...styles.tdCell, flex: 0.9, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(po.amount)}</span>
+                <span style={{ ...styles.tdCell, flex: 0.9, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(po.amount)}</span>
                 <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "center" }} className="no-print">
                   <select value={po.status} onChange={(e) => setPoStatus(po.id, e.target.value)}
                     style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: poStatusColor, width: "100%" }}>
@@ -5738,7 +5768,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               ))}
             </select>
             <input style={{ ...styles.addInput, flex: 1, minWidth: 0 }} type="date" value={poOrderDate} onChange={(e) => setPoOrderDate(e.target.value)} />
-            <input style={{ ...styles.addInput, flex: 0.9, minWidth: 0, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Amount" type="number" value={poAmount} onChange={(e) => setPoAmount(e.target.value)} />
+            <input style={{ ...styles.addInput, flex: 0.9, minWidth: 0, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }} placeholder="Amount" type="number" value={poAmount} onChange={(e) => setPoAmount(e.target.value)} />
             <button style={{ ...styles.addBtn, flex: "1.6 0 auto" }} onClick={addPurchaseOrder}>+ Add purchase order</button>
           </div>
         </div>
@@ -5790,7 +5820,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                     return (
                       <div key={bid.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #F7F7F8" }}>
                         <div style={{ flex: 1.6, fontSize: 13.5, color: "#1D1D1F" }}>{bid.bidder_name}</div>
-                        <div style={{ flex: 1, fontSize: 13.5, fontFamily: "'IBM Plex Mono', monospace", textAlign: "right" }}>{fmt(bid.amount)}</div>
+                        <div style={{ flex: 1, fontSize: 13.5, fontFamily: "'Space Grotesk', sans-serif", textAlign: "right" }}>{fmt(bid.amount)}</div>
                         <div style={{ flex: 1.6, fontSize: 12.5, color: "#6E6E73" }}>{bid.notes}</div>
                         <div style={{ flex: 0.9, fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: bidStatusColor, textAlign: "center" }}>{bid.status}</div>
                         <div className="no-print" style={{ flex: 1.2, textAlign: "right", display: "flex", gap: 6, justifyContent: "flex-end" }}>
@@ -5815,7 +5845,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                         <option key={s.id} value={s.id}>{s.name}</option>
                       ))}
                     </select>
-                    <input style={{ ...styles.addInput, flex: "1 1 110px", textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }} placeholder="Amount" type="number"
+                    <input style={{ ...styles.addInput, flex: "1 1 110px", textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }} placeholder="Amount" type="number"
                       value={draft.amount} onChange={(e) => updateBidDraft(tender.id, { amount: e.target.value })} />
                     <input style={{ ...styles.addInput, flex: "1.6 1 150px" }} placeholder="Notes (optional)"
                       value={draft.notes} onChange={(e) => updateBidDraft(tender.id, { notes: e.target.value })} />
@@ -5994,7 +6024,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   <button onClick={() => openPlan(p)} style={{ ...styles.attachmentLink, background: "none", border: "none", cursor: "pointer", padding: 0, flex: 1, textAlign: "left" }}>
                     📄 {p.name}
                   </button>
-                  <span style={{ fontSize: 11.5, color: "#6E6E73", fontFamily: "'IBM Plex Mono', monospace" }}>
+                  <span style={{ fontSize: 11.5, color: "#6E6E73", fontFamily: "'Space Grotesk', sans-serif" }}>
                     {p.size ? `${(p.size / 1024).toFixed(0)} KB` : ""}
                   </span>
                   <button className="no-print" style={styles.removeBtn} onClick={() => removePlan(p.path)}>✕</button>
@@ -6142,17 +6172,17 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             <div style={{ display: "flex", padding: "30px 36px", borderBottom: "1px solid #E8E8ED" }}>
               <div style={{ flex: 1, paddingRight: 20 }}>
                 <div style={{ fontSize: 11, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.06em" }}>Budget</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 600, marginTop: 4 }}>{fmt(totals.revisedBudget)}</div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 600, marginTop: 4 }}>{fmt(totals.revisedBudget)}</div>
               </div>
               <div style={{ width: 1, background: "#E8E8ED" }} />
               <div style={{ flex: 1, padding: "0 20px" }}>
                 <div style={{ fontSize: 11, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.06em" }}>Actual to date</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 600, marginTop: 4 }}>{fmt(totals.actual)}</div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 600, marginTop: 4 }}>{fmt(totals.actual)}</div>
               </div>
               <div style={{ width: 1, background: "#E8E8ED" }} />
               <div style={{ flex: 1, paddingLeft: 20 }}>
                 <div style={{ fontSize: 11, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.06em" }}>Variance</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 600, marginTop: 4, color: totals.variance > 0 ? "#C1462B" : "#4C7A5C" }}>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 600, marginTop: 4, color: totals.variance > 0 ? "#C1462B" : "#4C7A5C" }}>
                   {totals.variance >= 0 ? "+" : ""}{fmt(totals.variance)}
                 </div>
               </div>
@@ -6170,7 +6200,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                       {categoryRows.map(([cat, t]) => (
                         <div key={cat} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}>
                           <span>{cat}</span>
-                          <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(t.actual)} / {fmt(t.budget)}</span>
+                          <span style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(t.actual)} / {fmt(t.budget)}</span>
                         </div>
                       ))}
                     </>
@@ -6187,7 +6217,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                     coRows.map((co) => (
                       <div key={co.id} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}>
                         <span>{co.description} — {co.status}</span>
-                        <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{Number(co.amount) >= 0 ? "+" : ""}{fmt(co.amount)}</span>
+                        <span style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{Number(co.amount) >= 0 ? "+" : ""}{fmt(co.amount)}</span>
                       </div>
                     ))
                   )}
@@ -6200,7 +6230,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13.5, marginBottom: 8 }}>
                     <span style={{ width: 130 }}>Overall</span>
                     <div style={{ flex: 1, height: 3, background: "#F2F2F5" }}><div style={{ width: `${Math.min(100, scheduleOverallPct)}%`, height: "100%", background: "#20344A" }} /></div>
-                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", width: 36, textAlign: "right" }}>{Math.round(scheduleOverallPct)}%</span>
+                    <span style={{ fontFamily: "'Space Grotesk', sans-serif", width: 36, textAlign: "right" }}>{Math.round(scheduleOverallPct)}%</span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13.5, color: "#6E6E73" }}>
                     <span style={{ width: 130 }}>Current phase</span>
@@ -6223,9 +6253,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               {reportSections.payments && (
                 <>
                   <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Payments &amp; Retention</div>
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}><span>Claimed to date</span><span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.claimed)}</span></div>
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}><span>Certified to date</span><span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.certified)}</span></div>
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}><span>Retention held ({totals.retentionPct}%)</span><span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(totals.retentionHeld)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}><span>Claimed to date</span><span style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(totals.claimed)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}><span>Certified to date</span><span style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(totals.certified)}</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}><span>Retention held ({totals.retentionPct}%)</span><span style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(totals.retentionHeld)}</span></div>
                 </>
               )}
 
@@ -6238,7 +6268,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                     purchaseOrders.map((po) => (
                       <div key={po.id} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}>
                         <span>{po.supplier_name} — {po.status}</span>
-                        <span style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(po.amount)}</span>
+                        <span style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(po.amount)}</span>
                       </div>
                     ))
                   )}
@@ -6533,7 +6563,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   </span>
                   <span style={{ flex: 1.2 }}>
                     <input
-                      style={{ ...styles.previewInput, textAlign: "right", fontFamily: "'IBM Plex Mono', monospace" }}
+                      style={{ ...styles.previewInput, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}
                       type="number"
                       value={item.budget}
                       onChange={(e) => updatePreviewItem(idx, { budget: Number(e.target.value) || 0 })}
@@ -6674,11 +6704,11 @@ const styles = {
   menuPanelActions: { display: "flex", flexDirection: "column", gap: 8 },
   menuPanelGhost: { textAlign: "center", padding: 11, borderRadius: 100, fontWeight: 600, fontSize: 14, border: "1px solid #1D1D1F", color: "#1D1D1F", background: "none", cursor: "pointer" },
   menuPanelSolid: { textAlign: "center", padding: 11, borderRadius: 100, fontWeight: 600, fontSize: 14, border: "none", color: "#FFFFFF", background: "#1D5C8A", cursor: "pointer" },
-  menuPanelEmail: { marginTop: 14, fontSize: 11.5, color: "#A0A0A6", fontFamily: "'IBM Plex Mono', monospace" },
+  menuPanelEmail: { marginTop: 14, fontSize: 11.5, color: "#A0A0A6", fontFamily: "'Space Grotesk', sans-serif" },
 
   topNav: { maxWidth: 1180, margin: "0 auto 20px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #E8E8ED", paddingBottom: 12 },
   topNavRight: { marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 },
-  topNavEmail: { fontSize: 12, color: "#6E6E73", fontFamily: "'IBM Plex Mono', monospace" },
+  topNavEmail: { fontSize: 12, color: "#6E6E73", fontFamily: "'Space Grotesk', sans-serif" },
   topNavSignOut: { background: "none", border: "1px solid #E8E8ED", borderRadius: 100, color: "#6E6E73", fontSize: 12, padding: "6px 12px", cursor: "pointer" },
 
   // Sticky, same reasoning as dashHeader above — this already had the right
@@ -6697,12 +6727,13 @@ const styles = {
   heroBacksplash: { position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 0, pointerEvents: "none" },
   heroContent: { position: "relative", zIndex: 1 },
   heroEm: { fontStyle: "normal", color: "#1D5C8A" },
+  heroItal: { fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 600 },
   heroSub: { fontSize: 16, color: "#4A4A4F", lineHeight: 1.6, marginBottom: 26 },
   heroCtas: { display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", margin: "6px 0 20px" },
   heroBtnPrimary: { background: "#1D5C8A", color: "#FFFFFF", fontWeight: 600, fontSize: 15, padding: "12px 24px", borderRadius: 100, border: "none", cursor: "pointer" },
   heroTextlink: { fontSize: 15, fontWeight: 500, color: "#1D5C8A", background: "none", border: "none", padding: 0, cursor: "pointer" },
   heroProof: { display: "flex", alignItems: "baseline", gap: 7, fontSize: 13.5, color: "#6E6E73", marginBottom: 30 },
-  heroProofCount: { fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, fontSize: 15.5, color: "#1D1D1F" },
+  heroProofCount: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15.5, color: "#1D1D1F" },
   heroVisualWrap: { position: "relative", height: 260, display: "flex", alignItems: "center", justifyContent: "center", margin: "4px 0 8px" },
   heroDiamondWrapper: { position: "relative", zIndex: 1, display: "inline-flex", padding: 15, borderRadius: 50, background: "linear-gradient(150deg, #23272E 0%, #14171C 52%, #090B0E 100%)", transform: "rotate(45deg)", boxShadow: "17px 17px 30px -10px rgba(2,6,23,0.5), 10px 10px 18px -8px rgba(2,6,23,0.3), inset 0 1px 1px rgba(255,255,255,0.14)" },
   heroDiamondRing: { display: "flex", padding: 5, borderRadius: 36, background: "linear-gradient(135deg, #CFFAFE 0%, #22D3EE 20%, #06B6D4 42%, #10B981 66%, #22C55E 84%, #86EFAC 100%)", boxShadow: "0 0 5px rgba(207,250,254,0.45)" },
@@ -6718,18 +6749,18 @@ const styles = {
   mockHead: { display: "flex", justifyContent: "space-between", fontSize: 11, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase", fontWeight: 600, paddingBottom: 10, marginBottom: 10, borderBottom: "1px solid #F2F2F5" },
   mockRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 0", borderBottom: "1px solid #F2F2F5", flexWrap: "wrap" },
   mockName: { fontSize: 13.5, fontWeight: 600, color: "#1D1D1F", flex: "1 1 150px" },
-  mockNums: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#6E6E73", flex: "0 0 auto" },
+  mockNums: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#6E6E73", flex: "0 0 auto" },
   mockGauge: { display: "flex", alignItems: "center", gap: 8, flex: "0 0 auto" },
   gaugeTrack: { position: "relative", width: 60, height: 6, background: "#F2F2F5", borderRadius: 4, overflow: "hidden" },
   gaugeFill: { position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: 4 },
-  gaugeLabel: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 11.5, fontWeight: 600, width: 44 },
+  gaugeLabel: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 11.5, fontWeight: 600, width: 44 },
   pill: { fontSize: 10.5, fontWeight: 600, letterSpacing: "0.04em", padding: "4px 10px", borderRadius: 100, flex: "0 0 auto" },
   problemBlock: { marginTop: 4 },
-  pricingHead: { fontSize: 12.5, letterSpacing: "0.1em", color: "#6E6E73", textTransform: "uppercase", fontWeight: 600, margin: "34px 0 12px" },
+  pricingHead: { fontSize: 12.5, letterSpacing: "0.1em", color: "#6E6E73", textTransform: "uppercase", fontWeight: 600, margin: "44px 0 34px" },
   checkoutGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginTop: 8 },
   checkoutCard: { background: "#FFFFFF", borderRadius: 18, padding: "22px 20px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
   checkoutTier: { fontSize: 12.5, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase", fontWeight: 600, marginBottom: 10 },
-  checkoutPrice: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 26, fontWeight: 600, color: "#1D1D1F", marginBottom: 8 },
+  checkoutPrice: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 600, color: "#1D1D1F", marginBottom: 8 },
   checkoutPriceUnit: { fontSize: 13, color: "#6E6E73", fontWeight: 400 },
   checkoutDesc: { fontSize: 13, color: "#6E6E73", marginBottom: 16, lineHeight: 1.5 },
   checkoutCardSelected: { boxShadow: "0 0 0 1.5px #1D5C8A, 0 12px 34px rgba(0,0,0,0.08)" },
@@ -6773,7 +6804,7 @@ const styles = {
   projectCardTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 },
   projectName: { fontSize: 20, fontWeight: 600 },
   deleteProjectBtn: { background: "none", border: "none", color: "#6E6E73", cursor: "pointer", fontSize: 14 },
-  projectNums: { display: "flex", justifyContent: "space-between", fontSize: 13, fontFamily: "'IBM Plex Mono', monospace", color: "#4A4A4F" },
+  projectNums: { display: "flex", justifyContent: "space-between", fontSize: 13, fontFamily: "'Space Grotesk', sans-serif", color: "#4A4A4F" },
   projectMeta: { fontSize: 12, color: "#6E6E73", marginTop: 8 },
   subItemRow: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #F2F2F5" },
 
@@ -6787,8 +6818,8 @@ const styles = {
   titleBlockRight: { display: "flex", gap: 22 },
   tbCell: { display: "flex", flexDirection: "column", alignItems: "flex-end" },
   tbLabel: { fontSize: 10, letterSpacing: "0.1em", color: "#6E6E73" },
-  tbValue: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 15, color: "#1D1D1F", display: "flex", alignItems: "center", gap: 2 },
-  retentionInput: { width: 34, background: "#F5F5F7", border: "1px solid transparent", borderRadius: 6, color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, padding: "1px 4px", textAlign: "right" },
+  tbValue: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, color: "#1D1D1F", display: "flex", alignItems: "center", gap: 2 },
+  retentionInput: { width: 34, background: "#F5F5F7", border: "1px solid transparent", borderRadius: 6, color: "#1D1D1F", fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, padding: "1px 4px", textAlign: "right" },
 
   summaryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, maxWidth: 1180, margin: "0 auto 16px" },
   summaryCard: { background: "#FFFFFF", borderRadius: 16, padding: "14px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
@@ -6804,7 +6835,7 @@ const styles = {
   flaggedPopoverRow: { display: "flex", alignItems: "center", gap: 8 },
   flaggedDot: { width: 7, height: 7, borderRadius: "50%", flexShrink: 0 },
   flaggedPopoverName: { flex: 1, fontSize: 12.5, color: "#1D1D1F", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
-  flaggedPopoverVariance: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontVariantNumeric: "tabular-nums", flexShrink: 0 },
+  flaggedPopoverVariance: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontVariantNumeric: "tabular-nums", flexShrink: 0 },
 
   warningBanner: { maxWidth: 1180, margin: "0 auto 12px", background: "rgba(193,70,43,0.07)", border: "1px solid #C1462B", borderRadius: 14, padding: "12px 16px", fontSize: 14, color: "#8A3D1E" },
 
@@ -6813,7 +6844,7 @@ const styles = {
   categoryHead: { display: "flex", alignItems: "center", gap: 6, marginBottom: 4 },
   categoryDot: { width: 8, height: 8, borderRadius: "50%" },
   categoryName: { fontSize: 12, color: "#4A4A4F", fontWeight: 500 },
-  categoryNums: { display: "flex", justifyContent: "space-between", fontFamily: "'IBM Plex Mono', monospace", fontSize: 13 },
+  categoryNums: { display: "flex", justifyContent: "space-between", fontFamily: "'Space Grotesk', sans-serif", fontSize: 13 },
   categoryBudget: { color: "#6E6E73" },
   categoryVariance: { fontWeight: 600 },
 
@@ -6832,14 +6863,14 @@ const styles = {
   thCell: { fontSize: 11, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase" },
   row: { display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", borderBottom: "1px solid #F2F2F5", minWidth: 640 },
   tdCell: { fontSize: 14, paddingRight: 8 },
-  actualButton: { display: "inline-block", boxSizing: "border-box", appearance: "none", WebkitAppearance: "none", margin: 0, textAlign: "right", background: "none", border: "none", color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, lineHeight: "inherit", cursor: "pointer", borderBottom: "1px dashed #6E6E73", padding: 0 },
-  inlineInput: { width: "100%", background: "#FFFFFF", border: "1px solid #1D5C8A", borderRadius: 8, color: "#1D1D1F", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, padding: "2px 6px", textAlign: "right" },
+  actualButton: { display: "inline-block", boxSizing: "border-box", appearance: "none", WebkitAppearance: "none", margin: 0, textAlign: "right", background: "none", border: "none", color: "#1D1D1F", fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, lineHeight: "inherit", cursor: "pointer", borderBottom: "1px dashed #6E6E73", padding: 0 },
+  inlineInput: { width: "100%", background: "#FFFFFF", border: "1px solid #1D5C8A", borderRadius: 8, color: "#1D1D1F", fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, padding: "2px 6px", textAlign: "right" },
   miniLink: { background: "none", border: "none", color: "#6E6E73", fontSize: 10.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
   miniLinkBlock: { background: "none", border: "none", color: "#3D6FA6", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginTop: 4 },
   gaugeTrack: { position: "relative", height: 6, background: "#F2F2F5", borderRadius: 3, overflow: "visible", marginBottom: 4 },
   gaugeFill: { height: "100%", borderRadius: 3, transition: "width 0.3s ease" },
   gaugeTolMark: { position: "absolute", left: "71.4%", top: -2, width: 1, height: 10, background: "#6E6E73" },
-  gaugeLabel: { fontFamily: "'IBM Plex Mono', monospace", fontSize: 11 },
+  gaugeLabel: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 11 },
   dualBarTrack: { position: "relative", height: 16, background: "#F2F2F5", borderRadius: 3 },
   dualBarFill: { position: "absolute", left: 0, height: 6, borderRadius: 3, transition: "width 0.3s ease" },
   statusPill: { display: "inline-block", fontSize: 10, fontWeight: 600, letterSpacing: "0.05em", padding: "4px 10px", borderRadius: 100 },
@@ -6910,7 +6941,7 @@ const styles = {
 
   trendRow: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #F2F2F5", minWidth: 560 },
   trendHeadCell: { fontSize: 11, letterSpacing: "0.06em", color: "#6E6E73", textTransform: "uppercase" },
-  trendCell: { fontSize: 12, fontFamily: "'IBM Plex Mono', monospace" },
+  trendCell: { fontSize: 12, fontFamily: "'Space Grotesk', sans-serif" },
 
   quoteSheet: { maxWidth: 800, margin: "0 auto", background: "#FFFFFF", borderRadius: 18, padding: "36px 40px", boxShadow: "0 12px 34px rgba(0,0,0,0.08)" },
   quoteHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #1D1D1F", paddingBottom: 20, marginBottom: 28 },

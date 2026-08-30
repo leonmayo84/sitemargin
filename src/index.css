@@ -29,3 +29,134 @@ a {
 button {
   font-family: inherit;
 }
+
+/* ============================================================
+   SIGNED-OUT SCREEN — hero, auth and pricing
+   These live in index.css rather than App.jsx's inline `styles`
+   object because they need media queries and pseudo-elements,
+   which inline styles cannot express. Class names are prefixed
+   sm- so they can't collide with anything else in the bundle.
+   ============================================================ */
+
+/* The signed-out flow was capped at 640px, which forced the hero into one
+   column, dropped the diamond below the copy and squeezed pricing to 2x2. */
+.sm-gate { max-width: 1024px; }
+
+/* ---- hero ---- */
+.sm-hero-grid { display: grid; gap: 40px; align-items: center; }
+@media (min-width: 860px) {
+  .sm-hero-grid { grid-template-columns: 1.1fr 1fr; }
+  .sm-hero-visual { height: 400px !important; }
+}
+@media (max-width: 859px) {
+  .sm-hero-grid { grid-template-columns: 1fr; }
+}
+
+/* ---- auth ---- */
+.sm-auth-card {
+  max-width: 430px; margin: 0 auto; background: #FFFFFF; border-radius: 22px;
+  padding: 32px 30px 30px;
+  box-shadow: 0 20px 50px -26px rgba(0,0,0,0.35), 0 2px 10px rgba(0,0,0,0.05);
+}
+.sm-auth-title { text-align: center; }
+/* The inputs used the app's generic addInput style: #F5F5F7 fill with a
+   transparent border, on a page whose background is also #F5F5F7 -- the
+   fields were invisible until focused. */
+.sm-auth-card input[type="email"],
+.sm-auth-card input[type="password"] {
+  width: 100%; background: #FFFFFF; border: 1px solid #D8D8DE; border-radius: 11px;
+  font-size: 15px; padding: 12px 14px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.sm-auth-card input::placeholder { color: #A3A3AB; }
+.sm-auth-card input:focus {
+  outline: none; border-color: #1D5C8A; box-shadow: 0 0 0 3px rgba(29,92,138,0.15);
+}
+.sm-auth-card .sm-label {
+  display: block; font-size: 12px; font-weight: 600; letter-spacing: .04em;
+  text-transform: uppercase; color: #6E6E73; margin-bottom: 6px;
+}
+
+/* ---- diamond CTA, same button as sitemargin.co.za ---- */
+.sm-dcta {
+  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+  background: linear-gradient(150deg, #23272E 0%, #14171C 52%, #090B0E 100%);
+  border: none; border-radius: 100px; padding: 8px 8px 8px 26px; color: #F2F6F9;
+  font-family: 'Space Grotesk', 'Inter', sans-serif; font-weight: 600; font-size: 16px;
+  cursor: pointer; text-decoration: none;
+  box-shadow: 0 14px 30px -10px rgba(2,6,23,0.45), inset 0 1px 1px rgba(255,255,255,0.12);
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.sm-dcta.sm-dcta-block { width: 100%; font-size: 15px; padding: 7px 7px 7px 22px; }
+.sm-dcta .sm-cap {
+  width: 36px; height: 36px; border-radius: 12px; transform: rotate(45deg); padding: 2px; flex: none;
+  background: linear-gradient(135deg, #CFFAFE, #22D3EE 25%, #10B981 70%, #22C55E);
+  box-shadow: 0 0 10px rgba(34,211,238,0.55); transition: box-shadow .2s ease;
+}
+.sm-dcta.sm-dcta-block .sm-cap { width: 30px; height: 30px; border-radius: 9px; }
+.sm-dcta .sm-cap i {
+  display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;
+  border-radius: 10px; background: linear-gradient(150deg, #333740, #1B1E24);
+}
+.sm-dcta.sm-dcta-block .sm-cap i { border-radius: 7px; }
+.sm-dcta .sm-cap svg { transform: rotate(-45deg); display: block; }
+.sm-dcta:hover { transform: translateY(-2px); }
+.sm-dcta:hover .sm-cap { box-shadow: 0 0 16px rgba(34,211,238,0.85); }
+
+/* ---- pricing ---- */
+.sm-plans { display: grid; gap: 16px; align-items: stretch; grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 980px) { .sm-plans { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 620px) {
+  .sm-plans { grid-template-columns: 1fr; }
+  .sm-plan-feat, .sm-plan-free { margin-top: 0 !important; }
+}
+.sm-plan {
+  position: relative; background: #FFFFFF; border-radius: 18px; padding: 26px 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column;
+}
+.sm-plan .sm-plan-desc { flex: 1 0 auto; }
+.sm-plan .sm-dcta { margin-top: auto; }
+.sm-badge {
+  position: absolute; top: -13px; left: 50%; transform: translateX(-50%); white-space: nowrap;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase;
+  padding: 6px 14px; border-radius: 100px;
+}
+
+/* featured — dark header block, matching sitemargin.co.za/pricing */
+.sm-plan-feat {
+  padding: 0; margin-top: -14px;
+  box-shadow: 0 0 0 1.5px #1D5C8A, 0 20px 44px -18px rgba(29,92,138,0.4);
+}
+.sm-plan-feat .sm-plan-head {
+  background: linear-gradient(150deg, #23272E, #14171C); padding: 26px 20px 20px;
+  border-radius: 18px 18px 0 0;
+}
+.sm-plan-feat .sm-plan-body { padding: 20px 20px 26px; display: flex; flex-direction: column; flex: 1 0 auto; }
+.sm-plan-feat .sm-badge {
+  background: linear-gradient(135deg, #22D3EE, #10B981); color: #08252B;
+  box-shadow: 0 0 16px rgba(34,211,238,0.5);
+}
+
+/* free — the word is the price */
+.sm-plan-free {
+  margin-top: -14px; padding-top: 32px;
+  box-shadow: 0 0 0 1.5px #22C55E, 0 20px 44px -18px rgba(34,197,94,0.5);
+}
+.sm-plan-free .sm-free-word {
+  font-size: 56px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; margin-bottom: 8px;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  background: linear-gradient(135deg, #34D399 0%, #22C55E 45%, #15A34A 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.sm-plan-free .sm-micro { font-size: 12px; font-weight: 600; color: #15A34A; margin-bottom: 14px; }
+.sm-plan-free .sm-badge {
+  background: linear-gradient(135deg, #34D399, #15A34A); color: #04250F;
+  box-shadow: 0 0 18px rgba(34,197,94,0.55);
+}
+.sm-plan-free .sm-dcta {
+  background: linear-gradient(150deg, #1B7A45 0%, #0E5730 100%);
+  box-shadow: 0 12px 26px -10px rgba(21,163,74,0.65), inset 0 1px 1px rgba(255,255,255,0.18);
+}
+.sm-plan-free .sm-dcta .sm-cap { background: linear-gradient(135deg, #D1FAE5, #34D399 30%, #22C55E 75%); }
+
+.sm-auth-head { max-width: 430px; margin: 0 auto 10px; text-align: center; }
