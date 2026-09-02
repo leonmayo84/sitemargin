@@ -3,6 +3,7 @@ import { Capacitor } from "@capacitor/core";
 import { supabase } from "./supabaseClient";
 import { useRememberMeRestore, enableRememberMe, disableRememberMe } from "./useRememberMe";
 import { biometricAvailable, enableBiometricUnlock, unlockWithBiometrics, disableBiometricUnlock } from "./nativeBiometric";
+import { ThemeToggle } from "./ThemeToggle";
 
 // xlsx and pdfjs-dist are both large libraries only needed by the "import a
 // spreadsheet/PDF" feature. They're loaded on demand (see xlsxBufferToRows
@@ -976,11 +977,20 @@ function ScoreBar({ label, score, detail }) {
   );
 }
 
-function SummaryCard({ label, value, accent }) {
+function SummaryCard({ label, value, accent, slab, sub }) {
+  if (slab) {
+    return (
+      <div style={styles.summaryCardSlab}>
+        <div style={styles.summaryLabelSlab}>{label}</div>
+        <div style={styles.summaryValueSlab}>{value}</div>
+        {sub && <div style={styles.summarySubSlab}>{sub}</div>}
+      </div>
+    );
+  }
   return (
     <div style={styles.summaryCard}>
       <div style={styles.summaryLabel}>{label}</div>
-      <div style={{ ...styles.summaryValue, color: accent || "#1D1D1F" }}>{value}</div>
+      <div style={{ ...styles.summaryValue, ...(accent ? { color: accent } : {}) }}>{value}</div>
     </div>
   );
 }
@@ -1175,6 +1185,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
           {!Capacitor.isNativePlatform() && (
             <a href="https://sitemargin.co.za" style={styles.navHomeLink}>Home</a>
           )}
+          <ThemeToggle />
           <div className="sm-menu-wrap" ref={menuWrapRef} style={styles.menuWrap}>
             <button
               style={styles.menuBtn}
@@ -2840,6 +2851,8 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
             label="Net variance"
             value={`${portfolio.variance >= 0 ? "+" : ""}${fmt(portfolio.variance)}`}
             accent={portfolio.variance > 0 ? "#C1462B" : "#4C7A5C"}
+            slab={portfolio.variance > 0}
+            sub={portfolio.variance > 0 ? `${portfolio.overCount} project${portfolio.overCount === 1 ? "" : "s"} over budget` : undefined}
           />
           <SummaryCard label="Retention held" value={fmt(portfolio.retentionHeld)} />
           <SummaryCard
@@ -6690,8 +6703,8 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#F5F5F7",
-    color: "#1D1D1F",
+    background: "var(--bg-primary)",
+    color: "var(--text-primary)",
     fontFamily: "'Inter', sans-serif",
     padding: "20px 16px 48px",
   },
@@ -6714,8 +6727,8 @@ const styles = {
   // 1180px too, so there's no visible seam on wider viewports. Matches
   // sitemargin.co.za's own nav (position:sticky; top:0) — this header used
   // to just scroll away with the page instead of staying put.
-  dashHeader: { maxWidth: 1180, margin: "0 auto 20px", position: "sticky", top: 0, paddingTop: 56, background: "#F5F5F7", zIndex: 201 },
-  dashNavBar: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF", borderRadius: 18, padding: "10px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", marginBottom: 22, gap: 16, flexWrap: "wrap" },
+  dashHeader: { maxWidth: 1180, margin: "0 auto 20px", position: "sticky", top: 0, paddingTop: 56, background: "var(--bg-primary)", zIndex: 201 },
+  dashNavBar: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 18, padding: "10px 18px", boxShadow: "var(--shadow-card)", marginBottom: 22, gap: 16, flexWrap: "wrap" },
   dashNavRight: { display: "flex", alignItems: "center", gap: 14 },
   // Matches sitemargin.co.za's own .nav-app-link exactly (same font, size,
   // color, padding, radius) — the app's mirror-image equivalent, pointing
@@ -6743,7 +6756,7 @@ const styles = {
   // hovering the menu," so moving the mouse from button to drawer doesn't
   // flicker it shut.
   menuWrap: { position: "relative" },
-  menuBtn: { width: 40, height: 40, border: "none", borderRadius: "50%", background: "#F5F5F7", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, padding: 0, flexShrink: 0 },
+  menuBtn: { width: 40, height: 40, border: "none", borderRadius: "50%", background: "var(--bg-secondary)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, padding: 0, flexShrink: 0 },
   menuBtnBar: { display: "block", width: 15, height: 1.5, background: "#1D1D1F", borderRadius: 2, transition: "transform 0.25s ease, opacity 0.2s ease" },
   menuBtnBar1Open: { transform: "translateY(5.5px) rotate(45deg)" },
   menuBtnBarMidOpen: { opacity: 0 },
@@ -6921,12 +6934,16 @@ const styles = {
   retentionInput: { width: 34, background: "#F5F5F7", border: "1px solid transparent", borderRadius: 6, color: "#1D1D1F", fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, padding: "1px 4px", textAlign: "right" },
 
   summaryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, maxWidth: 1180, margin: "0 auto 16px" },
-  summaryCard: { background: "#FFFFFF", borderRadius: 16, padding: "14px 16px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
+  summaryCard: { background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 14, padding: "14px 15px", boxShadow: "var(--shadow-card)" },
+  summaryCardSlab: { background: "linear-gradient(150deg,#23272E 0%,#14171C 60%,#090B0E 100%)", border: "none", borderRadius: 14, padding: "14px 15px", boxShadow: "0 12px 26px -14px rgba(2,6,23,.55)" },
   // lineHeight + minHeight reserve room for two lines of label text (e.g.
   // "ORIGINAL QUOTE ALLOCATION" wraps, "ACTUAL SPEND" doesn't) so every
   // card's value sits on the same baseline regardless of how its label wraps.
-  summaryLabel: { fontSize: 11, lineHeight: 1.3, minHeight: 29, letterSpacing: "0.08em", color: "#6E6E73", marginBottom: 6, textTransform: "uppercase" },
-  summaryValue: { fontFamily: "'Inter', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 19, fontWeight: 500 },
+  summaryLabel: { fontSize: 11, lineHeight: 1.3, minHeight: 29, letterSpacing: "0.07em", color: "var(--text-secondary)", marginBottom: 7, textTransform: "uppercase", fontWeight: 700 },
+  summaryLabelSlab: { fontSize: 11, lineHeight: 1.3, minHeight: 29, letterSpacing: "0.07em", color: "rgba(255,255,255,.55)", marginBottom: 7, textTransform: "uppercase", fontWeight: 700 },
+  summaryValue: { fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 19, fontWeight: 600, color: "var(--text-primary)" },
+  summaryValueSlab: { fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 19, fontWeight: 600, color: "#F2F6F9" },
+  summarySubSlab: { fontSize: 10.5, color: "#FCA891", marginTop: 3, fontWeight: 600 },
 
   flaggedPopover: { position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, width: 280, background: "#FFFFFF", borderRadius: 14, boxShadow: "0 8px 28px rgba(0,0,0,0.16)", border: "1px solid #E8E8ED", padding: "12px 14px" },
   flaggedPopoverTitle: { fontSize: 10.5, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase", marginBottom: 8 },
@@ -6977,7 +6994,7 @@ const styles = {
   addRow: { display: "flex", gap: 10, alignItems: "center", padding: "14px", background: "#F5F5F7", flexWrap: "wrap" },
   addInput: { background: "#F5F5F7", border: "1px solid transparent", borderRadius: 10, color: "#1D1D1F", fontSize: 14, padding: "8px 12px" },
   addBtn: { background: "#1D5C8A", border: "none", borderRadius: 100, color: "#FFFFFF", fontWeight: 600, fontSize: 13, padding: "9px 16px", cursor: "pointer", whiteSpace: "nowrap" },
-  footer: { maxWidth: 1180, margin: "16px auto 0", fontSize: 12, color: "#6E6E73" },
+  footer: { maxWidth: 1180, margin: "16px auto 0", fontSize: 12, color: "var(--text-secondary)" },
   // Full marketing-style footer (AppFooter, above) — mirrors sitemargin.co.za's
   // .site-footer/.footer-* rules in styles.css. One deliberate departure: the
   // social-icon circle background is white here instead of the marketing
