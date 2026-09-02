@@ -1020,10 +1020,10 @@ function AppLogo() {
   return (
     <div style={styles.appLogoRow}>
       <svg className="sm-app-logo-mark" style={styles.appLogoMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-        <rect x="4" y="8" width="28" height="8" fill="#3C2E1E" />
+        <rect x="4" y="8" width="28" height="8" fill="#1D1D1F" />
         <rect x="34" y="8" width="10" height="8" fill="#1D5C8A" />
-        <rect x="4" y="20" width="40" height="8" fill="#3C2E1E" />
-        <rect x="4" y="32" width="40" height="8" fill="#3C2E1E" />
+        <rect x="4" y="20" width="40" height="8" fill="#1D1D1F" />
+        <rect x="4" y="32" width="40" height="8" fill="#1D1D1F" />
       </svg>
       <div className="sm-app-logo-text" style={styles.appLogoText}>
         site<span style={{ color: "#1D5C8A" }}>Margin</span>
@@ -1251,10 +1251,10 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                 <div style={styles.menuFooter}>
                   <div style={styles.menuFooterBrandRow}>
                     <svg style={styles.menuFooterLogoMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="4" y="8" width="28" height="8" fill="#3C2E1E" />
+                      <rect x="4" y="8" width="28" height="8" fill="#1D1D1F" />
                       <rect x="34" y="8" width="10" height="8" fill="#1D5C8A" />
-                      <rect x="4" y="20" width="40" height="8" fill="#3C2E1E" />
-                      <rect x="4" y="32" width="40" height="8" fill="#3C2E1E" />
+                      <rect x="4" y="20" width="40" height="8" fill="#1D1D1F" />
+                      <rect x="4" y="32" width="40" height="8" fill="#1D1D1F" />
                     </svg>
                     <span style={styles.menuFooterWordmark}>site<span style={{ color: "#1D5C8A" }}>Margin</span></span>
                   </div>
@@ -1424,10 +1424,10 @@ function AppFooter() {
           <div style={styles.pubFooterBrand}>
             <div style={styles.pubFooterLogoRow}>
               <svg style={styles.pubFooterLogoMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                <rect x="4" y="8" width="28" height="8" fill="#3C2E1E" />
+                <rect x="4" y="8" width="28" height="8" fill="#1D1D1F" />
                 <rect x="34" y="8" width="10" height="8" fill="#1D5C8A" />
-                <rect x="4" y="20" width="40" height="8" fill="#3C2E1E" />
-                <rect x="4" y="32" width="40" height="8" fill="#3C2E1E" />
+                <rect x="4" y="20" width="40" height="8" fill="#1D1D1F" />
+                <rect x="4" y="32" width="40" height="8" fill="#1D1D1F" />
               </svg>
               <div style={styles.pubFooterLogoText}>site<span style={{ color: "#1D5C8A" }}>Margin</span></div>
             </div>
@@ -2132,10 +2132,10 @@ function AuthGate() {
                   <div style={styles.menuFooter}>
                     <div style={styles.menuFooterBrandRow}>
                       <svg style={styles.menuFooterLogoMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="4" y="8" width="28" height="8" fill="#3C2E1E" />
+                        <rect x="4" y="8" width="28" height="8" fill="#1D1D1F" />
                         <rect x="34" y="8" width="10" height="8" fill="#1D5C8A" />
-                        <rect x="4" y="20" width="40" height="8" fill="#3C2E1E" />
-                        <rect x="4" y="32" width="40" height="8" fill="#3C2E1E" />
+                        <rect x="4" y="20" width="40" height="8" fill="#1D1D1F" />
+                        <rect x="4" y="32" width="40" height="8" fill="#1D1D1F" />
                       </svg>
                       <span style={styles.menuFooterWordmark}>site<span style={{ color: "#1D5C8A" }}>Margin</span></span>
                     </div>
@@ -6589,10 +6589,10 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         <div style={styles.dfRow}>
           <div style={styles.dfBrand}>
             <svg style={styles.dfMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-              <rect x="4" y="8" width="28" height="8" fill="#3C2E1E" />
+              <rect x="4" y="8" width="28" height="8" fill="#1D1D1F" />
               <rect x="34" y="8" width="10" height="8" fill="#1D5C8A" />
-              <rect x="4" y="20" width="40" height="8" fill="#3C2E1E" />
-              <rect x="4" y="32" width="40" height="8" fill="#3C2E1E" />
+              <rect x="4" y="20" width="40" height="8" fill="#1D1D1F" />
+              <rect x="4" y="32" width="40" height="8" fill="#1D1D1F" />
             </svg>
             <span style={styles.dfText}>
               site<span style={{ color: "#1D5C8A" }}>Margin</span> — Cost variance report for {project.name}
