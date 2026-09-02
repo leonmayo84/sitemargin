@@ -925,7 +925,7 @@ function TrendChart({ snapshots }) {
         const showLabel = labelAll || isFirst || isLast;
         return (
           <React.Fragment key={i}>
-            <circle cx={c.x} cy={c.y} r="5" fill="#FFFFFF" stroke={color} strokeWidth="2.5" />
+            <circle cx={c.x} cy={c.y} r="5" fill="var(--surface)" stroke={color} strokeWidth="2.5" />
             {showLabel && (
               <text
                 x={c.x}
@@ -1005,7 +1005,7 @@ function FlaggedLinesCard({ label, value, accent, items }) {
       onMouseLeave={() => setHover(false)}
     >
       <div style={styles.summaryLabel}>{label}</div>
-      <div style={{ ...styles.summaryValue, color: accent || "#1D1D1F" }}>{value}</div>
+      <div style={{ ...styles.summaryValue, color: accent || "var(--text-primary)" }}>{value}</div>
       {hover && hasItems && (
         <div style={styles.flaggedPopover}>
           <div style={styles.flaggedPopoverTitle}>Flagged line items</div>
@@ -1358,7 +1358,7 @@ function ReferralQr({ size = 112 }) {
   return (
     <svg viewBox={`0 0 ${full} ${full}`} width={size} height={size} shapeRendering="crispEdges" style={{ boxShadow: "0 1px 6px rgba(0,0,0,0.08)" }}>
       <rect width={full} height={full} fill="#ffffff" />
-      <g fill="var(--text-primary)">{rects}</g>
+      <g fill="#1D1D1F">{rects}</g>
     </svg>
   );
 }
@@ -2387,7 +2387,7 @@ function AuthGate() {
                       />
                     )}
                     {isLoginIntent && (
-                      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280", margin: "2px 2px 4px" }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--text-secondary)", margin: "2px 2px 4px" }}>
                         <input
                           type="checkbox"
                           checked={rememberMe}
@@ -3816,7 +3816,7 @@ function IntegrationsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                         value={sageForm.password}
                         onChange={(e) => setSageForm((f) => ({ ...f, password: e.target.value }))}
                       />
-                      {sageError && <div style={{ fontSize: 12.5, color: "#B3261E", marginBottom: 6 }}>{sageError}</div>}
+                      {sageError && <div style={{ fontSize: 12.5, color: "var(--danger)", marginBottom: 6 }}>{sageError}</div>}
                       <button
                         style={styles.importBtn}
                         disabled={sageConnecting || !sageForm.username || !sageForm.password}
@@ -5208,7 +5208,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         </div>
       )}
       {aheadCount > 0 && (
-        <div style={{ ...styles.warningBanner, borderColor: "var(--warning)", background: "rgba(184,134,47,0.1)", color: "#7A5A1E" }}>
+        <div style={{ ...styles.warningBanner, borderColor: "var(--warning)", background: "rgba(184,134,47,0.1)", color: "var(--text-primary)" }}>
           {aheadCount} line{aheadCount > 1 ? "s are" : " is"} spending ahead of physical progress. Check the Progress column below.
         </div>
       )}
@@ -5836,7 +5836,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           </div>
           {purchaseOrders.map((po) => {
             const linkedItem = items.find((i) => i.id === po.line_item_id);
-            const poStatusColor = po.status === "received" ? "var(--success)" : po.status === "cancelled" ? "var(--danger)" : po.status === "confirmed" ? "#1D1D1F" : po.status === "sent" ? "var(--warning)" : "#6E6E73";
+            const poStatusColor = po.status === "received" ? "var(--success)" : po.status === "cancelled" ? "var(--danger)" : po.status === "confirmed" ? "var(--text-primary)" : po.status === "sent" ? "var(--warning)" : "var(--text-secondary)";
             return (
               <div key={po.id} style={{ ...styles.row, minWidth: 1180 }}>
                 <span style={{ ...styles.tdCell, flex: 1.4 }}>{po.supplier_name}</span>
@@ -6038,7 +6038,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                           <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: statusColor, opacity: 0.6 }} />
                         </div>
                         {today >= rangeStart && today <= rangeEnd && (
-                          <div style={{ position: "absolute", top: -2, bottom: -2, left: `${((today - rangeStart) / 86400000 / totalDays) * 100}%`, width: 1, background: "#1D1D1F" }} title="Today" />
+                          <div style={{ position: "absolute", top: -2, bottom: -2, left: `${((today - rangeStart) / 86400000 / totalDays) * 100}%`, width: 1, background: "var(--text-primary)" }} title="Today" />
                         )}
                       </div>
                       <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 4 }}>{dfmt(start)} → {dfmt(end)}</div>
@@ -6414,7 +6414,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               )}
 
               {reportNote.trim() && (
-                <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid var(--border-color)", fontSize: 13.5, lineHeight: 1.65, fontStyle: "italic", color: "#3A3A3D" }}>
+                <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid var(--border-color)", fontSize: 13.5, lineHeight: 1.65, fontStyle: "italic", color: "var(--text-secondary)" }}>
                   "{reportNote}"
                 </div>
               )}
@@ -6553,8 +6553,8 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                       style={{
                         flex: 1, padding: "7px 0", borderRadius: 100, border: "none", cursor: "pointer",
                         fontSize: 13, fontWeight: 600, textTransform: "capitalize",
-                        background: reportFrequency === f ? "#20344A" : "#FFFFFF",
-                        color: reportFrequency === f ? "#FFFFFF" : "#6E6E73",
+                        background: reportFrequency === f ? "#20344A" : "var(--surface)",
+                        color: reportFrequency === f ? "#FFFFFF" : "var(--text-secondary)",
                         boxShadow: reportFrequency === f ? "none" : "0 1px 6px rgba(0,0,0,0.06)",
                       }}
                     >
@@ -6710,7 +6710,7 @@ const styles = {
   },
   eyebrow: { fontSize: 12, letterSpacing: "0.1em", color: "var(--text-secondary)", fontWeight: 600, textTransform: "uppercase" },
   eyebrowProminent: { fontSize: 17, letterSpacing: "0.06em", color: "var(--accent)", fontWeight: 800, textTransform: "uppercase" },
-  titleDivider: { fontSize: 22, color: "#C9C4B8", fontWeight: 400, lineHeight: 1 },
+  titleDivider: { fontSize: 22, color: "var(--border-color)", fontWeight: 400, lineHeight: 1 },
   appLogoRow: { display: "flex", alignItems: "center", gap: 8 },
   appLogoMark: { height: 64, width: "auto", display: "block" },
   appLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 22, letterSpacing: "-0.01em", color: "var(--text-primary)" },
@@ -6733,7 +6733,7 @@ const styles = {
   // Matches sitemargin.co.za's own .nav-app-link exactly (same font, size,
   // color, padding, radius) — the app's mirror-image equivalent, pointing
   // back to the marketing site instead of into the app.
-  navHomeLink: { fontSize: 13.5, fontWeight: 600, color: "#FFFFFF", textDecoration: "none", whiteSpace: "nowrap", background: "var(--accent)", padding: "8px 16px", borderRadius: 100, display: "inline-block" },
+  navHomeLink: { fontSize: 13.5, fontWeight: 600, color: "var(--on-accent)", textDecoration: "none", whiteSpace: "nowrap", background: "var(--accent)", padding: "8px 16px", borderRadius: 100, display: "inline-block" },
   dashTitle: { fontSize: "clamp(30px, 4.5vw, 42px)", fontWeight: 700, letterSpacing: "-0.02em" },
   pageHeaderEyebrow: { fontSize: 17, letterSpacing: "0.06em", color: "var(--accent)", fontWeight: 800, textTransform: "uppercase", margin: 0 },
   dashTitleInput: { fontSize: "clamp(20px, 2.6vw, 26px)", fontWeight: 700, letterSpacing: "-0.02em", color: "var(--accent)", background: "none", border: "none", borderBottom: "1px dashed var(--border-color)", padding: 0, width: "100%", minWidth: 0 },
@@ -6757,7 +6757,7 @@ const styles = {
   // flicker it shut.
   menuWrap: { position: "relative" },
   menuBtn: { width: 40, height: 40, border: "none", borderRadius: "50%", background: "var(--bg-secondary)", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, padding: 0, flexShrink: 0 },
-  menuBtnBar: { display: "block", width: 15, height: 1.5, background: "#1D1D1F", borderRadius: 2, transition: "transform 0.25s ease, opacity 0.2s ease" },
+  menuBtnBar: { display: "block", width: 15, height: 1.5, background: "var(--text-primary)", borderRadius: 2, transition: "transform 0.25s ease, opacity 0.2s ease" },
   menuBtnBar1Open: { transform: "translateY(5.5px) rotate(45deg)" },
   menuBtnBarMidOpen: { opacity: 0 },
   menuBtnBar3Open: { transform: "translateY(-5.5px) rotate(-45deg)" },
@@ -6807,15 +6807,15 @@ const styles = {
   menuSecondaryLink: { display: "block", width: "calc(100% + 20px)", textAlign: "left", background: "none", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 500, color: "var(--text-secondary)", padding: "5px 10px", margin: "0 -10px", cursor: "pointer", textDecoration: "none" },
   menuDivider: { height: 1, background: "var(--border-color)", margin: "14px 0 0" },
   menuPanelDimRow: { display: "flex", gap: 16, marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border-color)" },
-  menuPanelDim: { background: "none", border: "none", fontSize: 12, fontWeight: 600, color: "#8A8A90", padding: 0, cursor: "pointer", textDecoration: "none" },
+  menuPanelDim: { background: "none", border: "none", fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", padding: 0, cursor: "pointer", textDecoration: "none" },
   menuFooter: { marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border-color)" },
   menuFooterBrandRow: { display: "flex", alignItems: "center", gap: 7, marginBottom: 6 },
   menuFooterLogoMark: { height: 20, width: "auto", display: "block" },
   menuFooterWordmark: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 14.5, color: "var(--text-primary)" },
   menuFooterTagline: { fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 14 },
   menuPanelActions: { display: "flex", flexDirection: "column", gap: 8 },
-  menuPanelGhost: { textAlign: "center", padding: 11, borderRadius: 100, fontWeight: 600, fontSize: 14, border: "1px solid #1D1D1F", color: "var(--text-primary)", background: "none", cursor: "pointer" },
-  menuPanelSolid: { textAlign: "center", padding: 11, borderRadius: 100, fontWeight: 600, fontSize: 14, border: "none", color: "#FFFFFF", background: "var(--accent)", cursor: "pointer" },
+  menuPanelGhost: { textAlign: "center", padding: 11, borderRadius: 100, fontWeight: 600, fontSize: 14, border: "1px solid var(--text-primary)", color: "var(--text-primary)", background: "none", cursor: "pointer" },
+  menuPanelSolid: { textAlign: "center", padding: 11, borderRadius: 100, fontWeight: 600, fontSize: 14, border: "none", color: "var(--on-accent)", background: "var(--accent)", cursor: "pointer" },
   menuPanelEmail: { marginTop: 14, fontSize: 11.5, color: "var(--text-secondary)", fontFamily: "'Space Grotesk', sans-serif" },
 
   topNav: { maxWidth: 1180, margin: "0 auto 20px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid var(--border-color)", paddingBottom: 12 },
@@ -6833,7 +6833,7 @@ const styles = {
   // site's .nav-app-link, so "Log in" is right there in the header on the
   // signed-out gate screen without needing to open any menu.
   gateNavActions: { display: "flex", alignItems: "center", gap: 10 },
-  gateNavBtn: { fontSize: 13.5, fontWeight: 600, color: "#FFFFFF", textDecoration: "none", whiteSpace: "nowrap", background: "var(--accent)", padding: "8px 16px", borderRadius: 100, display: "inline-block" },
+  gateNavBtn: { fontSize: 13.5, fontWeight: 600, color: "var(--on-accent)", textDecoration: "none", whiteSpace: "nowrap", background: "var(--accent)", padding: "8px 16px", borderRadius: 100, display: "inline-block" },
   gateWrap: { maxWidth: 640, margin: "48px auto 0", padding: "0 16px" },
   heroWrap: { position: "relative", isolation: "isolate", overflow: "hidden", borderRadius: 24, background: "var(--bg-secondary)", padding: "30px 20px 34px", marginBottom: 36 },
   heroBacksplash: { position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 0, pointerEvents: "none" },
@@ -6842,7 +6842,7 @@ const styles = {
   heroItal: { fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 600 },
   heroSub: { fontSize: 16, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 26 },
   heroCtas: { display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", margin: "6px 0 20px" },
-  heroBtnPrimary: { background: "var(--accent)", color: "#FFFFFF", fontWeight: 600, fontSize: 15, padding: "12px 24px", borderRadius: 100, border: "none", cursor: "pointer" },
+  heroBtnPrimary: { background: "var(--accent)", color: "var(--on-accent)", fontWeight: 600, fontSize: 15, padding: "12px 24px", borderRadius: 100, border: "none", cursor: "pointer" },
   heroTextlink: { fontSize: 15, fontWeight: 500, color: "var(--accent)", background: "none", border: "none", padding: 0, cursor: "pointer" },
   heroProof: { display: "flex", alignItems: "baseline", gap: 7, fontSize: 13.5, color: "var(--text-secondary)", marginBottom: 30 },
   heroProofCount: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15.5, color: "var(--text-primary)" },
@@ -6852,7 +6852,7 @@ const styles = {
   heroDiamond: { width: 160, height: 160, background: "linear-gradient(150deg, #333740 0%, #272B32 45%, #1B1E24 100%)", borderRadius: 32, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "inset 0 1px 1px rgba(255,255,255,0.08), inset 0 -16px 34px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,0,0,0.5)" },
   heroDiamondInner: { transform: "rotate(-45deg)", textAlign: "center" },
   heroDiamondFigure: { fontWeight: 700, fontSize: 25, letterSpacing: "-0.7px", color: "#F2F6F9", whiteSpace: "nowrap", textShadow: "0 2px 18px rgba(34,211,238,0.28)" },
-  heroDiamondLabel: { fontSize: 10, fontWeight: 500, letterSpacing: "0.13em", color: "#AEB6BE", marginTop: 6, textTransform: "uppercase" },
+  heroDiamondLabel: { fontSize: 10, fontWeight: 500, letterSpacing: "0.13em", color: "var(--text-secondary)", marginTop: 6, textTransform: "uppercase" },
   heroBadge: { position: "absolute", zIndex: 1, display: "flex", alignItems: "center", gap: 7, background: "var(--surface)", borderRadius: 100, padding: "9px 14px 9px 12px", fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)", boxShadow: "0 12px 28px rgba(0,0,0,0.12)" },
   heroBadgeDot: { width: 7, height: 7, borderRadius: "50%", background: "var(--success)", flexShrink: 0 },
   heroBadgeTop: { top: 4, left: "8%" },
@@ -6876,7 +6876,7 @@ const styles = {
   checkoutPriceUnit: { fontSize: 13, color: "var(--text-secondary)", fontWeight: 400 },
   checkoutDesc: { fontSize: 13, color: "var(--text-secondary)", marginBottom: 16, lineHeight: 1.5 },
   checkoutCardSelected: { boxShadow: "0 0 0 1.5px #1D5C8A, 0 12px 34px rgba(0,0,0,0.08)" },
-  tierCta: { background: "transparent", border: "1px solid #1D1D1F", borderRadius: 100, padding: "9px 16px", fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)", cursor: "pointer" },
+  tierCta: { background: "transparent", border: "1px solid var(--text-primary)", borderRadius: 100, padding: "9px 16px", fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)", cursor: "pointer" },
   tierNote: { fontSize: 12.5, color: "var(--accent)", fontWeight: 600, marginBottom: 10 },
   gateText: { fontSize: 15, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 20 },
   gateForm: { display: "flex", flexDirection: "column", gap: 10 },
@@ -6887,13 +6887,13 @@ const styles = {
   gateSwitchLink: { color: "var(--accent)", fontWeight: 600, textDecoration: "none" },
   gateSwitchLinkBtn: { color: "var(--accent)", fontWeight: 600, background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" },
   topNavBtn: { background: "none", border: "none", color: "var(--text-secondary)", fontSize: 14, fontWeight: 500, padding: "6px 12px", cursor: "pointer", borderRadius: 3 },
-  topNavBtnActive: { background: "#1D1D1F", color: "#FFFFFF", fontWeight: 600 },
+  topNavBtnActive: { background: "var(--text-primary)", color: "var(--bg-primary)", fontWeight: 600 },
 
   explainer: { maxWidth: 1180, margin: "0 auto 18px", fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, background: "var(--surface)", borderRadius: 12, padding: "12px 16px", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
 
   // ---- Accounting sync (Xero / Sage) ----
-  integrationsBanner: { maxWidth: 1180, margin: "0 auto 18px", fontSize: 13.5, fontWeight: 500, color: "#154766", background: "rgba(29,92,138,0.10)", borderRadius: 12, padding: "12px 16px" },
-  integrationsBannerError: { color: "#8A2E1B", background: "rgba(193,70,43,0.09)" },
+  integrationsBanner: { maxWidth: 1180, margin: "0 auto 18px", fontSize: 13.5, fontWeight: 500, color: "var(--text-primary)", background: "rgba(29,92,138,0.10)", borderRadius: 12, padding: "12px 16px" },
+  integrationsBannerError: { color: "var(--text-primary)", background: "rgba(193,70,43,0.09)" },
   integrationsGrid: { maxWidth: 1180, margin: "0 auto 24px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14 },
   integrationsCard: { background: "var(--surface)", borderRadius: 14, padding: "18px 20px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)" },
   integrationsCardHead: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 },
@@ -6953,7 +6953,7 @@ const styles = {
   flaggedPopoverName: { flex: 1, fontSize: 12.5, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
   flaggedPopoverVariance: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontVariantNumeric: "tabular-nums", flexShrink: 0 },
 
-  warningBanner: { maxWidth: 1180, margin: "0 auto 12px", background: "rgba(193,70,43,0.07)", border: "1px solid #C1462B", borderRadius: 14, padding: "12px 16px", fontSize: 14, color: "#8A3D1E" },
+  warningBanner: { maxWidth: 1180, margin: "0 auto 12px", background: "rgba(193,70,43,0.07)", border: "1px solid var(--danger)", borderRadius: 14, padding: "12px 16px", fontSize: 14, color: "var(--text-primary)" },
 
   categoryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, maxWidth: 1180, margin: "0 auto 16px" },
   categoryCard: { background: "var(--surface)", borderRadius: 12, padding: "10px 14px", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
@@ -6965,14 +6965,14 @@ const styles = {
   categoryVariance: { fontWeight: 600 },
 
   importRow: { maxWidth: 1180, margin: "0 auto 14px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" },
-  importBtn: { background: "var(--surface)", border: "none", borderRadius: 100, color: "var(--text-primary)", fontSize: 13, fontWeight: 600, padding: "8px 16px", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" },
+  importBtn: { background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 100, color: "var(--text-primary)", fontSize: 13, fontWeight: 600, padding: "8px 16px", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" },
   templateLink: { background: "none", border: "none", color: "var(--text-secondary)", fontSize: 12.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
 
   viewToggle: { maxWidth: 1180, margin: "0 auto 12px", display: "flex", gap: 8, flexWrap: "wrap" },
   toggleGroupWrap: { maxWidth: 1180, margin: "0 auto", marginBottom: 14 },
   toggleGroupLabel: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-secondary)", margin: "0 0 8px 4px" },
   toggleBtn: { background: "var(--surface)", border: "none", borderRadius: 100, color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, padding: "8px 16px", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
-  toggleBtnActive: { background: "#1D1D1F", color: "#FFFFFF", fontWeight: 600 },
+  toggleBtnActive: { background: "var(--text-primary)", color: "var(--bg-primary)", fontWeight: 600 },
 
   ledger: { maxWidth: 1180, margin: "0 auto", background: "var(--surface)", borderRadius: 18, overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" },
   ledgerHeaderRow: { display: "flex", alignItems: "center", gap: 14, padding: "10px 14px", borderBottom: "1px solid var(--border-color)", background: "var(--bg-secondary)", minWidth: 640 },
@@ -7024,8 +7024,8 @@ const styles = {
   referralHeading: { fontSize: 17, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 },
   referralSub: { fontSize: 13, color: "var(--text-secondary)", marginBottom: 16, maxWidth: 420 },
   referralActions: { display: "flex", gap: 10, flexWrap: "wrap" },
-  referralBtn: { display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius: 100, fontSize: 13, fontWeight: 600, textDecoration: "none", border: "1px solid #1D1D1F", color: "var(--text-primary)", background: "none", cursor: "pointer" },
-  referralBtnWhatsapp: { borderColor: "#25D366", color: "#1c8a44" },
+  referralBtn: { display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius: 100, fontSize: 13, fontWeight: 600, textDecoration: "none", border: "1px solid var(--text-primary)", color: "var(--text-primary)", background: "none", cursor: "pointer" },
+  referralBtnWhatsapp: { borderColor: "#25D366", color: "var(--success)" },
   referralQrBlock: { display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: "0 0 auto" },
   referralQrCaption: { fontSize: 11, color: "var(--text-secondary)", textAlign: "center" },
   docFooter: { maxWidth: 1180, margin: "30px auto 0", paddingTop: 14, borderTop: "1px solid var(--border-color)" },
@@ -7047,10 +7047,10 @@ const styles = {
 
   chartGrid: { maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 14 },
   chartCard: { background: "var(--surface)", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
-  chartCardGreen: { background: "radial-gradient(120% 100% at 100% 0%, rgba(76,122,92,0.10), rgba(76,122,92,0) 55%), #FFFFFF", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid #4C7A5C" },
-  chartCardBlue: { background: "radial-gradient(120% 100% at 100% 0%, rgba(61,111,166,0.10), rgba(61,111,166,0) 55%), #FFFFFF", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid #3D6FA6" },
-  chartCardRed: { background: "radial-gradient(120% 100% at 100% 0%, rgba(193,70,43,0.09), rgba(193,70,43,0) 55%), #FFFFFF", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid #C1462B" },
-  chartCardGold: { background: "radial-gradient(120% 100% at 100% 0%, rgba(184,134,47,0.11), rgba(184,134,47,0) 55%), #FFFFFF", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid #B8862F" },
+  chartCardGreen: { background: "radial-gradient(120% 100% at 100% 0%, rgba(76,122,92,0.10), rgba(76,122,92,0) 55%), var(--surface)", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid var(--success)" },
+  chartCardBlue: { background: "radial-gradient(120% 100% at 100% 0%, rgba(61,111,166,0.10), rgba(61,111,166,0) 55%), var(--surface)", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid var(--accent)" },
+  chartCardRed: { background: "radial-gradient(120% 100% at 100% 0%, rgba(193,70,43,0.09), rgba(193,70,43,0) 55%), var(--surface)", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid var(--danger)" },
+  chartCardGold: { background: "radial-gradient(120% 100% at 100% 0%, rgba(184,134,47,0.11), rgba(184,134,47,0) 55%), var(--surface)", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid var(--warning)" },
   chartDot: { display: "inline-block", width: 8, height: 8, borderRadius: "50%", marginRight: 7, position: "relative", top: -1 },
   chartTitle: { fontSize: 18, fontWeight: 600, marginBottom: 2 },
   chartSub: { fontSize: 12, color: "var(--text-secondary)", marginBottom: 16 },
@@ -7060,13 +7060,13 @@ const styles = {
   trendCell: { fontSize: 12, fontFamily: "'Space Grotesk', sans-serif" },
 
   quoteSheet: { maxWidth: 800, margin: "0 auto", background: "var(--surface)", borderRadius: 18, padding: "36px 40px", boxShadow: "0 12px 34px rgba(0,0,0,0.08)" },
-  quoteHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #1D1D1F", paddingBottom: 20, marginBottom: 28 },
+  quoteHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid var(--text-primary)", paddingBottom: 20, marginBottom: 28 },
   quoteEyebrow: { fontSize: 12, letterSpacing: "0.14em", color: "var(--accent)", fontWeight: 600, marginBottom: 6 },
   quoteProjectName: { fontSize: 24, fontWeight: 700, letterSpacing: "-0.015em", color: "var(--text-primary)" },
   quoteMeta: { textAlign: "right", fontSize: 12.5, color: "var(--text-secondary)", lineHeight: 1.7 },
   quoteCatHeading: { fontSize: 13, letterSpacing: "0.06em", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: 8, paddingBottom: 6, borderBottom: "1px solid var(--border-color)" },
   quoteRow: { display: "flex", padding: "6px 0", fontSize: 14, color: "var(--text-primary)" },
-  quoteTotalRow: { display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 600, color: "var(--text-primary)", borderTop: "2px solid #1D1D1F", paddingTop: 14, marginTop: 10 },
+  quoteTotalRow: { display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 600, color: "var(--text-primary)", borderTop: "2px solid var(--text-primary)", paddingTop: 14, marginTop: 10 },
   quoteFootnote: { fontSize: 11.5, color: "var(--text-secondary)", marginTop: 30, lineHeight: 1.6, borderTop: "1px solid var(--border-color)", paddingTop: 16 },
   quoteClientEditRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 18, flexWrap: "wrap" },
   quoteClientEditLabel: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-secondary)" },
