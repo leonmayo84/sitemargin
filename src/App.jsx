@@ -110,9 +110,9 @@ const fmtShort = (n) => {
 };
 
 const STATUS = {
-  ok: { label: "ON TRACK", color: "#4C7A5C", bg: "rgba(76,122,92,0.12)" },
-  watch: { label: "WATCH", color: "#B8862F", bg: "rgba(184,134,47,0.12)" },
-  over: { label: "OVER", color: "#C1462B", bg: "rgba(193,70,43,0.12)" },
+  ok: { label: "ON TRACK", color: "var(--success)", bg: "rgba(76,122,92,0.12)" },
+  watch: { label: "WATCH", color: "var(--warning)", bg: "rgba(184,134,47,0.12)" },
+  over: { label: "OVER", color: "var(--danger)", bg: "rgba(193,70,43,0.12)" },
 };
 
 const CATEGORIES = [
@@ -134,7 +134,7 @@ const CATEGORY_COLOR = {
   "Roofing & Waterproofing": "#B5651D",
   "Windows & Doors": "#4F7A8C",
   Plumbing: "#3D6FA6",
-  Electrical: "#B8862F",
+  Electrical: "var(--warning)",
   "HVAC & Mechanical": "#4C8C87",
   "Fire Protection": "#B3453D",
   "Plastering & Rendering": "#BFA98C",
@@ -289,7 +289,7 @@ function ModuleBanner({ moduleKey, stat, statLabel, chartArg }) {
         </div>
         <div>
           <p style={{ fontSize: 15, fontWeight: 700, margin: "0 0 2px" }}>{info.label}</p>
-          <p style={{ fontSize: 12.5, margin: 0, color: "#6E6E73" }}>{info.sub}</p>
+          <p style={{ fontSize: 12.5, margin: 0, color: "var(--text-secondary)" }}>{info.sub}</p>
         </div>
       </div>
       <svg style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 220, opacity: 0.5 }} viewBox="0 0 220 60" preserveAspectRatio="none">
@@ -297,7 +297,7 @@ function ModuleBanner({ moduleKey, stat, statLabel, chartArg }) {
       </svg>
       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, zIndex: 1, textAlign: "right", color: mc.solid }}>
         {stat}
-        <span style={{ display: "block", fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "#6E6E73", marginTop: 2 }}>{statLabel}</span>
+        <span style={{ display: "block", fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-secondary)", marginTop: 2 }}>{statLabel}</span>
       </div>
     </div>
   );
@@ -323,9 +323,9 @@ const TIER_LABEL = {
 // trial tint is deliberately the least saturated of the four.
 const HEADER_TIER_BADGE = {
   free: { label: "Trial", tint: "rgba(160,160,166,0.14)", color: "#83838A" },
-  contractor: { label: "Contractor", tint: "rgba(29,92,138,0.09)", color: "#1D5C8A" },
-  firm: { label: "Company", tint: "rgba(184,134,47,0.11)", color: "#B8862F" },
-  homeowner: { label: "Home Owner", tint: "rgba(76,122,92,0.10)", color: "#4C7A5C" },
+  contractor: { label: "Contractor", tint: "rgba(29,92,138,0.09)", color: "var(--accent)" },
+  firm: { label: "Company", tint: "rgba(184,134,47,0.11)", color: "var(--warning)" },
+  homeowner: { label: "Home Owner", tint: "rgba(76,122,92,0.10)", color: "var(--success)" },
 };
 
 function statusFor(budget, actual) {
@@ -393,9 +393,9 @@ function scoreSubcontractor(items) {
 
 function scoreColor(score) {
   if (score == null) return "#6E6E73";
-  if (score >= 75) return "#4C7A5C";
-  if (score >= 50) return "#B8862F";
-  return "#C1462B";
+  if (score >= 75) return "var(--success)";
+  if (score >= 50) return "var(--warning)";
+  return "var(--danger)";
 }
 
 function parseCsvToItems(text) {
@@ -668,22 +668,22 @@ function BarChartBudgetVsActual({ items }) {
         return (
           <div key={item.id}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-              <span style={{ fontSize: 12.5, color: "#4A4A4F" }}>{item.name}</span>
-              <span style={{ fontSize: 11.5, fontFamily: "'Space Grotesk', sans-serif", color: over ? "#C1462B" : "#4C7A5C" }}>
+              <span style={{ fontSize: 12.5, color: "var(--text-secondary)" }}>{item.name}</span>
+              <span style={{ fontSize: 11.5, fontFamily: "'Space Grotesk', sans-serif", color: over ? "var(--danger)" : "var(--success)" }}>
                 {fmtShort(item.actual)} / {fmtShort(item.budget)}
               </span>
             </div>
             <div style={{ position: "relative", height: 16 }}>
-              <div style={{ position: "absolute", top: 0, left: 0, width: `${bPct}%`, height: 7, background: "#C7C7CE", borderRadius: 3 }} />
-              <div style={{ position: "absolute", top: 9, left: 0, width: `${aPct}%`, height: 7, background: over ? "#C1462B" : "#4C7A5C", borderRadius: 3 }} />
+              <div style={{ position: "absolute", top: 0, left: 0, width: `${bPct}%`, height: 7, background: "var(--border-color)", borderRadius: 3 }} />
+              <div style={{ position: "absolute", top: 9, left: 0, width: `${aPct}%`, height: 7, background: over ? "var(--danger)" : "var(--success)", borderRadius: 3 }} />
             </div>
           </div>
         );
       })}
       <div style={{ display: "flex", gap: 16, marginTop: 4, flexWrap: "wrap" }}>
         <LegendDot color="#C7C7CE" label="Budget" />
-        <LegendDot color="#4C7A5C" label="Actual (within)" />
-        <LegendDot color="#C1462B" label="Actual (over)" />
+        <LegendDot color="var(--success)" label="Actual (within)" />
+        <LegendDot color="var(--danger)" label="Actual (over)" />
       </div>
     </div>
   );
@@ -714,7 +714,7 @@ function DonutCategorySplit({ rollup }) {
           })}
         </g>
         <text x="70" y="66" textAnchor="middle" fill="#6E6E73" fontSize="10" fontFamily="'IBM Plex Mono', monospace">SPENT</text>
-        <text x="70" y="82" textAnchor="middle" fill="#1D1D1F" fontSize="14" fontWeight="600" fontFamily="'IBM Plex Mono', monospace">
+        <text x="70" y="82" textAnchor="middle" fill="var(--text-primary)" fontSize="14" fontWeight="600" fontFamily="'IBM Plex Mono', monospace">
           {fmtShort(total)}
         </text>
       </svg>
@@ -722,8 +722,8 @@ function DonutCategorySplit({ rollup }) {
         {rollup.map((c) => (
           <div key={c.category} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
             <span style={{ width: 9, height: 9, borderRadius: "50%", background: CATEGORY_COLOR[c.category] }} />
-            <span style={{ color: "#4A4A4F" }}>{c.category}</span>
-            <span style={{ marginLeft: "auto", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#6E6E73" }}>
+            <span style={{ color: "var(--text-secondary)" }}>{c.category}</span>
+            <span style={{ marginLeft: "auto", fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "var(--text-secondary)" }}>
               {((c.actual / total) * 100).toFixed(0)}%
             </span>
           </div>
@@ -749,27 +749,27 @@ function ProgressBars({ items }) {
     <div>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {plotted.map((item) => {
-          const color = item.gap > 15 ? "#C1462B" : item.gap > 5 ? "#B8862F" : "#4C7A5C";
+          const color = item.gap > 15 ? "var(--danger)" : item.gap > 5 ? "var(--warning)" : "var(--success)";
           return (
             <div key={item.id}>
-              <div style={{ fontSize: 12.5, color: "#4A4A4F", marginBottom: 5 }}>{item.name}</div>
+              <div style={{ fontSize: 12.5, color: "var(--text-secondary)", marginBottom: 5 }}>{item.name}</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                <div style={{ height: 7, background: "#F2F2F5", borderRadius: 3 }}>
-                  <div style={{ width: `${item.prog}%`, height: "100%", background: "#4C7A5C", borderRadius: 3 }} />
+                <div style={{ height: 7, background: "var(--bg-secondary)", borderRadius: 3 }}>
+                  <div style={{ width: `${item.prog}%`, height: "100%", background: "var(--success)", borderRadius: 3 }} />
                 </div>
-                <div style={{ height: 7, background: "#F2F2F5", borderRadius: 3 }}>
+                <div style={{ height: 7, background: "var(--bg-secondary)", borderRadius: 3 }}>
                   <div style={{ width: `${Math.min(item.spent, 100)}%`, height: "100%", background: color, borderRadius: 3 }} />
                 </div>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
-                <span style={{ fontSize: 10, color: "#4C7A5C" }}>{item.prog.toFixed(0)}% done</span>
+                <span style={{ fontSize: 10, color: "var(--success)" }}>{item.prog.toFixed(0)}% done</span>
                 <span style={{ fontSize: 10, color }}>{item.spent.toFixed(0)}% spent</span>
               </div>
             </div>
           );
         })}
       </div>
-      <p style={{ fontSize: 12, color: "#6E6E73", marginTop: 14 }}>
+      <p style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 14 }}>
         Red means spending is well ahead of progress — the bigger the gap between the two bars, the more urgent.
       </p>
     </div>
@@ -793,13 +793,13 @@ function TopOverruns({ items }) {
     <div style={{ display: "flex", flexDirection: "column" }}>
       {overruns.map((item, idx) => (
         <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: idx < overruns.length - 1 ? "1px solid #F2F2F5" : "none" }}>
-          <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#FDEDE8", color: "#C1462B", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <div style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(193,70,43,0.10)", color: "var(--danger)", fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             {idx + 1}
           </div>
-          <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#1D1D1F" }}>{item.name}</div>
+          <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>{item.name}</div>
           <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", color: "#C1462B" }}>+{fmtShort(item.variance)}</div>
-            <div style={{ fontSize: 11, color: "#8E8E93" }}>+{item.pctOver.toFixed(0)}%</div>
+            <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", color: "var(--danger)" }}>+{fmtShort(item.variance)}</div>
+            <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>+{item.pctOver.toFixed(0)}%</div>
           </div>
         </div>
       ))}
@@ -824,36 +824,36 @@ function ClaimsCertifiedChart({ items }) {
         const stageMax = Math.max(claimed, certified, paid, 1);
         const gap = claimed - certified;
         const stages = [
-          { label: "Claimed", value: claimed, color: "#B8862F" },
+          { label: "Claimed", value: claimed, color: "var(--warning)" },
           { label: "Certified", value: certified, color: "#3D6FA6" },
-          { label: "Paid", value: paid, color: "#4C7A5C" },
+          { label: "Paid", value: paid, color: "var(--success)" },
         ];
         return (
           <div key={item.id} style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#1D1D1F" }}>{item.name}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{item.name}</span>
               {gap > 0 && (
-                <span style={{ fontSize: 10.5, fontFamily: "'Space Grotesk', sans-serif", color: "#B8862F" }}>
+                <span style={{ fontSize: 10.5, fontFamily: "'Space Grotesk', sans-serif", color: "var(--warning)" }}>
                   {fmtShort(gap)} awaiting sign-off
                 </span>
               )}
             </div>
             {stages.map((stage) => (
               <div key={stage.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                <span style={{ width: 60, fontSize: 10.5, color: "#6E6E73", textAlign: "right", flexShrink: 0 }}>{stage.label}</span>
-                <div style={{ flex: 1, height: 14, background: "#F2F2F5", borderRadius: 3, overflow: "hidden" }}>
+                <span style={{ width: 60, fontSize: 10.5, color: "var(--text-secondary)", textAlign: "right", flexShrink: 0 }}>{stage.label}</span>
+                <div style={{ flex: 1, height: 14, background: "var(--bg-secondary)", borderRadius: 3, overflow: "hidden" }}>
                   <div style={{ width: `${(stage.value / stageMax) * 100}%`, height: "100%", background: stage.color, borderRadius: 3 }} />
                 </div>
-                <span style={{ fontSize: 10.5, fontFamily: "'Space Grotesk', sans-serif", color: "#4A4A4F", width: 60, flexShrink: 0 }}>{fmtShort(stage.value)}</span>
+                <span style={{ fontSize: 10.5, fontFamily: "'Space Grotesk', sans-serif", color: "var(--text-secondary)", width: 60, flexShrink: 0 }}>{fmtShort(stage.value)}</span>
               </div>
             ))}
           </div>
         );
       })}
       <div style={{ display: "flex", gap: 16, marginTop: 4, flexWrap: "wrap" }}>
-        <LegendDot color="#B8862F" label="Claimed" />
+        <LegendDot color="var(--warning)" label="Claimed" />
         <LegendDot color="#3D6FA6" label="Certified" />
-        <LegendDot color="#4C7A5C" label="Paid (actual)" />
+        <LegendDot color="var(--success)" label="Paid (actual)" />
       </div>
     </div>
   );
@@ -896,7 +896,7 @@ function TrendChart({ snapshots }) {
   // rather than whether the trend is improving or worsening, which the
   // callout line above the chart speaks to instead.
   const latest = values[values.length - 1];
-  const color = latest > 0 ? "#C1462B" : "#4C7A5C";
+  const color = latest > 0 ? "var(--danger)" : "var(--success)";
   const fillId = "trendAreaFill";
   // Labelling every point gets unreadable past a handful of snapshots —
   // only the first and last carry a value once there are more than five.
@@ -933,7 +933,7 @@ function TrendChart({ snapshots }) {
                 textAnchor={isFirst ? "start" : isLast ? "end" : "middle"}
                 fontSize="13"
                 fontWeight="700"
-                fill="#1D1D1F"
+                fill="var(--text-primary)"
                 fontFamily="'IBM Plex Mono', monospace"
               >
                 {c.variance >= 0 ? "+" : ""}{fmtShort(c.variance)}
@@ -948,7 +948,7 @@ function TrendChart({ snapshots }) {
 
 function LegendDot({ color, label }) {
   return (
-    <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "#6E6E73" }}>
+    <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, color: "var(--text-secondary)" }}>
       <span style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
       {label}
     </span>
@@ -956,7 +956,7 @@ function LegendDot({ color, label }) {
 }
 
 function EmptyChart({ label }) {
-  return <div style={{ fontSize: 13, color: "#6E6E73", padding: "24px 0" }}>{label}</div>;
+  return <div style={{ fontSize: 13, color: "var(--text-secondary)", padding: "24px 0" }}>{label}</div>;
 }
 
 function ScoreBar({ label, score, detail }) {
@@ -964,15 +964,15 @@ function ScoreBar({ label, score, detail }) {
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-        <span style={{ fontSize: 12, color: "#4A4A4F" }}>{label}</span>
+        <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{label}</span>
         <span style={{ fontSize: 12, fontFamily: "'Space Grotesk', sans-serif", color }}>
           {score == null ? "—" : Math.round(score)}
         </span>
       </div>
-      <div style={{ height: 6, background: "#F2F2F5", borderRadius: 3, overflow: "hidden" }}>
+      <div style={{ height: 6, background: "var(--bg-secondary)", borderRadius: 3, overflow: "hidden" }}>
         <div style={{ width: `${score ?? 0}%`, height: "100%", background: color, borderRadius: 3, transition: "width 0.3s ease" }} />
       </div>
-      {detail && <div style={{ fontSize: 10.5, color: "#6E6E73", marginTop: 3 }}>{detail}</div>}
+      {detail && <div style={{ fontSize: 10.5, color: "var(--text-secondary)", marginTop: 3 }}>{detail}</div>}
     </div>
   );
 }
@@ -1012,9 +1012,9 @@ function FlaggedLinesCard({ label, value, accent, items }) {
           <div style={styles.flaggedPopoverList}>
             {items.map((f) => (
               <div key={f.id} style={styles.flaggedPopoverRow}>
-                <span style={{ ...styles.flaggedDot, background: f.status === "over" ? "#C1462B" : "#B8862F" }} />
+                <span style={{ ...styles.flaggedDot, background: f.status === "over" ? "var(--danger)" : "var(--warning)" }} />
                 <span style={styles.flaggedPopoverName}>{f.name}</span>
-                <span style={{ ...styles.flaggedPopoverVariance, color: f.status === "over" ? "#C1462B" : "#B8862F" }}>
+                <span style={{ ...styles.flaggedPopoverVariance, color: f.status === "over" ? "var(--danger)" : "var(--warning)" }}>
                   {f.variance >= 0 ? "+" : ""}{fmt(f.variance)} · {f.pct >= 0 ? "+" : ""}{f.pct.toFixed(0)}%
                 </span>
               </div>
@@ -1030,13 +1030,13 @@ function AppLogo() {
   return (
     <div style={styles.appLogoRow}>
       <svg className="sm-app-logo-mark" style={styles.appLogoMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-        <rect x="4" y="8" width="28" height="8" fill="#1D1D1F" />
-        <rect x="34" y="8" width="10" height="8" fill="#1D5C8A" />
-        <rect x="4" y="20" width="40" height="8" fill="#1D1D1F" />
-        <rect x="4" y="32" width="40" height="8" fill="#1D1D1F" />
+        <rect x="4" y="8" width="28" height="8" fill="var(--text-primary)" />
+        <rect x="34" y="8" width="10" height="8" fill="var(--accent)" />
+        <rect x="4" y="20" width="40" height="8" fill="var(--text-primary)" />
+        <rect x="4" y="32" width="40" height="8" fill="var(--text-primary)" />
       </svg>
       <div className="sm-app-logo-text" style={styles.appLogoText}>
-        site<span style={{ color: "#1D5C8A" }}>Margin</span>
+        site<span style={{ color: "var(--accent)" }}>Margin</span>
       </div>
     </div>
   );
@@ -1262,12 +1262,12 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                 <div style={styles.menuFooter}>
                   <div style={styles.menuFooterBrandRow}>
                     <svg style={styles.menuFooterLogoMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="4" y="8" width="28" height="8" fill="#1D1D1F" />
-                      <rect x="34" y="8" width="10" height="8" fill="#1D5C8A" />
-                      <rect x="4" y="20" width="40" height="8" fill="#1D1D1F" />
-                      <rect x="4" y="32" width="40" height="8" fill="#1D1D1F" />
+                      <rect x="4" y="8" width="28" height="8" fill="var(--text-primary)" />
+                      <rect x="34" y="8" width="10" height="8" fill="var(--accent)" />
+                      <rect x="4" y="20" width="40" height="8" fill="var(--text-primary)" />
+                      <rect x="4" y="32" width="40" height="8" fill="var(--text-primary)" />
                     </svg>
-                    <span style={styles.menuFooterWordmark}>site<span style={{ color: "#1D5C8A" }}>Margin</span></span>
+                    <span style={styles.menuFooterWordmark}>site<span style={{ color: "var(--accent)" }}>Margin</span></span>
                   </div>
                   <div style={styles.menuFooterTagline}>Cost variance tracking built for contractors, not accountants.</div>
                   <div style={styles.menuPanelActions}>
@@ -1358,7 +1358,7 @@ function ReferralQr({ size = 112 }) {
   return (
     <svg viewBox={`0 0 ${full} ${full}`} width={size} height={size} shapeRendering="crispEdges" style={{ boxShadow: "0 1px 6px rgba(0,0,0,0.08)" }}>
       <rect width={full} height={full} fill="#ffffff" />
-      <g fill="#1D1D1F">{rects}</g>
+      <g fill="var(--text-primary)">{rects}</g>
     </svg>
   );
 }
@@ -1435,12 +1435,12 @@ function AppFooter() {
           <div style={styles.pubFooterBrand}>
             <div style={styles.pubFooterLogoRow}>
               <svg style={styles.pubFooterLogoMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                <rect x="4" y="8" width="28" height="8" fill="#1D1D1F" />
-                <rect x="34" y="8" width="10" height="8" fill="#1D5C8A" />
-                <rect x="4" y="20" width="40" height="8" fill="#1D1D1F" />
-                <rect x="4" y="32" width="40" height="8" fill="#1D1D1F" />
+                <rect x="4" y="8" width="28" height="8" fill="var(--text-primary)" />
+                <rect x="34" y="8" width="10" height="8" fill="var(--accent)" />
+                <rect x="4" y="20" width="40" height="8" fill="var(--text-primary)" />
+                <rect x="4" y="32" width="40" height="8" fill="var(--text-primary)" />
               </svg>
-              <div style={styles.pubFooterLogoText}>site<span style={{ color: "#1D5C8A" }}>Margin</span></div>
+              <div style={styles.pubFooterLogoText}>site<span style={{ color: "var(--accent)" }}>Margin</span></div>
             </div>
             <p style={styles.pubFooterTagline}>Cost variance tracking built for contractors, not accountants.</p>
             {showExternalLinks && (
@@ -2042,7 +2042,7 @@ function AuthGate() {
               type="button"
               onClick={handleEnableBiometric}
               disabled={biometricOffer === "saving"}
-              style={{ background: "#1D5C8A", color: "#fff", border: "none", borderRadius: 8, padding: "7px 12px", fontWeight: 600, cursor: "pointer" }}
+              style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "7px 12px", fontWeight: 600, cursor: "pointer" }}
             >
               {biometricOffer === "saving" ? "Enabling…" : "Enable"}
             </button>
@@ -2143,12 +2143,12 @@ function AuthGate() {
                   <div style={styles.menuFooter}>
                     <div style={styles.menuFooterBrandRow}>
                       <svg style={styles.menuFooterLogoMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="4" y="8" width="28" height="8" fill="#1D1D1F" />
-                        <rect x="34" y="8" width="10" height="8" fill="#1D5C8A" />
-                        <rect x="4" y="20" width="40" height="8" fill="#1D1D1F" />
-                        <rect x="4" y="32" width="40" height="8" fill="#1D1D1F" />
+                        <rect x="4" y="8" width="28" height="8" fill="var(--text-primary)" />
+                        <rect x="34" y="8" width="10" height="8" fill="var(--accent)" />
+                        <rect x="4" y="20" width="40" height="8" fill="var(--text-primary)" />
+                        <rect x="4" y="32" width="40" height="8" fill="var(--text-primary)" />
                       </svg>
-                      <span style={styles.menuFooterWordmark}>site<span style={{ color: "#1D5C8A" }}>Margin</span></span>
+                      <span style={styles.menuFooterWordmark}>site<span style={{ color: "var(--accent)" }}>Margin</span></span>
                     </div>
                     <div style={styles.menuFooterTagline}>Cost variance tracking built for contractors, not accountants.</div>
                     <div style={styles.menuPanelActions}>
@@ -2219,7 +2219,7 @@ function AuthGate() {
               <polygon points="960,150 1600,280 1600,600 800,600" fill="url(#heroPerforated)" />
               <g opacity="0.8">
                 <polygon points="380,600 1050,360 1600,500 1600,600" fill="url(#heroIsoGrid)" />
-                <g stroke="#1D5C8A" strokeWidth="1.8" fill="none" opacity="0.6">
+                <g stroke="var(--accent)" strokeWidth="1.8" fill="none" opacity="0.6">
                   <path d="M 1160 470 L 1220 446 L 1280 470 L 1220 494 Z" />
                   <path d="M 1160 470 L 1160 512 L 1220 536 L 1220 494" />
                   <path d="M 1280 470 L 1280 512 L 1220 536" />
@@ -2819,7 +2819,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
                   {logoUploading ? "Uploading…" : logoUrl ? "Change logo" : "Add logo"}
                 </button>
                 {logoUrl && (
-                  <button type="button" className="sm-logo-menu-item" style={{ ...styles.logoMenuItem, color: "#C1462B" }} onClick={() => { setLogoMenuOpen(false); removeLogo(); }}>
+                  <button type="button" className="sm-logo-menu-item" style={{ ...styles.logoMenuItem, color: "var(--danger)" }} onClick={() => { setLogoMenuOpen(false); removeLogo(); }}>
                     Remove logo
                   </button>
                 )}
@@ -2844,13 +2844,13 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
         <div style={styles.summaryStrip}>
           <SummaryCard label="Original quote allocation" value={fmt(portfolio.budget)} />
           {portfolio.revisedBudget !== portfolio.budget && (
-            <SummaryCard label="Revised allocation" value={fmt(portfolio.revisedBudget)} accent="#B8862F" />
+            <SummaryCard label="Revised allocation" value={fmt(portfolio.revisedBudget)} accent="var(--warning)" />
           )}
           <SummaryCard label="Actual spend" value={fmt(portfolio.actual)} />
           <SummaryCard
             label="Net variance"
             value={`${portfolio.variance >= 0 ? "+" : ""}${fmt(portfolio.variance)}`}
-            accent={portfolio.variance > 0 ? "#C1462B" : "#4C7A5C"}
+            accent={portfolio.variance > 0 ? "var(--danger)" : "var(--success)"}
             slab={portfolio.variance > 0}
             sub={portfolio.variance > 0 ? `${portfolio.overCount} project${portfolio.overCount === 1 ? "" : "s"} over budget` : undefined}
           />
@@ -2858,7 +2858,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
           <SummaryCard
             label="Projects flagged"
             value={`${portfolio.overCount} over · ${portfolio.watchCount} watch`}
-            accent={portfolio.overCount ? "#C1462B" : portfolio.watchCount ? "#B8862F" : "#4C7A5C"}
+            accent={portfolio.overCount ? "var(--danger)" : portfolio.watchCount ? "var(--warning)" : "var(--success)"}
           />
           <SummaryCard label="Total line items" value={String(portfolio.lineCount)} />
         </div>
@@ -2904,7 +2904,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
         <div style={styles.projectGrid}>
           {projects.map((p) => {
             const pct = p.budget ? (p.variance / p.budget) * 100 : 0;
-            const color = p.variance > 0 ? "#C1462B" : "#4C7A5C";
+            const color = p.variance > 0 ? "var(--danger)" : "var(--success)";
             const spentPct = p.budget ? Math.min((p.actual / p.budget) * 100, 100) : 0;
             return (
               <div key={p.id} style={styles.projectCard} onClick={() => onOpen(p.id)}>
@@ -2912,7 +2912,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
                   <div style={styles.projectName}>{p.name}</div>
                   <button style={styles.deleteProjectBtn} className="no-print" onClick={(e) => { e.stopPropagation(); deleteProject(p.id, p.name); }}>✕</button>
                 </div>
-                <div style={{ height: 5, background: "#F2F2F5", borderRadius: 3, marginBottom: 10 }}>
+                <div style={{ height: 5, background: "var(--bg-secondary)", borderRadius: 3, marginBottom: 10 }}>
                   <div style={{ width: `${spentPct}%`, height: "100%", background: color, borderRadius: 3 }} />
                 </div>
                 <div style={styles.projectNums}>
@@ -3052,7 +3052,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
 
       {trades.length > 0 && (
         <div className="no-print" style={{ maxWidth: 1180, margin: "0 auto 16px", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73", marginRight: 2 }}>Trade</span>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-secondary)", marginRight: 2 }}>Trade</span>
           <button style={{ ...styles.toggleBtn, ...(tradeFilter === "all" ? styles.toggleBtnActive : {}) }} onClick={() => setTradeFilter("all")}>
             All ({subs.length})
           </button>
@@ -3070,11 +3070,11 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
 
       {tradeFilter !== "all" && ranked.length > 1 && (
         <div className="no-print" style={{ ...styles.integrationsCard, maxWidth: 1180, margin: "0 auto 16px", overflowX: "auto" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73", marginBottom: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: 10 }}>
             Comparing {tradeFilter} ({ranked.length})
           </div>
           <div style={{ minWidth: 480 }}>
-            <div style={{ display: "flex", padding: "6px 0", borderBottom: "1px solid #E8E8ED", fontSize: 11, fontWeight: 700, color: "#6E6E73", textTransform: "uppercase" }}>
+            <div style={{ display: "flex", padding: "6px 0", borderBottom: "1px solid var(--border-color)", fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" }}>
               <span style={{ flex: 2 }}>Name</span>
               <span style={{ flex: 1, textAlign: "right" }}>Overall</span>
               <span style={{ flex: 1, textAlign: "right" }}>Budget</span>
@@ -3082,10 +3082,10 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
               <span style={{ flex: 1, textAlign: "right" }}>Quality</span>
             </div>
             {ranked.map(({ sub, score }) => (
-              <div key={sub.id} style={{ display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #F2F2F5", fontSize: 13 }}>
+              <div key={sub.id} style={{ display: "flex", alignItems: "center", padding: "8px 0", borderBottom: "1px solid var(--border-color)", fontSize: 13 }}>
                 <span style={{ flex: 2, display: "flex", alignItems: "center", gap: 6 }}>
                   {sub.flag && sub.flag !== "none" && (
-                    <span style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: sub.flag === "red" ? "#C1462B" : "#B8862F" }} />
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: sub.flag === "red" ? "var(--danger)" : "var(--warning)" }} />
                   )}
                   {sub.name}
                 </span>
@@ -3117,11 +3117,11 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                 <div style={styles.projectCardTop}>
                   <div>
                     <div style={styles.projectName}>{sub.name}</div>
-                    {sub.trade && <div style={{ fontSize: 11.5, color: "#6E6E73", marginTop: 2 }}>{sub.trade}</div>}
+                    {sub.trade && <div style={{ fontSize: 11.5, color: "var(--text-secondary)", marginTop: 2 }}>{sub.trade}</div>}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 10, color: "#6E6E73", letterSpacing: "0.08em" }}>OVERALL</div>
+                      <div style={{ fontSize: 10, color: "var(--text-secondary)", letterSpacing: "0.08em" }}>OVERALL</div>
                       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 600, color: scoreColor(score.overall) }}>
                         {score.overall == null ? "—" : Math.round(score.overall)}
                       </div>
@@ -3136,7 +3136,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                     onChange={(e) => setFlag(sub.id, e.target.value)}
                     style={{
                       fontSize: 12, fontWeight: 600, border: "1px solid transparent", borderRadius: 100, padding: "4px 10px", cursor: "pointer",
-                      color: sub.flag === "red" ? "#C1462B" : sub.flag === "amber" ? "#B8862F" : "#6E6E73",
+                      color: sub.flag === "red" ? "var(--danger)" : sub.flag === "amber" ? "var(--warning)" : "#6E6E73",
                       background: sub.flag === "red" ? "rgba(193,70,43,0.09)" : sub.flag === "amber" ? "rgba(184,134,47,0.09)" : "#F5F5F7",
                     }}
                   >
@@ -3146,7 +3146,7 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                   </select>
                 </div>
                 {sub.flag && sub.flag !== "none" && (
-                  <div className="print-only-status" style={{ fontSize: 11.5, fontWeight: 600, marginBottom: 8, color: sub.flag === "red" ? "#C1462B" : "#B8862F" }}>
+                  <div className="print-only-status" style={{ fontSize: 11.5, fontWeight: 600, marginBottom: 8, color: sub.flag === "red" ? "var(--danger)" : "var(--warning)" }}>
                     {sub.flag === "red" ? "⛔ Red flag — don't rehire" : "⚠ Amber flag — watch"}
                   </div>
                 )}
@@ -3174,16 +3174,16 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                 />
 
                 <div className="no-print" style={{ marginTop: 6 }}>
-                  <div style={{ fontSize: 11, color: "#6E6E73", marginBottom: 4 }}>Notes</div>
+                  <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 4 }}>Notes</div>
                   <textarea
                     value={sub.notes || ""}
                     onChange={(e) => setNotes(sub.id, e.target.value)}
                     placeholder="e.g. reliable on small jobs, slow to respond to calls…"
-                    style={{ width: "100%", minHeight: 48, fontSize: 12.5, fontFamily: "inherit", border: "1px solid #E8E8ED", borderRadius: 8, padding: 8, resize: "vertical" }}
+                    style={{ width: "100%", minHeight: 48, fontSize: 12.5, fontFamily: "inherit", border: "1px solid var(--border-color)", borderRadius: 8, padding: 8, resize: "vertical" }}
                   />
                 </div>
                 {sub.notes && sub.notes.trim() && (
-                  <p className="print-only-status" style={{ fontSize: 11.5, color: "#6E6E73" }}>Notes: {sub.notes}</p>
+                  <p className="print-only-status" style={{ fontSize: 11.5, color: "var(--text-secondary)" }}>Notes: {sub.notes}</p>
                 )}
 
                 <button style={styles.miniLinkBlock} className="no-print" onClick={() => setExpanded(isOpen ? null : sub.id)}>
@@ -3191,9 +3191,9 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                 </button>
 
                 {isOpen && (
-                  <div style={{ marginTop: 10, borderTop: "1px solid #F2F2F5", paddingTop: 10 }}>
+                  <div style={{ marginTop: 10, borderTop: "1px solid var(--border-color)", paddingTop: 10 }}>
                     {groups.length === 0 ? (
-                      <div style={{ fontSize: 12, color: "#6E6E73" }}>
+                      <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
                         No line items assigned to this sub yet. Open a project, click a line item, then under
                         Details pick "{sub.name}" as the subcontractor to start scoring them.
                       </div>
@@ -3213,13 +3213,13 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                               return (
                                 <div key={i.id} style={styles.subItemRow}>
                                   <span style={{ fontSize: 12.5, flex: 2 }}>{i.name}</span>
-                                  <span style={{ fontSize: 11.5, fontFamily: "'Space Grotesk', sans-serif", color: Number(i.actual) > Number(i.budget) ? "#C1462B" : "#4C7A5C", flex: 1, textAlign: "right" }}>
+                                  <span style={{ fontSize: 11.5, fontFamily: "'Space Grotesk', sans-serif", color: Number(i.actual) > Number(i.budget) ? "var(--danger)" : "var(--success)", flex: 1, textAlign: "right" }}>
                                     {fmtShort(i.actual)} / {fmtShort(i.budget)}
                                   </span>
-                                  <span style={{ fontSize: 11, color: "#6E6E73", flex: 0.8, textAlign: "right" }}>
+                                  <span style={{ fontSize: 11, color: "var(--text-secondary)", flex: 0.8, textAlign: "right" }}>
                                     {late == null ? "—" : late > 0 ? `${late}d late` : `${Math.abs(late)}d early`}
                                   </span>
-                                  <span style={{ fontSize: 11, color: "#B8862F", flex: 0.5, textAlign: "right" }}>
+                                  <span style={{ fontSize: 11, color: "var(--warning)", flex: 0.5, textAlign: "right" }}>
                                     {i.quality_rating ? `${i.quality_rating}/5` : "—"}
                                   </span>
                                 </div>
@@ -3459,7 +3459,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
 
       {allTags.length > 0 && (
         <div className="no-print" style={{ maxWidth: 1180, margin: "0 auto 16px", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73", marginRight: 2 }}>Tag</span>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-secondary)", marginRight: 2 }}>Tag</span>
           <button style={{ ...styles.toggleBtn, ...(tagFilter === "all" ? styles.toggleBtnActive : {}) }} onClick={() => setTagFilter("all")}>
             All ({templates.length})
           </button>
@@ -3494,14 +3494,14 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                 <div style={styles.projectCardTop}>
                   <div>
                     <div style={styles.projectName}>{t.name}</div>
-                    {t.description && <div style={{ fontSize: 12, color: "#6E6E73", marginTop: 3 }}>{t.description}</div>}
-                    <div style={{ fontSize: 11.5, color: "#6E6E73", marginTop: 6, fontFamily: "'Space Grotesk', sans-serif" }}>
+                    {t.description && <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 3 }}>{t.description}</div>}
+                    <div style={{ fontSize: 11.5, color: "var(--text-secondary)", marginTop: 6, fontFamily: "'Space Grotesk', sans-serif" }}>
                       {tItems.length} line item{tItems.length === 1 ? "" : "s"} · {fmt(total)}
                     </div>
                     {(t.tags || []).length > 0 && (
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
                         {t.tags.map((tag) => (
-                          <span key={tag} style={{ fontSize: 11, fontWeight: 600, color: "#1D5C8A", background: "rgba(29,92,138,0.08)", borderRadius: 100, padding: "2px 9px" }}>
+                          <span key={tag} style={{ fontSize: 11, fontWeight: 600, color: "var(--accent)", background: "rgba(29,92,138,0.08)", borderRadius: 100, padding: "2px 9px" }}>
                             {tag}
                           </span>
                         ))}
@@ -3517,12 +3517,12 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                 </div>
 
                 {isOpen && (
-                  <div style={{ marginTop: 12, borderTop: "1px solid #F2F2F5", paddingTop: 12 }}>
+                  <div style={{ marginTop: 12, borderTop: "1px solid var(--border-color)", paddingTop: 12 }}>
                     <div className="no-print" style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
                       {(t.tags || []).map((tag) => (
-                        <span key={tag} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#1D5C8A", background: "rgba(29,92,138,0.08)", borderRadius: 100, padding: "2px 6px 2px 9px" }}>
+                        <span key={tag} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "var(--accent)", background: "rgba(29,92,138,0.08)", borderRadius: 100, padding: "2px 6px 2px 9px" }}>
                           {tag}
-                          <button style={{ ...styles.removeBtn, fontSize: 11, padding: 0, color: "#1D5C8A" }} onClick={() => removeTag(t.id, tag)}>✕</button>
+                          <button style={{ ...styles.removeBtn, fontSize: 11, padding: 0, color: "var(--accent)" }} onClick={() => removeTag(t.id, tag)}>✕</button>
                         </span>
                       ))}
                       <input
@@ -3545,7 +3545,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                           <span style={{ width: 6, height: 6, borderRadius: "50%", background: CATEGORY_COLOR[i.category] || "#6E6E73" }} />
                           <span style={{ fontSize: 12.5 }}>{i.name}</span>
                         </span>
-                        <span style={{ fontSize: 11.5, color: "#6E6E73", flex: 0.8 }}>{i.category}</span>
+                        <span style={{ fontSize: 11.5, color: "var(--text-secondary)", flex: 0.8 }}>{i.category}</span>
                         <span style={{ fontSize: 12, fontFamily: "'Space Grotesk', sans-serif", flex: 0.8, textAlign: "right" }}>{fmt(i.budget)}</span>
                         <button style={{ ...styles.removeBtn, flex: 0.2, textAlign: "right" }} className="no-print" onClick={() => removeTemplateItem(t.id, i.id)}>✕</button>
                       </div>
@@ -3783,7 +3783,7 @@ function IntegrationsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                 <div>
                   {sageCompanies ? (
                     <>
-                      <div style={{ fontSize: 12.5, color: "#6E6E73", marginBottom: 8 }}>
+                      <div style={{ fontSize: 12.5, color: "var(--text-secondary)", marginBottom: 8 }}>
                         This Sage login has more than one company — pick which one to connect:
                       </div>
                       {sageCompanies.map((c) => (
@@ -3800,7 +3800,7 @@ function IntegrationsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                     </>
                   ) : (
                     <>
-                      <div style={{ fontSize: 12.5, color: "#6E6E73", marginBottom: 8 }}>
+                      <div style={{ fontSize: 12.5, color: "var(--text-secondary)", marginBottom: 8 }}>
                         Sign in with your own Sage Business Cloud Accounting (South Africa) username and password.
                       </div>
                       <input
@@ -3844,7 +3844,7 @@ function IntegrationsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
             <div key={t.id} style={styles.integrationsTxnRow}>
               <div style={{ flex: 1, minWidth: 160 }}>
                 <div style={{ fontWeight: 600, fontSize: 13.5 }}>{t.contact_name || t.description || "Transaction"}</div>
-                <div style={{ fontSize: 12, color: "#6E6E73" }}>{t.description}{t.txn_date ? ` · ${t.txn_date}` : ""}</div>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{t.description}{t.txn_date ? ` · ${t.txn_date}` : ""}</div>
               </div>
               <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, minWidth: 100, textAlign: "right" }}>{fmt(t.amount)}</div>
               <select style={{ ...styles.addInput, maxWidth: 240 }} defaultValue="" onChange={(e) => assignTransaction(t, e.target.value)}>
@@ -4039,7 +4039,7 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
   const isCompanyTier = status?.tier === "firm";
   const upgradeOptions = isCompanyTier ? STORAGE_UPGRADES_COMPANY : STORAGE_UPGRADES_INDIVIDUAL;
   const pct = status ? Math.min(Number(status.pct_used) || 0, 100) : 0;
-  const barColor = pct >= 90 ? "#C1462B" : pct >= 70 ? "#B8862F" : "#1D5C8A";
+  const barColor = pct >= 90 ? "var(--danger)" : pct >= 70 ? "var(--warning)" : "var(--accent)";
 
   return (
     <div style={styles.page}>
@@ -4062,20 +4062,20 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
         <div style={{ ...styles.integrationsCard, maxWidth: 1180, margin: "0 auto 16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73", marginBottom: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: 4 }}>
                 Plan &amp; billing
               </div>
               <div style={{ fontSize: 14, fontWeight: 700 }}>
                 {TIER_LABEL[plan.tier] || plan.tier}
                 {" — "}
-                <span style={{ fontWeight: 400, color: plan.status === "active" ? "#1D5C8A" : "#6E6E73" }}>
+                <span style={{ fontWeight: 400, color: plan.status === "active" ? "var(--accent)" : "#6E6E73" }}>
                   {plan.status === "active" ? "Active, billed monthly" : plan.status === "cancelled" ? "Cancelled" : plan.status || "Unknown"}
                 </span>
               </div>
             </div>
             {plan.status === "active" && (
               <button
-                style={{ ...styles.importBtn, color: "#C1462B", borderColor: "#C1462B" }}
+                style={{ ...styles.importBtn, color: "var(--danger)", borderColor: "var(--danger)" }}
                 disabled={cancelling}
                 onClick={cancelSubscription}
               >
@@ -4088,26 +4088,26 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
 
       <div style={{ ...styles.integrationsCard, maxWidth: 1180, margin: "0 auto" }}>
         {loading ? (
-          <div style={{ fontSize: 13, color: "#6E6E73" }}>Loading storage usage…</div>
+          <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Loading storage usage…</div>
         ) : !status ? (
-          <div style={{ fontSize: 13, color: "#6E6E73" }}>Couldn't load your storage usage — please refresh.</div>
+          <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>Couldn't load your storage usage — please refresh.</div>
         ) : (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
               <span style={{ fontSize: 14, fontWeight: 700 }}>Storage used</span>
-              <span style={{ fontSize: 13, color: "#6E6E73" }}>
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
                 {formatStorageBytes(status.used_bytes)} of {formatStorageBytes(status.limit_bytes)}
               </span>
             </div>
-            <div style={{ height: 8, background: "#F2F2F5", borderRadius: 4, overflow: "hidden", marginBottom: 16 }}>
+            <div style={{ height: 8, background: "var(--bg-secondary)", borderRadius: 4, overflow: "hidden", marginBottom: 16 }}>
               <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 4, transition: "width 0.3s ease" }} />
             </div>
             {pct >= 70 && (
-              <p style={{ fontSize: 13, color: "#6E6E73", margin: "0 0 14px" }}>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "0 0 14px" }}>
                 {pct >= 90 ? "You're almost out of space — upgrade to keep uploading." : "You're close to your limit — consider upgrading."}
               </p>
             )}
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73", marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: 10 }}>
               {isCompanyTier ? "Company upgrades" : "Upgrade options"}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -4119,7 +4119,7 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                   onClick={() => upgrade(opt.tier)}
                 >
                   <span style={{ fontWeight: 600 }}>{upgrading === opt.tier ? "Redirecting…" : opt.label}</span>
-                  <span style={{ fontSize: 12, color: "#6E6E73", fontWeight: 400 }}>{opt.price}</span>
+                  <span style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 400 }}>{opt.price}</span>
                 </button>
               ))}
             </div>
@@ -5195,11 +5195,11 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
       <div style={styles.summaryStrip}>
         <SummaryCard label="Original budget" value={fmt(totals.budget)} />
-        {approvedCoTotal !== 0 && <SummaryCard label="Revised budget" value={fmt(totals.revisedBudget)} accent="#B8862F" />}
+        {approvedCoTotal !== 0 && <SummaryCard label="Revised budget" value={fmt(totals.revisedBudget)} accent="var(--warning)" />}
         <SummaryCard label="Actual spend" value={fmt(totals.actual)} />
-        <SummaryCard label="Variance" value={`${totals.variance >= 0 ? "+" : ""}${fmt(totals.variance)}`} accent={totals.variance > 0 ? "#C1462B" : "#4C7A5C"} />
+        <SummaryCard label="Variance" value={`${totals.variance >= 0 ? "+" : ""}${fmt(totals.variance)}`} accent={totals.variance > 0 ? "var(--danger)" : "var(--success)"} />
         <SummaryCard label="Retention held" value={fmt(totals.retentionHeld)} />
-        <FlaggedLinesCard label="Flagged lines" value={`${overCount} over · ${watchCount} watch`} accent={overCount ? "#C1462B" : watchCount ? "#B8862F" : "#4C7A5C"} items={flaggedItems} />
+        <FlaggedLinesCard label="Flagged lines" value={`${overCount} over · ${watchCount} watch`} accent={overCount ? "var(--danger)" : watchCount ? "var(--warning)" : "var(--success)"} items={flaggedItems} />
       </div>
 
       {totals.pct > 0 && (
@@ -5208,7 +5208,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         </div>
       )}
       {aheadCount > 0 && (
-        <div style={{ ...styles.warningBanner, borderColor: "#B8862F", background: "rgba(184,134,47,0.1)", color: "#7A5A1E" }}>
+        <div style={{ ...styles.warningBanner, borderColor: "var(--warning)", background: "rgba(184,134,47,0.1)", color: "#7A5A1E" }}>
           {aheadCount} line{aheadCount > 1 ? "s are" : " is"} spending ahead of physical progress. Check the Progress column below.
         </div>
       )}
@@ -5222,7 +5222,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             </div>
             <div style={styles.categoryNums}>
               <span style={styles.categoryBudget}>{fmt(c.budget)}</span>
-              <span style={{ ...styles.categoryVariance, color: c.variance > 0 ? "#C1462B" : "#4C7A5C" }}>
+              <span style={{ ...styles.categoryVariance, color: c.variance > 0 ? "var(--danger)" : "var(--success)" }}>
                 {c.variance >= 0 ? "+" : ""}{fmt(c.variance)}
               </span>
             </div>
@@ -5238,7 +5238,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         </select>
         <button style={styles.importBtn} onClick={saveAsTemplate}>Save as template</button>
         {importMessage && (
-          <span style={{ fontSize: 12.5, color: importMessage.type === "error" ? "#C1462B" : "#4C7A5C" }}>{importMessage.text}</span>
+          <span style={{ fontSize: 12.5, color: importMessage.type === "error" ? "var(--danger)" : "var(--success)" }}>{importMessage.text}</span>
         )}
         <div ref={downloadMenuRef} style={{ position: "relative", marginLeft: "auto" }}>
           <button style={styles.exportBtn} onClick={() => setDownloadMenuOpen((v) => !v)}>Download</button>
@@ -5350,7 +5350,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3, flexWrap: "wrap" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
                         <span style={{ width: 6, height: 6, borderRadius: "50%", background: CATEGORY_COLOR[item.category] || "#6E6E73" }} />
-                        <span style={{ fontSize: 11, color: "#6E6E73" }}>{item.category || "Other"}</span>
+                        <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>{item.category || "Other"}</span>
                       </span>
                       {subName && <span style={{ fontSize: 11, color: "#8B5FA3" }}>· {subName}</span>}
                       <button className="no-print" style={styles.miniLink} onClick={() => { setExpandedRow(isOpen ? null : item.id); setNoteDraft(item.notes || ""); }}>
@@ -5379,19 +5379,19 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   </span>
                   <span style={{ ...styles.tdCell, flex: 1.4 }} className="no-print">
                     <div style={styles.dualBarTrack}>
-                      <div style={{ ...styles.dualBarFill, width: `${progPct}%`, background: "#4C7A5C", top: 0 }} />
-                      <div style={{ ...styles.dualBarFill, width: `${spentPct}%`, background: gapFlag ? "#C1462B" : "#3D6FA6", top: 8 }} />
+                      <div style={{ ...styles.dualBarFill, width: `${progPct}%`, background: "var(--success)", top: 0 }} />
+                      <div style={{ ...styles.dualBarFill, width: `${spentPct}%`, background: gapFlag ? "var(--danger)" : "#3D6FA6", top: 8 }} />
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3 }}>
-                      <span style={{ fontSize: 10, color: "#4C7A5C" }}>{progPct.toFixed(0)}% done</span>
-                      <span style={{ fontSize: 10, color: gapFlag ? "#C1462B" : "#3D6FA6" }}>{spentPct.toFixed(0)}% spent</span>
+                      <span style={{ fontSize: 10, color: "var(--success)" }}>{progPct.toFixed(0)}% done</span>
+                      <span style={{ fontSize: 10, color: gapFlag ? "var(--danger)" : "#3D6FA6" }}>{spentPct.toFixed(0)}% spent</span>
                     </div>
                   </span>
                   <span style={{ ...styles.tdCell, flex: 0.9, textAlign: "center" }}>
                     <span style={{ ...styles.statusPill, color: s.color, background: s.bg }}>{s.label}</span>
                     {gapFlag && (
                       <div className="no-print" style={{ marginTop: 4 }}>
-                        <span style={{ ...styles.statusPill, color: "#C1462B", background: "rgba(193,70,43,0.12)", fontSize: 9 }}>SPEND AHEAD</span>
+                        <span style={{ ...styles.statusPill, color: "var(--danger)", background: "rgba(193,70,43,0.12)", fontSize: 9 }}>SPEND AHEAD</span>
                       </div>
                     )}
                   </span>
@@ -5490,7 +5490,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       {view === "charts" && (
         <div style={styles.chartGrid}>
           <div style={styles.chartCardGreen}>
-            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "#4C7A5C" }} />Budget vs actual</div>
+            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "var(--success)" }} />Budget vs actual</div>
             <div style={styles.chartSub}>Largest eight line items by budget.</div>
             <BarChartBudgetVsActual items={items} />
           </div>
@@ -5500,12 +5500,12 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             <DonutCategorySplit rollup={categoryRollup} />
           </div>
           <div style={styles.chartCardRed}>
-            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "#C1462B" }} />Progress against spend</div>
+            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "var(--danger)" }} />Progress against spend</div>
             <div style={styles.chartSub}>Progress bar vs spend bar, per line item.</div>
             <ProgressBars items={items} />
           </div>
           <div style={styles.chartCardGold}>
-            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "#B8862F" }} />Category variance</div>
+            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "var(--warning)" }} />Category variance</div>
             <div style={styles.chartSub}>Positive bars are overruns.</div>
             {categoryRollup.length === 0 ? (
               <EmptyChart label="Add line items to see category variance." />
@@ -5516,17 +5516,17 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   const over = c.variance > 0;
                   const offset = c.variance === 0 ? 0 : (Math.abs(c.variance) / maxAbs) * 42;
                   const dotPos = 50 + (over ? offset : -offset);
-                  const dotColor = c.variance === 0 ? "#8E8E93" : over ? "#C1462B" : "#4C7A5C";
+                  const dotColor = c.variance === 0 ? "#8E8E93" : over ? "var(--danger)" : "var(--success)";
                   return (
                     <div key={c.category}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                        <span style={{ fontSize: 12.5, color: "#4A4A4F" }}>{c.category}</span>
+                        <span style={{ fontSize: 12.5, color: "var(--text-secondary)" }}>{c.category}</span>
                         <span style={{ fontSize: 11.5, fontFamily: "'Space Grotesk', sans-serif", color: dotColor }}>
                           {over ? "+" : ""}{fmtShort(c.variance)}
                         </span>
                       </div>
-                      <div style={{ position: "relative", height: 22, background: "#F2F2F5", borderRadius: 4 }}>
-                        <div style={{ position: "absolute", left: "50%", top: -4, width: 1, height: 30, background: "#C7C7CE" }} />
+                      <div style={{ position: "relative", height: 22, background: "var(--bg-secondary)", borderRadius: 4 }}>
+                        <div style={{ position: "absolute", left: "50%", top: -4, width: 1, height: 30, background: "var(--border-color)" }} />
                         {c.variance !== 0 && (
                           <div style={{
                             position: "absolute", top: "50%", height: 2, transform: "translateY(-1px)",
@@ -5547,12 +5547,12 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             )}
           </div>
           <div style={styles.chartCardRed}>
-            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "#C1462B" }} />Top overruns</div>
+            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "var(--danger)" }} />Top overruns</div>
             <div style={styles.chartSub}>Line items furthest over budget.</div>
             <TopOverruns items={items} />
           </div>
           <div style={styles.chartCardGreen}>
-            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "#4C7A5C" }} />Claims vs certified vs paid</div>
+            <div style={styles.chartTitle}><span style={{ ...styles.chartDot, background: "var(--success)" }} />Claims vs certified vs paid</div>
             <div style={styles.chartSub}>Spot claims still waiting on sign-off.</div>
             <ClaimsCertifiedChart items={items} />
           </div>
@@ -5622,7 +5622,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                       <span style={{ flex: 1, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(item.budget)}</span>
                     </div>
                   ))}
-                  <div style={{ ...styles.quoteRow, borderTop: "1px solid #E8E8ED", fontWeight: 600 }}>
+                  <div style={{ ...styles.quoteRow, borderTop: "1px solid var(--border-color)", fontWeight: 600 }}>
                     <span style={{ flex: 3 }}>Subtotal — {cat.category}</span>
                     <span style={{ flex: 1, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(cat.budget)}</span>
                   </div>
@@ -5699,9 +5699,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                     <button style={styles.actualButton} onClick={() => startEdit(item.id, "certified", item.certified)}><Money value={certified} /></button>
                   )}
                 </span>
-                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: "#B8862F" }}><Money value={retentionHeld} /></span>
-                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: "#4C7A5C" }}><Money value={certified - retentionHeld} /></span>
-                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: uncertified > 0 ? "#C1462B" : "#6E6E73" }}><Money value={uncertified} /></span>
+                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: "var(--warning)" }}><Money value={retentionHeld} /></span>
+                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: "var(--success)" }}><Money value={certified - retentionHeld} /></span>
+                <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: uncertified > 0 ? "var(--danger)" : "#6E6E73" }}><Money value={uncertified} /></span>
                 <span style={{ ...styles.tdCell, flex: 1.1, textAlign: "center" }} className="no-print">
                   <input
                     type="date"
@@ -5727,13 +5727,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               </div>
             );
           })}
-          <div style={{ ...styles.row, background: "#F5F5F7", fontWeight: 600, minWidth: 1140 }}>
+          <div style={{ ...styles.row, background: "var(--bg-secondary)", fontWeight: 600, minWidth: 1140 }}>
             <span style={{ ...styles.tdCell, flex: 2.2 }}>Totals</span>
             <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}><Money value={totals.claimed} /></span>
             <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}><Money value={totals.certified} /></span>
-            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: "#B8862F" }}><Money value={totals.retentionHeld} /></span>
-            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: "#4C7A5C" }}><Money value={totals.paidToDate} /></span>
-            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: totals.uncertified > 0 ? "#C1462B" : "#6E6E73" }}><Money value={totals.uncertified} /></span>
+            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: "var(--warning)" }}><Money value={totals.retentionHeld} /></span>
+            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: "var(--success)" }}><Money value={totals.paidToDate} /></span>
+            <span style={{ ...styles.tdCell, flex: 1.5, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", color: totals.uncertified > 0 ? "var(--danger)" : "#6E6E73" }}><Money value={totals.uncertified} /></span>
             <span style={{ ...styles.tdCell, flex: 1.1 }}></span>
             <span style={{ ...styles.tdCell, flex: 1.1 }}></span>
           </div>
@@ -5763,7 +5763,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               <span style={{ ...styles.tdCell, flex: 2.2 }}>{co.description}</span>
               <span style={{ ...styles.tdCell, flex: 1, textAlign: "center" }} className="no-print">
                 <select value={co.priority || "Normal"} onChange={(e) => setCoPriorityValue(co.id, e.target.value)}
-                  style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: co.priority === "High" ? "#C1462B" : co.priority === "Low" ? "#6E6E73" : "#B8862F" }}>
+                  style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: co.priority === "High" ? "var(--danger)" : co.priority === "Low" ? "#6E6E73" : "var(--warning)" }}>
                   <option value="High">High</option>
                   <option value="Normal">Normal</option>
                   <option value="Low">Low</option>
@@ -5786,7 +5786,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               <span style={{ ...styles.tdCell, flex: 1, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(co.amount)}</span>
               <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "center" }} className="no-print">
                 <select value={co.status} onChange={(e) => setCoStatus(co.id, e.target.value)}
-                  style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: co.status === "approved" ? "#4C7A5C" : co.status === "rejected" ? "#C1462B" : "#B8862F" }}>
+                  style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: co.status === "approved" ? "var(--success)" : co.status === "rejected" ? "var(--danger)" : "var(--warning)" }}>
                   <option value="pending">Pending</option>
                   <option value="approved">Approved</option>
                   <option value="rejected">Rejected</option>
@@ -5799,7 +5799,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             </div>
           ))}
           {changeOrders.length === 0 && (
-            <div style={{ padding: 20, fontSize: 13, color: "#6E6E73" }}>
+            <div style={{ padding: 20, fontSize: 13, color: "var(--text-secondary)" }}>
               No change orders yet. Add one below when a client approves a variation to the original budget.
             </div>
           )}
@@ -5821,8 +5821,8 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
       {view === "purchaseorders" && (
         <div style={{ ...styles.ledger, overflowX: "auto" }}>
-          <div style={{ padding: "12px 16px", fontSize: 13, color: "#6E6E73", borderBottom: "1px solid #E8E8ED" }}>
-            Outstanding (not yet received): <strong style={{ color: "#1D1D1F", fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(poOutstandingTotal)}</strong>
+          <div style={{ padding: "12px 16px", fontSize: 13, color: "var(--text-secondary)", borderBottom: "1px solid var(--border-color)" }}>
+            Outstanding (not yet received): <strong style={{ color: "var(--text-primary)", fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(poOutstandingTotal)}</strong>
           </div>
           <div style={{ ...styles.ledgerHeaderRow, minWidth: 1180 }}>
             <span style={{ ...styles.thCell, flex: 1.4 }}>Supplier</span>
@@ -5836,13 +5836,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           </div>
           {purchaseOrders.map((po) => {
             const linkedItem = items.find((i) => i.id === po.line_item_id);
-            const poStatusColor = po.status === "received" ? "#4C7A5C" : po.status === "cancelled" ? "#C1462B" : po.status === "confirmed" ? "#1D1D1F" : po.status === "sent" ? "#B8862F" : "#6E6E73";
+            const poStatusColor = po.status === "received" ? "var(--success)" : po.status === "cancelled" ? "var(--danger)" : po.status === "confirmed" ? "#1D1D1F" : po.status === "sent" ? "var(--warning)" : "#6E6E73";
             return (
               <div key={po.id} style={{ ...styles.row, minWidth: 1180 }}>
                 <span style={{ ...styles.tdCell, flex: 1.4 }}>{po.supplier_name}</span>
                 <span style={{ ...styles.tdCell, flex: 0.9, fontFamily: "'Space Grotesk', sans-serif" }}>{po.po_number || "—"}</span>
                 <span style={{ ...styles.tdCell, flex: 1.8 }}>{po.description || "—"}</span>
-                <span style={{ ...styles.tdCell, flex: 1.4, color: "#6E6E73" }}>{linkedItem ? linkedItem.name : "—"}</span>
+                <span style={{ ...styles.tdCell, flex: 1.4, color: "var(--text-secondary)" }}>{linkedItem ? linkedItem.name : "—"}</span>
                 <span style={{ ...styles.tdCell, flex: 1, textAlign: "center", fontFamily: "'Space Grotesk', sans-serif" }}>
                   {po.order_date ? new Date(po.order_date + "T00:00:00").toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                 </span>
@@ -5865,7 +5865,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             );
           })}
           {purchaseOrders.length === 0 && (
-            <div style={{ padding: 20, fontSize: 13, color: "#6E6E73" }}>
+            <div style={{ padding: 20, fontSize: 13, color: "var(--text-secondary)" }}>
               No purchase orders yet. Log a supplier order below to track it against this project's budget.
             </div>
           )}
@@ -5901,7 +5901,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           </div>
 
           {tenders.length === 0 && (
-            <div style={{ ...styles.ledger, padding: 20, fontSize: 13, color: "#6E6E73" }}>
+            <div style={{ ...styles.ledger, padding: 20, fontSize: 13, color: "var(--text-secondary)" }}>
               No tenders yet. Raise one above to start collecting and comparing subcontractor bids before appointing anyone.
             </div>
           )}
@@ -5910,30 +5910,30 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             const bids = tenderBids.filter((b) => b.tender_id === tender.id).sort((a, b) => Number(a.amount) - Number(b.amount));
             const linkedItem = items.find((i) => i.id === tender.line_item_id);
             const draft = bidDrafts[tender.id] || { bidderName: "", subcontractorId: "", amount: "", notes: "" };
-            const tenderStatusColor = tender.status === "awarded" ? "#4C7A5C" : tender.status === "cancelled" ? "#C1462B" : "#1D5C8A";
+            const tenderStatusColor = tender.status === "awarded" ? "var(--success)" : tender.status === "cancelled" ? "var(--danger)" : "var(--accent)";
             return (
               <div key={tender.id} style={{ ...styles.scoreCard, marginBottom: 16 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 4 }}>
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#1D5C8A", background: "rgba(29,92,138,0.1)", borderRadius: 100, padding: "3px 10px" }}>{tender.trade || "Trade"}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--accent)", background: "rgba(29,92,138,0.1)", borderRadius: 100, padding: "3px 10px" }}>{tender.trade || "Trade"}</span>
                       <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: tenderStatusColor }}>{tender.status}</span>
                     </div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "#1D1D1F" }}>{tender.title}</div>
-                    {linkedItem && <div style={{ fontSize: 12.5, color: "#6E6E73", marginTop: 2 }}>Against: {linkedItem.name}</div>}
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>{tender.title}</div>
+                    {linkedItem && <div style={{ fontSize: 12.5, color: "var(--text-secondary)", marginTop: 2 }}>Against: {linkedItem.name}</div>}
                   </div>
                   <button className="no-print" style={styles.removeBtn} onClick={() => removeTender(tender.id)}>✕</button>
                 </div>
 
-                <div style={{ borderTop: "1px solid #F2F2F5", marginTop: 10, paddingTop: 10 }}>
-                  {bids.length === 0 && <div style={{ fontSize: 13, color: "#6E6E73", padding: "4px 0" }}>No bids logged yet.</div>}
+                <div style={{ borderTop: "1px solid var(--border-color)", marginTop: 10, paddingTop: 10 }}>
+                  {bids.length === 0 && <div style={{ fontSize: 13, color: "var(--text-secondary)", padding: "4px 0" }}>No bids logged yet.</div>}
                   {bids.map((bid) => {
-                    const bidStatusColor = bid.status === "awarded" ? "#4C7A5C" : bid.status === "declined" ? "#C1462B" : bid.status === "shortlisted" ? "#B8862F" : "#6E6E73";
+                    const bidStatusColor = bid.status === "awarded" ? "var(--success)" : bid.status === "declined" ? "var(--danger)" : bid.status === "shortlisted" ? "var(--warning)" : "#6E6E73";
                     return (
-                      <div key={bid.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #F7F7F8" }}>
-                        <div style={{ flex: 1.6, fontSize: 13.5, color: "#1D1D1F" }}>{bid.bidder_name}</div>
+                      <div key={bid.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border-color)" }}>
+                        <div style={{ flex: 1.6, fontSize: 13.5, color: "var(--text-primary)" }}>{bid.bidder_name}</div>
                         <div style={{ flex: 1, fontSize: 13.5, fontFamily: "'Space Grotesk', sans-serif", textAlign: "right" }}>{fmt(bid.amount)}</div>
-                        <div style={{ flex: 1.6, fontSize: 12.5, color: "#6E6E73" }}>{bid.notes}</div>
+                        <div style={{ flex: 1.6, fontSize: 12.5, color: "var(--text-secondary)" }}>{bid.notes}</div>
                         <div style={{ flex: 0.9, fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: bidStatusColor, textAlign: "center" }}>{bid.status}</div>
                         <div className="no-print" style={{ flex: 1.2, textAlign: "right", display: "flex", gap: 6, justifyContent: "flex-end" }}>
                           {tender.status === "open" && bid.status !== "awarded" && bid.status !== "declined" && (
@@ -5996,12 +5996,12 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             </div>
 
             {scheduleTasks.length === 0 ? (
-              <div style={{ ...styles.ledger, padding: 20, fontSize: 13, color: "#6E6E73" }}>
+              <div style={{ ...styles.ledger, padding: 20, fontSize: 13, color: "var(--text-secondary)" }}>
                 No tasks scheduled yet. Add one above to start building the project timeline.
               </div>
             ) : (
               <div style={styles.ledger}>
-                <div style={{ padding: "10px 16px", fontSize: 12, color: "#6E6E73", borderBottom: "1px solid #E8E8ED", display: "flex", justifyContent: "space-between" }}>
+                <div style={{ padding: "10px 16px", fontSize: 12, color: "var(--text-secondary)", borderBottom: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between" }}>
                   <span>{dfmt(rangeStart)}</span>
                   <span>{dfmt(rangeEnd)}</span>
                 </div>
@@ -6014,26 +6014,26 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   const pct = Number(task.percent_complete || 0);
                   let statusColor = "#6E6E73"; // not started
                   let statusLabel = "Not started";
-                  if (pct >= 100) { statusColor = "#4C7A5C"; statusLabel = "Done"; }
-                  else if (end < today) { statusColor = "#C1462B"; statusLabel = "Overdue"; }
-                  else if (start <= today && today <= end) { statusColor = "#1D5C8A"; statusLabel = "In progress"; }
+                  if (pct >= 100) { statusColor = "var(--success)"; statusLabel = "Done"; }
+                  else if (end < today) { statusColor = "var(--danger)"; statusLabel = "Overdue"; }
+                  else if (start <= today && today <= end) { statusColor = "var(--accent)"; statusLabel = "In progress"; }
                   return (
-                    <div key={task.id} style={{ padding: "12px 16px", borderBottom: "1px solid #F2F2F5" }}>
+                    <div key={task.id} style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-color)" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
                         <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 14, fontWeight: 600, color: "#1D1D1F" }}>{task.name}</span>
-                          {linkedItem && <span style={{ fontSize: 12, color: "#6E6E73" }}>· {linkedItem.name}</span>}
+                          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>{task.name}</span>
+                          {linkedItem && <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>· {linkedItem.name}</span>}
                           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: statusColor }}>{statusLabel}</span>
                         </div>
                         <div className="no-print" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <input type="number" min="0" max="100" value={pct}
                             onChange={(e) => setTaskProgress(task.id, e.target.value)}
                             style={{ ...styles.addInput, width: 56, padding: "4px 6px", fontSize: 12, textAlign: "right" }} />
-                          <span style={{ fontSize: 12, color: "#6E6E73" }}>%</span>
+                          <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>%</span>
                           <button style={styles.removeBtn} onClick={() => removeScheduleTask(task.id)}>✕</button>
                         </div>
                       </div>
-                      <div style={{ position: "relative", height: 14, background: "#F2F2F5", borderRadius: 4 }}>
+                      <div style={{ position: "relative", height: 14, background: "var(--bg-secondary)", borderRadius: 4 }}>
                         <div style={{ position: "absolute", top: 0, bottom: 0, left: `${leftPct}%`, width: `${widthPct}%`, minWidth: 6, background: "rgba(29,92,138,0.16)", border: `1.5px solid ${statusColor}`, borderRadius: 4, overflow: "hidden" }}>
                           <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${pct}%`, background: statusColor, opacity: 0.6 }} />
                         </div>
@@ -6041,7 +6041,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                           <div style={{ position: "absolute", top: -2, bottom: -2, left: `${((today - rangeStart) / 86400000 / totalDays) * 100}%`, width: 1, background: "#1D1D1F" }} title="Today" />
                         )}
                       </div>
-                      <div style={{ fontSize: 11, color: "#6E6E73", marginTop: 4 }}>{dfmt(start)} → {dfmt(end)}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 4 }}>{dfmt(start)} → {dfmt(end)}</div>
                     </div>
                   );
                 })}
@@ -6073,27 +6073,27 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           </div>
 
           {documents.length === 0 ? (
-            <div style={{ ...styles.ledger, padding: 20, fontSize: 13, color: "#6E6E73" }}>
+            <div style={{ ...styles.ledger, padding: 20, fontSize: 13, color: "var(--text-secondary)" }}>
               No documents yet. Upload drawings, contracts, specs, or site photos above — pick a category and, optionally, the budget line they belong to.
             </div>
           ) : (
             <div style={styles.ledger}>
               {DOC_CATEGORIES.filter((cat) => documents.some((d) => d.category === cat)).map((cat) => (
                 <div key={cat}>
-                  <div style={{ padding: "10px 16px", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#1D5C8A", background: "#FAF7F2", borderBottom: "1px solid #E8E8ED" }}>
+                  <div style={{ padding: "10px 16px", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--accent)", background: "var(--bg-secondary)", borderBottom: "1px solid var(--border-color)" }}>
                     {cat}
                   </div>
                   {documents.filter((d) => d.category === cat).map((doc) => {
                     const linkedItem = items.find((i) => i.id === doc.line_item_id);
                     return (
-                      <div key={doc.id} style={{ padding: "10px 16px", borderBottom: "1px solid #F2F2F5", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                      <div key={doc.id} style={{ padding: "10px 16px", borderBottom: "1px solid var(--border-color)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                         <div style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0, flexWrap: "wrap" }}>
-                          <button onClick={() => openDocument(doc)} style={{ background: "none", border: "none", padding: 0, color: "#1D1D1F", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>
+                          <button onClick={() => openDocument(doc)} style={{ background: "none", border: "none", padding: 0, color: "var(--text-primary)", fontSize: 14, fontWeight: 600, cursor: "pointer", textAlign: "left" }}>
                             {doc.name}
                           </button>
-                          {doc.version > 1 && <span style={{ fontSize: 11, fontWeight: 700, color: "#1D5C8A", background: "rgba(29,92,138,0.1)", borderRadius: 100, padding: "2px 8px" }}>v{doc.version}</span>}
-                          {linkedItem && <span style={{ fontSize: 12, color: "#6E6E73" }}>· {linkedItem.name}</span>}
-                          <span style={{ fontSize: 12, color: "#6E6E73" }}>{fmtFileSize(doc.file_size)}</span>
+                          {doc.version > 1 && <span style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)", background: "rgba(29,92,138,0.1)", borderRadius: 100, padding: "2px 8px" }}>v{doc.version}</span>}
+                          {linkedItem && <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>· {linkedItem.name}</span>}
+                          <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{fmtFileSize(doc.file_size)}</span>
                         </div>
                         <button className="no-print" style={styles.removeBtn} onClick={() => removeDocument(doc)}>✕</button>
                       </div>
@@ -6122,21 +6122,21 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             style={{ display: "none" }}
             onChange={handlePlanUpload}
           />
-          <div style={{ padding: "16px 20px 4px", fontSize: 13, color: "#6E6E73", lineHeight: 1.5 }}>
+          <div style={{ padding: "16px 20px 4px", fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
             Reference documents for this project — drawings, CAD exports, quotes, contracts. Uploaded here so
             they're on hand for quick reference; not tied to any single line item. PDF, CAD (DWG/DXF/DWF), Excel,
             and Word files are supported.
           </div>
           {(project?.plans || []).length === 0 ? (
-            <div style={{ padding: "8px 20px 20px", fontSize: 13, color: "#6E6E73" }}>No documents uploaded yet.</div>
+            <div style={{ padding: "8px 20px 20px", fontSize: 13, color: "var(--text-secondary)" }}>No documents uploaded yet.</div>
           ) : (
             <div style={{ padding: "8px 20px 4px" }}>
               {(project.plans || []).map((p) => (
-                <div key={p.path} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #EDE6D4" }}>
+                <div key={p.path} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border-color)" }}>
                   <button onClick={() => openPlan(p)} style={{ ...styles.attachmentLink, background: "none", border: "none", cursor: "pointer", padding: 0, flex: 1, textAlign: "left" }}>
                     📄 {p.name}
                   </button>
-                  <span style={{ fontSize: 11.5, color: "#6E6E73", fontFamily: "'Space Grotesk', sans-serif" }}>
+                  <span style={{ fontSize: 11.5, color: "var(--text-secondary)", fontFamily: "'Space Grotesk', sans-serif" }}>
                     {p.size ? `${(p.size / 1024).toFixed(0)} KB` : ""}
                   </span>
                   <button className="no-print" style={styles.removeBtn} onClick={() => removePlan(p.path)}>✕</button>
@@ -6155,13 +6155,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         <div style={styles.ledger}>
           <div className="no-print" style={{ padding: 20 }}>
             <button style={styles.addBtn} onClick={logSnapshot}>+ Log snapshot now</button>
-            <p style={{ fontSize: 12.5, color: "#6E6E73", marginTop: 10 }}>
+            <p style={{ fontSize: 12.5, color: "var(--text-secondary)", marginTop: 10 }}>
               Click this weekly (or before each client meeting) to record where budget vs actual stand right now.
               Over time this builds a trend you can point to instead of a single snapshot.
             </p>
           </div>
           {snapshots.length === 0 ? (
-            <div style={{ padding: "0 20px 20px", fontSize: 13, color: "#6E6E73" }}>No snapshots logged yet.</div>
+            <div style={{ padding: "0 20px 20px", fontSize: 13, color: "var(--text-secondary)" }}>No snapshots logged yet.</div>
           ) : (
             <div style={{ padding: "0 20px 20px" }}>
               <TrendChart snapshots={snapshots} />
@@ -6190,12 +6190,12 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                       <SummaryCard
                         label={`Where you stand — ${new Date(latest.created_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}`}
                         value={`${Number(latest.variance) >= 0 ? "+" : ""}${fmt(latest.variance)}`}
-                        accent={Number(latest.variance) > 0 ? "#C1462B" : "#4C7A5C"}
+                        accent={Number(latest.variance) > 0 ? "var(--danger)" : "var(--success)"}
                       />
                       <SummaryCard
                         label="Movement since you started"
                         value={`${swing >= 0 ? "+" : ""}${fmt(swing)}`}
-                        accent={swing > 0 ? "#C1462B" : swing < 0 ? "#4C7A5C" : undefined}
+                        accent={swing > 0 ? "var(--danger)" : swing < 0 ? "var(--success)" : undefined}
                       />
                       <SummaryCard label="Times you've checked in" value={String(snapshots.length)} />
                     </div>
@@ -6204,7 +6204,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               })()}
 
               <div style={{ marginTop: 16 }}>
-                <div style={{ ...styles.trendRow, borderBottom: "1px solid #E8E8ED" }}>
+                <div style={{ ...styles.trendRow, borderBottom: "1px solid var(--border-color)" }}>
                   <span style={{ ...styles.trendHeadCell, flex: 1.3 }}>Date</span>
                   <span style={{ ...styles.trendHeadCell, flex: 1, textAlign: "right" }}>Budget</span>
                   <span style={{ ...styles.trendHeadCell, flex: 1, textAlign: "right" }}>Actual</span>
@@ -6219,18 +6219,18 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   const pctOfBudget = Number(s.budget) ? (Number(s.actual) / Number(s.budget)) * 100 : null;
                   return (
                     <div key={s.id} style={styles.trendRow}>
-                      <span style={{ ...styles.trendCell, flex: 1.3, color: "#6E6E73" }}>
+                      <span style={{ ...styles.trendCell, flex: 1.3, color: "var(--text-secondary)" }}>
                         {new Date(s.created_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}
                       </span>
                       <span style={{ ...styles.trendCell, flex: 1, textAlign: "right" }}>{fmt(s.budget)}</span>
                       <span style={{ ...styles.trendCell, flex: 1, textAlign: "right" }}>{fmt(s.actual)}</span>
-                      <span style={{ ...styles.trendCell, flex: 1.1, textAlign: "right", color: Number(s.variance) > 0 ? "#C1462B" : "#4C7A5C", fontWeight: 600 }}>
+                      <span style={{ ...styles.trendCell, flex: 1.1, textAlign: "right", color: Number(s.variance) > 0 ? "var(--danger)" : "var(--success)", fontWeight: 600 }}>
                         {Number(s.variance) >= 0 ? "+" : ""}{fmt(s.variance)}
                       </span>
-                      <span style={{ ...styles.trendCell, flex: 1, textAlign: "right", color: "#6E6E73" }}>
+                      <span style={{ ...styles.trendCell, flex: 1, textAlign: "right", color: "var(--text-secondary)" }}>
                         {pctOfBudget == null ? "—" : `${pctOfBudget.toFixed(1)}%`}
                       </span>
-                      <span style={{ ...styles.trendCell, flex: 1.1, textAlign: "right", color: delta == null ? "#6E6E73" : delta > 0 ? "#C1462B" : delta < 0 ? "#4C7A5C" : "#6E6E73" }}>
+                      <span style={{ ...styles.trendCell, flex: 1.1, textAlign: "right", color: delta == null ? "#6E6E73" : delta > 0 ? "var(--danger)" : delta < 0 ? "var(--success)" : "#6E6E73" }}>
                         {delta == null ? "— first" : `${delta >= 0 ? "+" : ""}${fmt(delta)}`}
                       </span>
                       <span style={{ ...styles.trendCell, flex: 0.4, textAlign: "right" }} className="no-print">
@@ -6267,7 +6267,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         <div style={{ display: "flex", gap: 20, alignItems: "flex-start", maxWidth: 1180, margin: "0 auto" }}>
 
           {/* Preview — what the client will actually see */}
-          <div className="card" style={{ flex: 1.6, background: "#FFFFFF", borderRadius: 18, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+          <div className="card" style={{ flex: 1.6, background: "var(--surface)", borderRadius: 18, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", overflow: "hidden" }}>
             <div style={{ background: "#20344A", padding: "36px 36px 30px", color: "#fff" }}>
               <svg width="26" height="26" viewBox="0 0 48 48" style={{ marginBottom: 18 }}>
                 <rect x="4" y="8" width="28" height="8" fill="#fff" opacity="0.9" />
@@ -6281,20 +6281,20 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               </div>
             </div>
 
-            <div style={{ display: "flex", padding: "30px 36px", borderBottom: "1px solid #E8E8ED" }}>
+            <div style={{ display: "flex", padding: "30px 36px", borderBottom: "1px solid var(--border-color)" }}>
               <div style={{ flex: 1, paddingRight: 20 }}>
-                <div style={{ fontSize: 11, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.06em" }}>Budget</div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Budget</div>
                 <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 600, marginTop: 4 }}>{fmt(totals.revisedBudget)}</div>
               </div>
-              <div style={{ width: 1, background: "#E8E8ED" }} />
+              <div style={{ width: 1, background: "var(--border-color)" }} />
               <div style={{ flex: 1, padding: "0 20px" }}>
-                <div style={{ fontSize: 11, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.06em" }}>Actual to date</div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Actual to date</div>
                 <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 600, marginTop: 4 }}>{fmt(totals.actual)}</div>
               </div>
-              <div style={{ width: 1, background: "#E8E8ED" }} />
+              <div style={{ width: 1, background: "var(--border-color)" }} />
               <div style={{ flex: 1, paddingLeft: 20 }}>
-                <div style={{ fontSize: 11, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.06em" }}>Variance</div>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 600, marginTop: 4, color: totals.variance > 0 ? "#C1462B" : "#4C7A5C" }}>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Variance</div>
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 600, marginTop: 4, color: totals.variance > 0 ? "var(--danger)" : "var(--success)" }}>
                   {totals.variance >= 0 ? "+" : ""}{fmt(totals.variance)}
                 </div>
               </div>
@@ -6303,12 +6303,12 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             <div style={{ padding: "8px 36px 30px" }}>
               {reportSections.cost_summary && (
                 <>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "20px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Cost Summary by Category</div>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "20px 0 12px", paddingBottom: 8, borderBottom: "1px solid var(--border-color)" }}>Cost Summary by Category</div>
                   {categoryRows.length === 0 ? (
-                    <div style={{ fontSize: 13, color: "#6E6E73", padding: "6px 0" }}>No line items yet.</div>
+                    <div style={{ fontSize: 13, color: "var(--text-secondary)", padding: "6px 0" }}>No line items yet.</div>
                   ) : (
                     <>
-                      <div style={{ textAlign: "right", fontSize: 10.5, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.04em", padding: "4px 0 2px" }}>Actual / Budget</div>
+                      <div style={{ textAlign: "right", fontSize: 10.5, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", padding: "4px 0 2px" }}>Actual / Budget</div>
                       {categoryRows.map(([cat, t]) => (
                         <div key={cat} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}>
                           <span>{cat}</span>
@@ -6322,9 +6322,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
               {reportSections.change_orders && (
                 <>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Change Orders</div>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid var(--border-color)" }}>Change Orders</div>
                   {coRows.length === 0 ? (
-                    <div style={{ fontSize: 13, color: "#6E6E73", padding: "6px 0" }}>No change orders logged.</div>
+                    <div style={{ fontSize: 13, color: "var(--text-secondary)", padding: "6px 0" }}>No change orders logged.</div>
                   ) : (
                     coRows.map((co) => (
                       <div key={co.id} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}>
@@ -6338,13 +6338,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
               {reportSections.schedule && (
                 <>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Schedule Progress</div>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid var(--border-color)" }}>Schedule Progress</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13.5, marginBottom: 8 }}>
                     <span style={{ width: 130 }}>Overall</span>
-                    <div style={{ flex: 1, height: 3, background: "#F2F2F5" }}><div style={{ width: `${Math.min(100, scheduleOverallPct)}%`, height: "100%", background: "#20344A" }} /></div>
+                    <div style={{ flex: 1, height: 3, background: "var(--bg-secondary)" }}><div style={{ width: `${Math.min(100, scheduleOverallPct)}%`, height: "100%", background: "#20344A" }} /></div>
                     <span style={{ fontFamily: "'Space Grotesk', sans-serif", width: 36, textAlign: "right" }}>{Math.round(scheduleOverallPct)}%</span>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13.5, color: "#6E6E73" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 13.5, color: "var(--text-secondary)" }}>
                     <span style={{ width: 130 }}>Current phase</span>
                     <span>{currentPhase ? currentPhase.name : "All tasks complete"}</span>
                   </div>
@@ -6353,9 +6353,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
               {reportSections.trend && (
                 <>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Cost Trend</div>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid var(--border-color)" }}>Cost Trend</div>
                   {snapshots.length === 0 ? (
-                    <div style={{ fontSize: 13, color: "#6E6E73", padding: "6px 0" }}>No snapshots logged yet — log one from the Trend tab.</div>
+                    <div style={{ fontSize: 13, color: "var(--text-secondary)", padding: "6px 0" }}>No snapshots logged yet — log one from the Trend tab.</div>
                   ) : (
                     <TrendChart snapshots={snapshots} />
                   )}
@@ -6364,7 +6364,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
               {reportSections.payments && (
                 <>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Payments &amp; Retention</div>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid var(--border-color)" }}>Payments &amp; Retention</div>
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}><span>Claimed to date</span><span style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(totals.claimed)}</span></div>
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}><span>Certified to date</span><span style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(totals.certified)}</span></div>
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}><span>Retention held ({totals.retentionPct}%)</span><span style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{fmt(totals.retentionHeld)}</span></div>
@@ -6373,9 +6373,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
               {reportSections.purchase_orders && (
                 <>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Purchase Orders</div>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid var(--border-color)" }}>Purchase Orders</div>
                   {purchaseOrders.length === 0 ? (
-                    <div style={{ fontSize: 13, color: "#6E6E73", padding: "6px 0" }}>No purchase orders yet.</div>
+                    <div style={{ fontSize: 13, color: "var(--text-secondary)", padding: "6px 0" }}>No purchase orders yet.</div>
                   ) : (
                     purchaseOrders.map((po) => (
                       <div key={po.id} style={{ display: "flex", justifyContent: "space-between", padding: "9px 0", fontSize: 13.5 }}>
@@ -6389,9 +6389,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
               {reportSections.documents && (
                 <>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Documents Shared</div>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid var(--border-color)" }}>Documents Shared</div>
                   {documents.length === 0 ? (
-                    <div style={{ fontSize: 13, color: "#6E6E73", padding: "6px 0" }}>No documents uploaded yet.</div>
+                    <div style={{ fontSize: 13, color: "var(--text-secondary)", padding: "6px 0" }}>No documents uploaded yet.</div>
                   ) : (
                     documents.map((d) => (
                       <div key={d.id} style={{ padding: "7px 0", fontSize: 13.5 }}>{d.name}</div>
@@ -6402,9 +6402,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
               {reportSections.subcontractors && (
                 <>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid #E8E8ED" }}>Subcontractors</div>
+                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, fontWeight: 700, margin: "24px 0 12px", paddingBottom: 8, borderBottom: "1px solid var(--border-color)" }}>Subcontractors</div>
                   {subs.length === 0 ? (
-                    <div style={{ fontSize: 13, color: "#6E6E73", padding: "6px 0" }}>None added yet.</div>
+                    <div style={{ fontSize: 13, color: "var(--text-secondary)", padding: "6px 0" }}>None added yet.</div>
                   ) : (
                     subs.map((s) => (
                       <div key={s.id} style={{ padding: "7px 0", fontSize: 13.5 }}>{s.name}{s.trade ? ` — ${s.trade}` : ""}</div>
@@ -6414,25 +6414,25 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               )}
 
               {reportNote.trim() && (
-                <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid #E8E8ED", fontSize: 13.5, lineHeight: 1.65, fontStyle: "italic", color: "#3A3A3D" }}>
+                <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid var(--border-color)", fontSize: 13.5, lineHeight: 1.65, fontStyle: "italic", color: "#3A3A3D" }}>
                   "{reportNote}"
                 </div>
               )}
             </div>
 
-            <div style={{ padding: "16px 36px", borderTop: "1px solid #E8E8ED", display: "flex", justifyContent: "space-between", fontSize: 11, color: "#6E6E73" }}>
-              <span>site<span style={{ color: "#1D5C8A" }}>Margin</span> — Client report for {project.name}</span>
+            <div style={{ padding: "16px 36px", borderTop: "1px solid var(--border-color)", display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-secondary)" }}>
+              <span>site<span style={{ color: "var(--accent)" }}>Margin</span> — Client report for {project.name}</span>
               <span>Generated {reportDate}</span>
             </div>
           </div>
 
           {/* Panel — sections, note, save/send/schedule */}
-          <div className="no-print" style={{ width: 340, flexShrink: 0, background: "#FFFFFF", borderRadius: 18, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: 22, position: "sticky", top: 20 }}>
+          <div className="no-print" style={{ width: 340, flexShrink: 0, background: "var(--surface)", borderRadius: 18, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: 22, position: "sticky", top: 20 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
               <div style={{ fontSize: 14, fontWeight: 700 }}>Report sections</div>
               <button
                 onClick={() => window.print()}
-                style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "1px solid #E8E8ED", borderRadius: 100, padding: "5px 11px", fontSize: 12, fontWeight: 600, color: "#1D1D1F", cursor: "pointer" }}
+                style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "1px solid var(--border-color)", borderRadius: 100, padding: "5px 11px", fontSize: 12, fontWeight: 600, color: "var(--text-primary)", cursor: "pointer" }}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="6 9 6 2 18 2 18 9" />
@@ -6443,13 +6443,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               </button>
             </div>
 
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Always included</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Always included</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 0" }}>
               <input type="checkbox" checked disabled style={{ width: 18, height: 18 }} />
-              <span style={{ fontSize: 13, color: "#6E6E73" }}>Project &amp; cost headline</span>
+              <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>Project &amp; cost headline</span>
             </div>
 
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.04em", margin: "14px 0 8px" }}>Recommended</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", margin: "14px 0 8px" }}>Recommended</div>
             {[
               ["cost_summary", "Cost summary by category"],
               ["change_orders", "Change orders"],
@@ -6467,7 +6467,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               </label>
             ))}
 
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.04em", margin: "14px 0 8px" }}>Optional</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", margin: "14px 0 8px" }}>Optional</div>
             {[
               ["payments", "Payments & retention detail"],
               ["purchase_orders", "Purchase orders"],
@@ -6481,19 +6481,19 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   onChange={() => setReportSections((s) => ({ ...s, [key]: !s[key] }))}
                   style={{ width: 18, height: 18, accentColor: "#20344A" }}
                 />
-                <span style={{ fontSize: 13, color: "#6E6E73" }}>{label}</span>
+                <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{label}</span>
               </label>
             ))}
 
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.04em", margin: "16px 0 8px" }}>Note to client</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", margin: "16px 0 8px" }}>Note to client</div>
             <textarea
               value={reportNote}
               onChange={(e) => setReportNote(e.target.value)}
               placeholder="Add a line or two of context before this goes out…"
-              style={{ width: "100%", minHeight: 64, border: "1px solid #E8E8ED", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, fontFamily: "inherit", resize: "vertical" }}
+              style={{ width: "100%", minHeight: 64, border: "1px solid var(--border-color)", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, fontFamily: "inherit", resize: "vertical" }}
             />
 
-            <div style={{ height: 1, background: "#E8E8ED", margin: "18px 0" }} />
+            <div style={{ height: 1, background: "var(--border-color)", margin: "18px 0" }} />
 
             <button style={{ ...styles.importBtn, width: "100%", marginBottom: 10 }} disabled={reportSaving} onClick={saveReportProfile}>
               {reportSaving ? "Saving…" : "Save profile"}
@@ -6501,9 +6501,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
               {reportRecipients.map((email) => (
-                <span key={email} style={{ display: "flex", alignItems: "center", gap: 6, background: "#FFFFFF", border: "1px solid #E8E8ED", borderRadius: 100, padding: "5px 6px 5px 10px", fontSize: 12 }}>
+                <span key={email} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 100, padding: "5px 6px 5px 10px", fontSize: 12 }}>
                   {email}
-                  <button onClick={() => setReportRecipients((r) => r.filter((e) => e !== email))} style={{ background: "none", border: "none", color: "#6E6E73", cursor: "pointer", fontSize: 11, padding: 0 }}>✕</button>
+                  <button onClick={() => setReportRecipients((r) => r.filter((e) => e !== email))} style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: 11, padding: 0 }}>✕</button>
                 </span>
               ))}
               <input
@@ -6517,7 +6517,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                 }}
                 onBlur={addReportRecipient}
                 placeholder="client@email.com"
-                style={{ border: "1px solid #E8E8ED", borderRadius: 100, padding: "5px 12px", fontSize: 12, minWidth: 140 }}
+                style={{ border: "1px solid var(--border-color)", borderRadius: 100, padding: "5px 12px", fontSize: 12, minWidth: 140 }}
               />
             </div>
             <button style={{ ...styles.addBtn, width: "100%", background: "#20344A", marginBottom: 14 }} disabled={reportSending} onClick={sendReportNow}>
@@ -6525,7 +6525,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             </button>
 
             {reportMessage && (
-              <div style={{ fontSize: 12.5, color: reportMessage.type === "error" ? "#C1462B" : "#4C7A5C", marginBottom: 14 }}>{reportMessage.text}</div>
+              <div style={{ fontSize: 12.5, color: reportMessage.type === "error" ? "var(--danger)" : "var(--success)", marginBottom: 14 }}>{reportMessage.text}</div>
             )}
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
@@ -6538,13 +6538,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   style={{ position: "absolute", opacity: 0, width: "100%", height: "100%", margin: 0, cursor: "pointer" }}
                 />
                 <span style={{ position: "absolute", inset: 0, borderRadius: 100, background: reportFrequency !== "none" ? "#20344A" : "#DCDCE1", pointerEvents: "none", transition: "background 0.15s" }} />
-                <span style={{ position: "absolute", top: 2, left: reportFrequency !== "none" ? 18 : 2, width: 16, height: 16, borderRadius: 100, background: "#fff", pointerEvents: "none", transition: "left 0.15s" }} />
+                <span style={{ position: "absolute", top: 2, left: reportFrequency !== "none" ? 18 : 2, width: 16, height: 16, borderRadius: 100, background: "var(--surface)", pointerEvents: "none", transition: "left 0.15s" }} />
               </label>
             </div>
 
             {reportFrequency !== "none" && (
-              <div style={{ background: "#F2F2F5", borderRadius: 12, padding: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Frequency</div>
+              <div style={{ background: "var(--bg-secondary)", borderRadius: 12, padding: 14 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Frequency</div>
                 <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
                   {["weekly", "monthly"].map((f) => (
                     <button
@@ -6563,12 +6563,12 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   ))}
                 </div>
 
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Send on</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Send on</div>
                 {reportFrequency === "weekly" ? (
                   <select
                     value={reportSendDay}
                     onChange={(e) => setReportSendDay(Number(e.target.value))}
-                    style={{ width: "100%", background: "#fff", border: "1px solid #E8E8ED", borderRadius: 8, padding: "8px 12px", fontSize: 13, marginBottom: 14 }}
+                    style={{ width: "100%", background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 8, padding: "8px 12px", fontSize: 13, marginBottom: 14 }}
                   >
                     {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((d, i) => (
                       <option key={i} value={i}>{d}</option>
@@ -6578,7 +6578,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   <select
                     value={reportSendDay}
                     onChange={(e) => setReportSendDay(Number(e.target.value))}
-                    style={{ width: "100%", background: "#fff", border: "1px solid #E8E8ED", borderRadius: 8, padding: "8px 12px", fontSize: 13, marginBottom: 14 }}
+                    style={{ width: "100%", background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 8, padding: "8px 12px", fontSize: 13, marginBottom: 14 }}
                   >
                     {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
                       <option key={d} value={d}>{d === 1 ? "1st" : d === 2 ? "2nd" : d === 3 ? "3rd" : `${d}th`} of the month</option>
@@ -6586,7 +6586,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                   </select>
                 )}
 
-                <div style={{ fontSize: 12, color: "#6E6E73" }}>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
                   Next send: {new Date(computeNextSendAt(reportFrequency, reportSendDay)).toLocaleDateString("en-ZA", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
                   {" — save the profile to lock this in."}
                 </div>
@@ -6602,13 +6602,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         <div style={styles.dfRow}>
           <div style={styles.dfBrand}>
             <svg style={styles.dfMark} viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-              <rect x="4" y="8" width="28" height="8" fill="#1D1D1F" />
-              <rect x="34" y="8" width="10" height="8" fill="#1D5C8A" />
-              <rect x="4" y="20" width="40" height="8" fill="#1D1D1F" />
-              <rect x="4" y="32" width="40" height="8" fill="#1D1D1F" />
+              <rect x="4" y="8" width="28" height="8" fill="var(--text-primary)" />
+              <rect x="34" y="8" width="10" height="8" fill="var(--accent)" />
+              <rect x="4" y="20" width="40" height="8" fill="var(--text-primary)" />
+              <rect x="4" y="32" width="40" height="8" fill="var(--text-primary)" />
             </svg>
             <span style={styles.dfText}>
-              site<span style={{ color: "#1D5C8A" }}>Margin</span> — Cost variance report for {project.name}
+              site<span style={{ color: "var(--accent)" }}>Margin</span> — Cost variance report for {project.name}
             </span>
           </div>
           <div style={styles.dfMeta}>
@@ -6708,13 +6708,13 @@ const styles = {
     fontFamily: "'Inter', sans-serif",
     padding: "20px 16px 48px",
   },
-  eyebrow: { fontSize: 12, letterSpacing: "0.1em", color: "#6E6E73", fontWeight: 600, textTransform: "uppercase" },
-  eyebrowProminent: { fontSize: 17, letterSpacing: "0.06em", color: "#1D5C8A", fontWeight: 800, textTransform: "uppercase" },
+  eyebrow: { fontSize: 12, letterSpacing: "0.1em", color: "var(--text-secondary)", fontWeight: 600, textTransform: "uppercase" },
+  eyebrowProminent: { fontSize: 17, letterSpacing: "0.06em", color: "var(--accent)", fontWeight: 800, textTransform: "uppercase" },
   titleDivider: { fontSize: 22, color: "#C9C4B8", fontWeight: 400, lineHeight: 1 },
   appLogoRow: { display: "flex", alignItems: "center", gap: 8 },
   appLogoMark: { height: 64, width: "auto", display: "block" },
-  appLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 22, letterSpacing: "-0.01em", color: "#1D1D1F" },
-  eyebrowLink: { fontSize: 12, letterSpacing: "0.1em", color: "#6E6E73", fontWeight: 600, textTransform: "uppercase", textDecoration: "none", display: "inline-block" },
+  appLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 22, letterSpacing: "-0.01em", color: "var(--text-primary)" },
+  eyebrowLink: { fontSize: 12, letterSpacing: "0.1em", color: "var(--text-secondary)", fontWeight: 600, textTransform: "uppercase", textDecoration: "none", display: "inline-block" },
 
   // zIndex 201 keeps the logo + hamburger button visible ABOVE the full-screen
   // menu overlay (zIndex 200) when the menu is open — otherwise the overlay
@@ -6733,10 +6733,10 @@ const styles = {
   // Matches sitemargin.co.za's own .nav-app-link exactly (same font, size,
   // color, padding, radius) — the app's mirror-image equivalent, pointing
   // back to the marketing site instead of into the app.
-  navHomeLink: { fontSize: 13.5, fontWeight: 600, color: "#FFFFFF", textDecoration: "none", whiteSpace: "nowrap", background: "#1D5C8A", padding: "8px 16px", borderRadius: 100, display: "inline-block" },
+  navHomeLink: { fontSize: 13.5, fontWeight: 600, color: "#FFFFFF", textDecoration: "none", whiteSpace: "nowrap", background: "var(--accent)", padding: "8px 16px", borderRadius: 100, display: "inline-block" },
   dashTitle: { fontSize: "clamp(30px, 4.5vw, 42px)", fontWeight: 700, letterSpacing: "-0.02em" },
-  pageHeaderEyebrow: { fontSize: 17, letterSpacing: "0.06em", color: "#1D5C8A", fontWeight: 800, textTransform: "uppercase", margin: 0 },
-  dashTitleInput: { fontSize: "clamp(20px, 2.6vw, 26px)", fontWeight: 700, letterSpacing: "-0.02em", color: "#1D5C8A", background: "none", border: "none", borderBottom: "1px dashed #D9D9DE", padding: 0, width: "100%", minWidth: 0 },
+  pageHeaderEyebrow: { fontSize: 17, letterSpacing: "0.06em", color: "var(--accent)", fontWeight: 800, textTransform: "uppercase", margin: 0 },
+  dashTitleInput: { fontSize: "clamp(20px, 2.6vw, 26px)", fontWeight: 700, letterSpacing: "-0.02em", color: "var(--accent)", background: "none", border: "none", borderBottom: "1px dashed var(--border-color)", padding: 0, width: "100%", minWidth: 0 },
   companyLogoMark: { height: "clamp(28px, 4.5vw, 44px)", width: "auto", maxWidth: 140, objectFit: "contain", borderRadius: 6 },
   // Subscription-tier badge next to the wordmark (direction "B" from the
   // tier-badge mockup) — background is set per-tier via HEADER_TIER_BADGE's
@@ -6744,11 +6744,11 @@ const styles = {
   // across tiers so only two values ever vary at the call site.
   tierBadge: { display: "inline-flex", alignItems: "center", borderRadius: 100, padding: "4px 11px" },
   tierBadgeLabel: { fontSize: 10.5, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", whiteSpace: "nowrap" },
-  logoTextBtn: { background: "none", border: "none", color: "#1D5C8A", fontSize: 11.5, fontWeight: 600, textAlign: "left", padding: 0, cursor: "pointer" },
-  logoTextBtnMuted: { background: "none", border: "none", color: "#6E6E73", fontSize: 11, textAlign: "left", padding: 0, cursor: "pointer" },
-  logoMenuPopover: { position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 30, background: "#FFFFFF", borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.14)", padding: 6, minWidth: 150, display: "flex", flexDirection: "column", gap: 2 },
-  downloadMenuPopover: { position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, background: "#FFFFFF", borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.14)", padding: 6, minWidth: 130, display: "flex", flexDirection: "column", gap: 2 },
-  logoMenuItem: { background: "none", border: "none", color: "#1D1D1F", fontSize: 13.5, fontWeight: 500, textAlign: "left", padding: "9px 12px", borderRadius: 8, cursor: "pointer" },
+  logoTextBtn: { background: "none", border: "none", color: "var(--accent)", fontSize: 11.5, fontWeight: 600, textAlign: "left", padding: 0, cursor: "pointer" },
+  logoTextBtnMuted: { background: "none", border: "none", color: "var(--text-secondary)", fontSize: 11, textAlign: "left", padding: 0, cursor: "pointer" },
+  logoMenuPopover: { position: "absolute", top: "calc(100% + 6px)", left: 0, zIndex: 30, background: "var(--surface)", borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.14)", padding: 6, minWidth: 150, display: "flex", flexDirection: "column", gap: 2 },
+  downloadMenuPopover: { position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 30, background: "var(--surface)", borderRadius: 12, boxShadow: "0 8px 28px rgba(0,0,0,0.14)", padding: 6, minWidth: 130, display: "flex", flexDirection: "column", gap: 2 },
+  logoMenuItem: { background: "none", border: "none", color: "var(--text-primary)", fontSize: 13.5, fontWeight: 500, textAlign: "left", padding: "9px 12px", borderRadius: 8, cursor: "pointer" },
 
   // menuWrap surrounds the button AND the drawer so the CSS hover rule in
   // GlobalStyles (".sm-menu-wrap:hover .sm-menu-drawer") can bridge the two —
@@ -6791,7 +6791,7 @@ const styles = {
   menuDrawer: {
     position: "absolute", top: "100%", right: 0,
     width: "min(320px, 86vw)",
-    background: "#FFFFFF", borderRadius: 20,
+    background: "var(--surface)", borderRadius: 20,
     boxShadow: "0 20px 50px rgba(0,0,0,0.16), 0 4px 16px rgba(0,0,0,0.07)",
     zIndex: 200,
     display: "flex", flexDirection: "column",
@@ -6801,51 +6801,51 @@ const styles = {
   },
   menuDrawerOpen: { opacity: 1, visibility: "visible", pointerEvents: "auto" },
   menuPanelInner: { width: "100%" },
-  menuPanelLink: { display: "block", width: "calc(100% + 20px)", textAlign: "left", background: "none", fontSize: 17, fontWeight: 700, letterSpacing: "-0.01em", color: "#1D1D1F", border: "none", borderRadius: 10, padding: "7px 10px", margin: "0 -10px", cursor: "pointer", textDecoration: "none" },
-  menuPanelLinkActive: { color: "#1D5C8A" },
-  menuSectionLabel: { fontSize: 10.5, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: "#A0A0A6", margin: "16px 0 6px" },
-  menuSecondaryLink: { display: "block", width: "calc(100% + 20px)", textAlign: "left", background: "none", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 500, color: "#4A4A4F", padding: "5px 10px", margin: "0 -10px", cursor: "pointer", textDecoration: "none" },
-  menuDivider: { height: 1, background: "#E8E8ED", margin: "14px 0 0" },
-  menuPanelDimRow: { display: "flex", gap: 16, marginTop: 12, paddingTop: 12, borderTop: "1px solid #E8E8ED" },
+  menuPanelLink: { display: "block", width: "calc(100% + 20px)", textAlign: "left", background: "none", fontSize: 17, fontWeight: 700, letterSpacing: "-0.01em", color: "var(--text-primary)", border: "none", borderRadius: 10, padding: "7px 10px", margin: "0 -10px", cursor: "pointer", textDecoration: "none" },
+  menuPanelLinkActive: { color: "var(--accent)" },
+  menuSectionLabel: { fontSize: 10.5, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: "var(--text-secondary)", margin: "16px 0 6px" },
+  menuSecondaryLink: { display: "block", width: "calc(100% + 20px)", textAlign: "left", background: "none", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 500, color: "var(--text-secondary)", padding: "5px 10px", margin: "0 -10px", cursor: "pointer", textDecoration: "none" },
+  menuDivider: { height: 1, background: "var(--border-color)", margin: "14px 0 0" },
+  menuPanelDimRow: { display: "flex", gap: 16, marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border-color)" },
   menuPanelDim: { background: "none", border: "none", fontSize: 12, fontWeight: 600, color: "#8A8A90", padding: 0, cursor: "pointer", textDecoration: "none" },
-  menuFooter: { marginTop: 16, paddingTop: 16, borderTop: "1px solid #E8E8ED" },
+  menuFooter: { marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border-color)" },
   menuFooterBrandRow: { display: "flex", alignItems: "center", gap: 7, marginBottom: 6 },
   menuFooterLogoMark: { height: 20, width: "auto", display: "block" },
-  menuFooterWordmark: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 14.5, color: "#1D1D1F" },
-  menuFooterTagline: { fontSize: 12, color: "#6E6E73", lineHeight: 1.5, marginBottom: 14 },
+  menuFooterWordmark: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 14.5, color: "var(--text-primary)" },
+  menuFooterTagline: { fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 14 },
   menuPanelActions: { display: "flex", flexDirection: "column", gap: 8 },
-  menuPanelGhost: { textAlign: "center", padding: 11, borderRadius: 100, fontWeight: 600, fontSize: 14, border: "1px solid #1D1D1F", color: "#1D1D1F", background: "none", cursor: "pointer" },
-  menuPanelSolid: { textAlign: "center", padding: 11, borderRadius: 100, fontWeight: 600, fontSize: 14, border: "none", color: "#FFFFFF", background: "#1D5C8A", cursor: "pointer" },
-  menuPanelEmail: { marginTop: 14, fontSize: 11.5, color: "#A0A0A6", fontFamily: "'Space Grotesk', sans-serif" },
+  menuPanelGhost: { textAlign: "center", padding: 11, borderRadius: 100, fontWeight: 600, fontSize: 14, border: "1px solid #1D1D1F", color: "var(--text-primary)", background: "none", cursor: "pointer" },
+  menuPanelSolid: { textAlign: "center", padding: 11, borderRadius: 100, fontWeight: 600, fontSize: 14, border: "none", color: "#FFFFFF", background: "var(--accent)", cursor: "pointer" },
+  menuPanelEmail: { marginTop: 14, fontSize: 11.5, color: "var(--text-secondary)", fontFamily: "'Space Grotesk', sans-serif" },
 
-  topNav: { maxWidth: 1180, margin: "0 auto 20px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid #E8E8ED", paddingBottom: 12 },
+  topNav: { maxWidth: 1180, margin: "0 auto 20px", display: "flex", alignItems: "center", gap: 8, borderBottom: "1px solid var(--border-color)", paddingBottom: 12 },
   topNavRight: { marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 },
-  topNavEmail: { fontSize: 12, color: "#6E6E73", fontFamily: "'Space Grotesk', sans-serif" },
-  topNavSignOut: { background: "none", border: "1px solid #E8E8ED", borderRadius: 100, color: "#6E6E73", fontSize: 12, padding: "6px 12px", cursor: "pointer" },
+  topNavEmail: { fontSize: 12, color: "var(--text-secondary)", fontFamily: "'Space Grotesk', sans-serif" },
+  topNavSignOut: { background: "none", border: "1px solid var(--border-color)", borderRadius: 100, color: "var(--text-secondary)", fontSize: 12, padding: "6px 12px", cursor: "pointer" },
 
   // Sticky, same reasoning as dashHeader above — this already had the right
   // background band, it was just missing position:sticky, so it scrolled
   // out of view instead of staying put like sitemargin.co.za's own nav.
-  gateNavOuter: { position: "sticky", top: 0, paddingTop: 56, zIndex: 201, background: "#F5F5F7" },
+  gateNavOuter: { position: "sticky", top: 0, paddingTop: 56, zIndex: 201, background: "var(--bg-secondary)" },
   gateNavWrap: { maxWidth: 980, margin: "0 auto", padding: "0 20px" },
-  gateNav: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "#FFFFFF", borderRadius: 18, padding: "10px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", margin: "14px 0 0" },
+  gateNav: { display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--surface)", borderRadius: 18, padding: "10px 18px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", margin: "14px 0 0" },
   // Always-visible pill next to the hamburger — same idea as the marketing
   // site's .nav-app-link, so "Log in" is right there in the header on the
   // signed-out gate screen without needing to open any menu.
   gateNavActions: { display: "flex", alignItems: "center", gap: 10 },
-  gateNavBtn: { fontSize: 13.5, fontWeight: 600, color: "#FFFFFF", textDecoration: "none", whiteSpace: "nowrap", background: "#1D5C8A", padding: "8px 16px", borderRadius: 100, display: "inline-block" },
+  gateNavBtn: { fontSize: 13.5, fontWeight: 600, color: "#FFFFFF", textDecoration: "none", whiteSpace: "nowrap", background: "var(--accent)", padding: "8px 16px", borderRadius: 100, display: "inline-block" },
   gateWrap: { maxWidth: 640, margin: "48px auto 0", padding: "0 16px" },
-  heroWrap: { position: "relative", isolation: "isolate", overflow: "hidden", borderRadius: 24, background: "#F5F5F7", padding: "30px 20px 34px", marginBottom: 36 },
+  heroWrap: { position: "relative", isolation: "isolate", overflow: "hidden", borderRadius: 24, background: "var(--bg-secondary)", padding: "30px 20px 34px", marginBottom: 36 },
   heroBacksplash: { position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 0, pointerEvents: "none" },
   heroContent: { position: "relative", zIndex: 1 },
-  heroEm: { fontStyle: "normal", color: "#1D5C8A" },
+  heroEm: { fontStyle: "normal", color: "var(--accent)" },
   heroItal: { fontFamily: "'Fraunces', Georgia, serif", fontStyle: "italic", fontWeight: 600 },
-  heroSub: { fontSize: 16, color: "#4A4A4F", lineHeight: 1.6, marginBottom: 26 },
+  heroSub: { fontSize: 16, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 26 },
   heroCtas: { display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap", margin: "6px 0 20px" },
-  heroBtnPrimary: { background: "#1D5C8A", color: "#FFFFFF", fontWeight: 600, fontSize: 15, padding: "12px 24px", borderRadius: 100, border: "none", cursor: "pointer" },
-  heroTextlink: { fontSize: 15, fontWeight: 500, color: "#1D5C8A", background: "none", border: "none", padding: 0, cursor: "pointer" },
-  heroProof: { display: "flex", alignItems: "baseline", gap: 7, fontSize: 13.5, color: "#6E6E73", marginBottom: 30 },
-  heroProofCount: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15.5, color: "#1D1D1F" },
+  heroBtnPrimary: { background: "var(--accent)", color: "#FFFFFF", fontWeight: 600, fontSize: 15, padding: "12px 24px", borderRadius: 100, border: "none", cursor: "pointer" },
+  heroTextlink: { fontSize: 15, fontWeight: 500, color: "var(--accent)", background: "none", border: "none", padding: 0, cursor: "pointer" },
+  heroProof: { display: "flex", alignItems: "baseline", gap: 7, fontSize: 13.5, color: "var(--text-secondary)", marginBottom: 30 },
+  heroProofCount: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 15.5, color: "var(--text-primary)" },
   heroVisualWrap: { position: "relative", height: 260, display: "flex", alignItems: "center", justifyContent: "center", margin: "4px 0 8px" },
   heroDiamondWrapper: { position: "relative", zIndex: 1, display: "inline-flex", padding: 15, borderRadius: 50, background: "linear-gradient(150deg, #23272E 0%, #14171C 52%, #090B0E 100%)", transform: "rotate(45deg)", boxShadow: "17px 17px 30px -10px rgba(2,6,23,0.5), 10px 10px 18px -8px rgba(2,6,23,0.3), inset 0 1px 1px rgba(255,255,255,0.14)" },
   heroDiamondRing: { display: "flex", padding: 5, borderRadius: 36, background: "linear-gradient(135deg, #CFFAFE 0%, #22D3EE 20%, #06B6D4 42%, #10B981 66%, #22C55E 84%, #86EFAC 100%)", boxShadow: "0 0 5px rgba(207,250,254,0.45)" },
@@ -6853,85 +6853,85 @@ const styles = {
   heroDiamondInner: { transform: "rotate(-45deg)", textAlign: "center" },
   heroDiamondFigure: { fontWeight: 700, fontSize: 25, letterSpacing: "-0.7px", color: "#F2F6F9", whiteSpace: "nowrap", textShadow: "0 2px 18px rgba(34,211,238,0.28)" },
   heroDiamondLabel: { fontSize: 10, fontWeight: 500, letterSpacing: "0.13em", color: "#AEB6BE", marginTop: 6, textTransform: "uppercase" },
-  heroBadge: { position: "absolute", zIndex: 1, display: "flex", alignItems: "center", gap: 7, background: "#FFFFFF", borderRadius: 100, padding: "9px 14px 9px 12px", fontSize: 12.5, fontWeight: 600, color: "#1D1D1F", boxShadow: "0 12px 28px rgba(0,0,0,0.12)" },
-  heroBadgeDot: { width: 7, height: 7, borderRadius: "50%", background: "#4C7A5C", flexShrink: 0 },
+  heroBadge: { position: "absolute", zIndex: 1, display: "flex", alignItems: "center", gap: 7, background: "var(--surface)", borderRadius: 100, padding: "9px 14px 9px 12px", fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)", boxShadow: "0 12px 28px rgba(0,0,0,0.12)" },
+  heroBadgeDot: { width: 7, height: 7, borderRadius: "50%", background: "var(--success)", flexShrink: 0 },
   heroBadgeTop: { top: 4, left: "8%" },
   heroBadgeBottom: { bottom: 20, right: "4%" },
-  mockSheet: { background: "#FFFFFF", borderRadius: 18, padding: "16px 18px", boxShadow: "0 12px 34px rgba(0,0,0,0.08)", marginBottom: 28 },
-  mockHead: { display: "flex", justifyContent: "space-between", fontSize: 11, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase", fontWeight: 600, paddingBottom: 10, marginBottom: 10, borderBottom: "1px solid #F2F2F5" },
-  mockRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 0", borderBottom: "1px solid #F2F2F5", flexWrap: "wrap" },
-  mockName: { fontSize: 13.5, fontWeight: 600, color: "#1D1D1F", flex: "1 1 150px" },
-  mockNums: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "#6E6E73", flex: "0 0 auto" },
+  mockSheet: { background: "var(--surface)", borderRadius: 18, padding: "16px 18px", boxShadow: "0 12px 34px rgba(0,0,0,0.08)", marginBottom: 28 },
+  mockHead: { display: "flex", justifyContent: "space-between", fontSize: 11, letterSpacing: "0.08em", color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 600, paddingBottom: 10, marginBottom: 10, borderBottom: "1px solid var(--border-color)" },
+  mockRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 0", borderBottom: "1px solid var(--border-color)", flexWrap: "wrap" },
+  mockName: { fontSize: 13.5, fontWeight: 600, color: "var(--text-primary)", flex: "1 1 150px" },
+  mockNums: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, color: "var(--text-secondary)", flex: "0 0 auto" },
   mockGauge: { display: "flex", alignItems: "center", gap: 8, flex: "0 0 auto" },
-  gaugeTrack: { position: "relative", width: 60, height: 6, background: "#F2F2F5", borderRadius: 4, overflow: "hidden" },
+  gaugeTrack: { position: "relative", width: 60, height: 6, background: "var(--bg-secondary)", borderRadius: 4, overflow: "hidden" },
   gaugeFill: { position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: 4 },
   gaugeLabel: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 11.5, fontWeight: 600, width: 44 },
   pill: { fontSize: 10.5, fontWeight: 600, letterSpacing: "0.04em", padding: "4px 10px", borderRadius: 100, flex: "0 0 auto" },
   problemBlock: { marginTop: 4 },
-  pricingHead: { fontSize: 12.5, letterSpacing: "0.1em", color: "#6E6E73", textTransform: "uppercase", fontWeight: 600, margin: "44px 0 34px" },
+  pricingHead: { fontSize: 12.5, letterSpacing: "0.1em", color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 600, margin: "44px 0 34px" },
   checkoutGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginTop: 8 },
-  checkoutCard: { background: "#FFFFFF", borderRadius: 18, padding: "22px 20px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
-  checkoutTier: { fontSize: 12.5, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase", fontWeight: 600, marginBottom: 10 },
-  checkoutPrice: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 600, color: "#1D1D1F", marginBottom: 8 },
-  checkoutPriceUnit: { fontSize: 13, color: "#6E6E73", fontWeight: 400 },
-  checkoutDesc: { fontSize: 13, color: "#6E6E73", marginBottom: 16, lineHeight: 1.5 },
+  checkoutCard: { background: "var(--surface)", borderRadius: 18, padding: "22px 20px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
+  checkoutTier: { fontSize: 12.5, letterSpacing: "0.08em", color: "var(--text-secondary)", textTransform: "uppercase", fontWeight: 600, marginBottom: 10 },
+  checkoutPrice: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 },
+  checkoutPriceUnit: { fontSize: 13, color: "var(--text-secondary)", fontWeight: 400 },
+  checkoutDesc: { fontSize: 13, color: "var(--text-secondary)", marginBottom: 16, lineHeight: 1.5 },
   checkoutCardSelected: { boxShadow: "0 0 0 1.5px #1D5C8A, 0 12px 34px rgba(0,0,0,0.08)" },
-  tierCta: { background: "transparent", border: "1px solid #1D1D1F", borderRadius: 100, padding: "9px 16px", fontSize: 12.5, fontWeight: 600, color: "#1D1D1F", cursor: "pointer" },
-  tierNote: { fontSize: 12.5, color: "#1D5C8A", fontWeight: 600, marginBottom: 10 },
-  gateText: { fontSize: 15, color: "#4A4A4F", lineHeight: 1.6, marginBottom: 20 },
+  tierCta: { background: "transparent", border: "1px solid #1D1D1F", borderRadius: 100, padding: "9px 16px", fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)", cursor: "pointer" },
+  tierNote: { fontSize: 12.5, color: "var(--accent)", fontWeight: 600, marginBottom: 10 },
+  gateText: { fontSize: 15, color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: 20 },
   gateForm: { display: "flex", flexDirection: "column", gap: 10 },
-  gateNotice: { background: "rgba(29,92,138,0.07)", border: "1px solid #1D5C8A", borderRadius: 14, padding: "14px 16px", fontSize: 14, color: "#4A4A4F" },
-  gateError: { color: "#C1462B", fontSize: 13, marginTop: 10 },
-  gateFootnote: { fontSize: 13, color: "#6E6E73", marginTop: 22 },
-  gateSwitchText: { fontSize: 13.5, color: "#6E6E73", marginTop: 14 },
-  gateSwitchLink: { color: "#1D5C8A", fontWeight: 600, textDecoration: "none" },
-  gateSwitchLinkBtn: { color: "#1D5C8A", fontWeight: 600, background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" },
-  topNavBtn: { background: "none", border: "none", color: "#6E6E73", fontSize: 14, fontWeight: 500, padding: "6px 12px", cursor: "pointer", borderRadius: 3 },
+  gateNotice: { background: "rgba(29,92,138,0.07)", border: "1px solid #1D5C8A", borderRadius: 14, padding: "14px 16px", fontSize: 14, color: "var(--text-secondary)" },
+  gateError: { color: "var(--danger)", fontSize: 13, marginTop: 10 },
+  gateFootnote: { fontSize: 13, color: "var(--text-secondary)", marginTop: 22 },
+  gateSwitchText: { fontSize: 13.5, color: "var(--text-secondary)", marginTop: 14 },
+  gateSwitchLink: { color: "var(--accent)", fontWeight: 600, textDecoration: "none" },
+  gateSwitchLinkBtn: { color: "var(--accent)", fontWeight: 600, background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" },
+  topNavBtn: { background: "none", border: "none", color: "var(--text-secondary)", fontSize: 14, fontWeight: 500, padding: "6px 12px", cursor: "pointer", borderRadius: 3 },
   topNavBtnActive: { background: "#1D1D1F", color: "#FFFFFF", fontWeight: 600 },
 
-  explainer: { maxWidth: 1180, margin: "0 auto 18px", fontSize: 13, color: "#6E6E73", lineHeight: 1.6, background: "#FFFFFF", borderRadius: 12, padding: "12px 16px", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
+  explainer: { maxWidth: 1180, margin: "0 auto 18px", fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, background: "var(--surface)", borderRadius: 12, padding: "12px 16px", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
 
   // ---- Accounting sync (Xero / Sage) ----
-  integrationsBanner: { maxWidth: 1180, margin: "0 auto 18px", fontSize: 13.5, fontWeight: 500, color: "#154766", background: "#E9F1F6", borderRadius: 12, padding: "12px 16px" },
+  integrationsBanner: { maxWidth: 1180, margin: "0 auto 18px", fontSize: 13.5, fontWeight: 500, color: "#154766", background: "rgba(29,92,138,0.10)", borderRadius: 12, padding: "12px 16px" },
   integrationsBannerError: { color: "#8A2E1B", background: "rgba(193,70,43,0.09)" },
   integrationsGrid: { maxWidth: 1180, margin: "0 auto 24px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14 },
-  integrationsCard: { background: "#FFFFFF", borderRadius: 14, padding: "18px 20px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)" },
+  integrationsCard: { background: "var(--surface)", borderRadius: 14, padding: "18px 20px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)" },
   integrationsCardHead: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 },
   integrationsDot: { width: 10, height: 10, borderRadius: "50%" },
   integrationsCardName: { fontSize: 15, fontWeight: 700 },
-  integrationsConnectedTag: { fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#4C7A5C", background: "rgba(76,122,92,0.12)", padding: "3px 9px", borderRadius: 100, marginLeft: "auto" },
-  integrationsMeta: { fontSize: 12.5, color: "#6E6E73", marginBottom: 3 },
-  integrationsUnmatched: { maxWidth: 1180, margin: "0 auto 24px", background: "#FFFFFF", borderRadius: 14, padding: "16px 20px", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
-  integrationsTxnRow: { display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid #F2F2F5", flexWrap: "wrap" },
-  explainerLink: { color: "#1D5C8A", fontWeight: 600 },
+  integrationsConnectedTag: { fontSize: 10.5, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--success)", background: "rgba(76,122,92,0.12)", padding: "3px 9px", borderRadius: 100, marginLeft: "auto" },
+  integrationsMeta: { fontSize: 12.5, color: "var(--text-secondary)", marginBottom: 3 },
+  integrationsUnmatched: { maxWidth: 1180, margin: "0 auto 24px", background: "var(--surface)", borderRadius: 14, padding: "16px 20px", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
+  integrationsTxnRow: { display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid var(--border-color)", flexWrap: "wrap" },
+  explainerLink: { color: "var(--accent)", fontWeight: 600 },
 
   newProjectRow: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", gap: 10 },
-  freeLimitBanner: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, background: "rgba(29,92,138,0.07)", border: "1px solid #1D5C8A", borderRadius: 14, padding: "14px 16px", fontSize: 13.5, color: "#4A4A4F", flexWrap: "wrap" },
-  freeLimitLink: { color: "#1D5C8A", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" },
+  freeLimitBanner: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, background: "rgba(29,92,138,0.07)", border: "1px solid #1D5C8A", borderRadius: 14, padding: "14px 16px", fontSize: 13.5, color: "var(--text-secondary)", flexWrap: "wrap" },
+  freeLimitLink: { color: "var(--accent)", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" },
   addRowStandalone: { maxWidth: 1180, margin: "0 auto 22px", display: "flex", gap: 10, flexWrap: "wrap" },
   projectGrid: { maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 },
-  projectCard: { background: "#FFFFFF", borderRadius: 18, padding: "20px 22px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
-  scoreCard: { background: "#FFFFFF", borderRadius: 18, padding: "20px 22px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
-  templateCard: { background: "#FFFFFF", borderRadius: 18, padding: "20px 22px", marginBottom: 12, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
+  projectCard: { background: "var(--surface)", borderRadius: 18, padding: "20px 22px", cursor: "pointer", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
+  scoreCard: { background: "var(--surface)", borderRadius: 18, padding: "20px 22px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
+  templateCard: { background: "var(--surface)", borderRadius: 18, padding: "20px 22px", marginBottom: 12, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
   projectCardTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 },
   projectName: { fontSize: 20, fontWeight: 600 },
-  deleteProjectBtn: { background: "none", border: "none", color: "#6E6E73", cursor: "pointer", fontSize: 14 },
-  projectNums: { display: "flex", justifyContent: "space-between", fontSize: 13, fontFamily: "'Space Grotesk', sans-serif", color: "#4A4A4F" },
-  projectMeta: { fontSize: 12, color: "#6E6E73", marginTop: 8 },
-  subItemRow: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #F2F2F5" },
+  deleteProjectBtn: { background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: 14 },
+  projectNums: { display: "flex", justifyContent: "space-between", fontSize: 13, fontFamily: "'Space Grotesk', sans-serif", color: "var(--text-secondary)" },
+  projectMeta: { fontSize: 12, color: "var(--text-secondary)", marginTop: 8 },
+  subItemRow: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--border-color)" },
 
   backRow: { maxWidth: 1180, margin: "0 auto 12px", display: "flex", justifyContent: "space-between" },
-  backBtn: { background: "none", border: "none", color: "#6E6E73", fontSize: 13, cursor: "pointer" },
-  exportBtn: { background: "#FFFFFF", border: "none", borderRadius: 100, color: "#1D1D1F", fontSize: 13, fontWeight: 600, padding: "8px 16px", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" },
+  backBtn: { background: "none", border: "none", color: "var(--text-secondary)", fontSize: 13, cursor: "pointer" },
+  exportBtn: { background: "var(--surface)", border: "none", borderRadius: 100, color: "var(--text-primary)", fontSize: 13, fontWeight: 600, padding: "8px 16px", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" },
 
-  titleBlock: { display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-end", gap: 16, borderBottom: "2px solid #E8E8ED", paddingBottom: 14, maxWidth: 1180, margin: "0 auto 20px" },
+  titleBlock: { display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-end", gap: 16, borderBottom: "2px solid var(--border-color)", paddingBottom: 14, maxWidth: 1180, margin: "0 auto 20px" },
   titleBlockLeft: { display: "flex", flexDirection: "column", gap: 6, flex: 1, minWidth: 240 },
-  projectInput: { background: "transparent", border: "none", color: "#1D1D1F", fontSize: 17, fontWeight: 800, padding: 0, flex: "1 1 auto", minWidth: 160, letterSpacing: "0.02em", fontFamily: "'Inter', sans-serif", textTransform: "uppercase" },
+  projectInput: { background: "transparent", border: "none", color: "var(--text-primary)", fontSize: 17, fontWeight: 800, padding: 0, flex: "1 1 auto", minWidth: 160, letterSpacing: "0.02em", fontFamily: "'Inter', sans-serif", textTransform: "uppercase" },
   titleBlockRight: { display: "flex", gap: 22 },
   tbCell: { display: "flex", flexDirection: "column", alignItems: "flex-end" },
-  tbLabel: { fontSize: 10, letterSpacing: "0.1em", color: "#6E6E73" },
-  tbValue: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, color: "#1D1D1F", display: "flex", alignItems: "center", gap: 2 },
-  retentionInput: { width: 34, background: "#F5F5F7", border: "1px solid transparent", borderRadius: 6, color: "#1D1D1F", fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, padding: "1px 4px", textAlign: "right" },
+  tbLabel: { fontSize: 10, letterSpacing: "0.1em", color: "var(--text-secondary)" },
+  tbValue: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 2 },
+  retentionInput: { width: 34, background: "var(--bg-secondary)", border: "1px solid transparent", borderRadius: 6, color: "var(--text-primary)", fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, padding: "1px 4px", textAlign: "right" },
 
   summaryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, maxWidth: 1180, margin: "0 auto 16px" },
   summaryCard: { background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 14, padding: "14px 15px", boxShadow: "var(--shadow-card)" },
@@ -6945,144 +6945,144 @@ const styles = {
   summaryValueSlab: { fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 19, fontWeight: 600, color: "#F2F6F9" },
   summarySubSlab: { fontSize: 10.5, color: "#FCA891", marginTop: 3, fontWeight: 600 },
 
-  flaggedPopover: { position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, width: 280, background: "#FFFFFF", borderRadius: 14, boxShadow: "0 8px 28px rgba(0,0,0,0.16)", border: "1px solid #E8E8ED", padding: "12px 14px" },
-  flaggedPopoverTitle: { fontSize: 10.5, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase", marginBottom: 8 },
+  flaggedPopover: { position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, width: 280, background: "var(--surface)", borderRadius: 14, boxShadow: "0 8px 28px rgba(0,0,0,0.16)", border: "1px solid var(--border-color)", padding: "12px 14px" },
+  flaggedPopoverTitle: { fontSize: 10.5, letterSpacing: "0.08em", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: 8 },
   flaggedPopoverList: { display: "flex", flexDirection: "column", gap: 8, maxHeight: 220, overflowY: "auto" },
   flaggedPopoverRow: { display: "flex", alignItems: "center", gap: 8 },
   flaggedDot: { width: 7, height: 7, borderRadius: "50%", flexShrink: 0 },
-  flaggedPopoverName: { flex: 1, fontSize: 12.5, color: "#1D1D1F", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  flaggedPopoverName: { flex: 1, fontSize: 12.5, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
   flaggedPopoverVariance: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontVariantNumeric: "tabular-nums", flexShrink: 0 },
 
   warningBanner: { maxWidth: 1180, margin: "0 auto 12px", background: "rgba(193,70,43,0.07)", border: "1px solid #C1462B", borderRadius: 14, padding: "12px 16px", fontSize: 14, color: "#8A3D1E" },
 
   categoryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, maxWidth: 1180, margin: "0 auto 16px" },
-  categoryCard: { background: "#FFFFFF", borderRadius: 12, padding: "10px 14px", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
+  categoryCard: { background: "var(--surface)", borderRadius: 12, padding: "10px 14px", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
   categoryHead: { display: "flex", alignItems: "center", gap: 6, marginBottom: 4 },
   categoryDot: { width: 8, height: 8, borderRadius: "50%" },
-  categoryName: { fontSize: 12, color: "#4A4A4F", fontWeight: 500 },
+  categoryName: { fontSize: 12, color: "var(--text-secondary)", fontWeight: 500 },
   categoryNums: { display: "flex", justifyContent: "space-between", fontFamily: "'Space Grotesk', sans-serif", fontSize: 13 },
-  categoryBudget: { color: "#6E6E73" },
+  categoryBudget: { color: "var(--text-secondary)" },
   categoryVariance: { fontWeight: 600 },
 
   importRow: { maxWidth: 1180, margin: "0 auto 14px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" },
-  importBtn: { background: "#FFFFFF", border: "none", borderRadius: 100, color: "#1D1D1F", fontSize: 13, fontWeight: 600, padding: "8px 16px", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" },
-  templateLink: { background: "none", border: "none", color: "#6E6E73", fontSize: 12.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
+  importBtn: { background: "var(--surface)", border: "none", borderRadius: 100, color: "var(--text-primary)", fontSize: 13, fontWeight: 600, padding: "8px 16px", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" },
+  templateLink: { background: "none", border: "none", color: "var(--text-secondary)", fontSize: 12.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
 
   viewToggle: { maxWidth: 1180, margin: "0 auto 12px", display: "flex", gap: 8, flexWrap: "wrap" },
   toggleGroupWrap: { maxWidth: 1180, margin: "0 auto", marginBottom: 14 },
-  toggleGroupLabel: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73", margin: "0 0 8px 4px" },
-  toggleBtn: { background: "#FFFFFF", border: "none", borderRadius: 100, color: "#6E6E73", fontSize: 13, fontWeight: 500, padding: "8px 16px", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
+  toggleGroupLabel: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-secondary)", margin: "0 0 8px 4px" },
+  toggleBtn: { background: "var(--surface)", border: "none", borderRadius: 100, color: "var(--text-secondary)", fontSize: 13, fontWeight: 500, padding: "8px 16px", cursor: "pointer", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
   toggleBtnActive: { background: "#1D1D1F", color: "#FFFFFF", fontWeight: 600 },
 
-  ledger: { maxWidth: 1180, margin: "0 auto", background: "#FFFFFF", borderRadius: 18, overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" },
-  ledgerHeaderRow: { display: "flex", alignItems: "center", gap: 14, padding: "10px 14px", borderBottom: "1px solid #E8E8ED", background: "#F5F5F7", minWidth: 640 },
-  thCell: { fontSize: 11, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase" },
-  row: { display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", borderBottom: "1px solid #F2F2F5", minWidth: 640 },
+  ledger: { maxWidth: 1180, margin: "0 auto", background: "var(--surface)", borderRadius: 18, overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" },
+  ledgerHeaderRow: { display: "flex", alignItems: "center", gap: 14, padding: "10px 14px", borderBottom: "1px solid var(--border-color)", background: "var(--bg-secondary)", minWidth: 640 },
+  thCell: { fontSize: 11, letterSpacing: "0.08em", color: "var(--text-secondary)", textTransform: "uppercase" },
+  row: { display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", borderBottom: "1px solid var(--border-color)", minWidth: 640 },
   tdCell: { fontSize: 14, paddingRight: 8 },
-  actualButton: { display: "inline-block", boxSizing: "border-box", appearance: "none", WebkitAppearance: "none", margin: 0, textAlign: "right", background: "none", border: "none", color: "#1D1D1F", fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, lineHeight: "inherit", cursor: "pointer", borderBottom: "1px dashed #6E6E73", padding: 0 },
-  inlineInput: { width: "100%", background: "#FFFFFF", border: "1px solid #1D5C8A", borderRadius: 8, color: "#1D1D1F", fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, padding: "2px 6px", textAlign: "right" },
-  miniLink: { background: "none", border: "none", color: "#6E6E73", fontSize: 10.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
+  actualButton: { display: "inline-block", boxSizing: "border-box", appearance: "none", WebkitAppearance: "none", margin: 0, textAlign: "right", background: "none", border: "none", color: "var(--text-primary)", fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, lineHeight: "inherit", cursor: "pointer", borderBottom: "1px dashed #6E6E73", padding: 0 },
+  inlineInput: { width: "100%", background: "var(--surface)", border: "1px solid #1D5C8A", borderRadius: 8, color: "var(--text-primary)", fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, padding: "2px 6px", textAlign: "right" },
+  miniLink: { background: "none", border: "none", color: "var(--text-secondary)", fontSize: 10.5, textDecoration: "underline", cursor: "pointer", padding: 0 },
   miniLinkBlock: { background: "none", border: "none", color: "#3D6FA6", fontSize: 12, textDecoration: "underline", cursor: "pointer", padding: 0, marginTop: 4 },
-  gaugeTrack: { position: "relative", height: 6, background: "#F2F2F5", borderRadius: 3, overflow: "visible", marginBottom: 4 },
+  gaugeTrack: { position: "relative", height: 6, background: "var(--bg-secondary)", borderRadius: 3, overflow: "visible", marginBottom: 4 },
   gaugeFill: { height: "100%", borderRadius: 3, transition: "width 0.3s ease" },
   gaugeTolMark: { position: "absolute", left: "71.4%", top: -2, width: 1, height: 10, background: "#6E6E73" },
   gaugeLabel: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 11 },
-  dualBarTrack: { position: "relative", height: 16, background: "#F2F2F5", borderRadius: 3 },
+  dualBarTrack: { position: "relative", height: 16, background: "var(--bg-secondary)", borderRadius: 3 },
   dualBarFill: { position: "absolute", left: 0, height: 6, borderRadius: 3, transition: "width 0.3s ease" },
   statusPill: { display: "inline-block", fontSize: 10, fontWeight: 600, letterSpacing: "0.05em", padding: "4px 10px", borderRadius: 100 },
-  removeBtn: { background: "none", border: "none", color: "#6E6E73", cursor: "pointer", fontSize: 13 },
-  addRow: { display: "flex", gap: 10, alignItems: "center", padding: "14px", background: "#F5F5F7", flexWrap: "wrap" },
-  addInput: { background: "#F5F5F7", border: "1px solid transparent", borderRadius: 10, color: "#1D1D1F", fontSize: 14, padding: "8px 12px" },
-  addBtn: { background: "#1D5C8A", border: "none", borderRadius: 100, color: "#FFFFFF", fontWeight: 600, fontSize: 13, padding: "9px 16px", cursor: "pointer", whiteSpace: "nowrap" },
+  removeBtn: { background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: 13 },
+  addRow: { display: "flex", gap: 10, alignItems: "center", padding: "14px", background: "var(--bg-secondary)", flexWrap: "wrap" },
+  addInput: { background: "var(--bg-secondary)", border: "1px solid transparent", borderRadius: 10, color: "var(--text-primary)", fontSize: 14, padding: "8px 12px" },
+  addBtn: { background: "var(--accent)", border: "none", borderRadius: 100, color: "#FFFFFF", fontWeight: 600, fontSize: 13, padding: "9px 16px", cursor: "pointer", whiteSpace: "nowrap" },
   footer: { maxWidth: 1180, margin: "16px auto 0", fontSize: 12, color: "var(--text-secondary)" },
   // Full marketing-style footer (AppFooter, above) — mirrors sitemargin.co.za's
   // .site-footer/.footer-* rules in styles.css. One deliberate departure: the
   // social-icon circle background is white here instead of the marketing
   // site's --stage (#F5F5F7) tint, because #F5F5F7 is this app's own page
   // background — using it would make the icons invisible against the page.
-  pubFooter: { maxWidth: 1180, margin: "0 auto", padding: "40px 0 0", borderTop: "1px solid #E8E8ED" },
+  pubFooter: { maxWidth: 1180, margin: "0 auto", padding: "40px 0 0", borderTop: "1px solid var(--border-color)" },
   pubFooterTop: { display: "flex", flexWrap: "wrap", gap: 40, justifyContent: "space-between", paddingBottom: 30 },
   pubFooterBrand: { maxWidth: 280 },
   pubFooterLogoRow: { display: "flex", alignItems: "center", gap: 8, marginBottom: 12 },
   pubFooterLogoMark: { height: 38, width: "auto", display: "block" },
-  pubFooterLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, letterSpacing: "-0.01em", color: "#1D1D1F" },
-  pubFooterTagline: { color: "#6E6E73", fontSize: 13.5, lineHeight: 1.6, margin: "0 0 16px" },
+  pubFooterLogoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, letterSpacing: "-0.01em", color: "var(--text-primary)" },
+  pubFooterTagline: { color: "var(--text-secondary)", fontSize: 13.5, lineHeight: 1.6, margin: "0 0 16px" },
   pubFooterSocial: { display: "flex", gap: 10 },
-  pubFooterSocialLink: { width: 32, height: 32, borderRadius: "50%", background: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", color: "#6E6E73", textDecoration: "none" },
+  pubFooterSocialLink: { width: 32, height: 32, borderRadius: "50%", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-secondary)", textDecoration: "none" },
   pubFooterCols: { display: "flex", gap: 40, flexWrap: "wrap" },
   pubFooterCol: { minWidth: 130 },
-  pubFooterColHead: { fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73", fontWeight: 600, marginBottom: 14 },
-  pubFooterColLink: { display: "block", fontSize: 13.5, color: "#1D1D1F", textDecoration: "none", marginBottom: 10 },
-  pubFooterStoreLink: { display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#1D1D1F", textDecoration: "none", marginBottom: 10 },
-  pubFooterStoreLinkSoon: { color: "#6E6E73" },
+  pubFooterColHead: { fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-secondary)", fontWeight: 600, marginBottom: 14 },
+  pubFooterColLink: { display: "block", fontSize: 13.5, color: "var(--text-primary)", textDecoration: "none", marginBottom: 10 },
+  pubFooterStoreLink: { display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--text-primary)", textDecoration: "none", marginBottom: 10 },
+  pubFooterStoreLinkSoon: { color: "var(--text-secondary)" },
   pubFooterStoreIcon: { width: 18, height: 18, flex: "none" },
-  pubFooterBottom: { borderTop: "1px solid #E8E8ED", marginTop: 8, padding: "18px 0 24px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, fontSize: 12, color: "#6E6E73" },
+  pubFooterBottom: { borderTop: "1px solid var(--border-color)", marginTop: 8, padding: "18px 0 24px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, fontSize: 12, color: "var(--text-secondary)" },
   pubFooterBottomLinks: { display: "flex", gap: 18, flexWrap: "wrap" },
-  referralRow: { maxWidth: 1180, margin: "40px auto 0", padding: "32px 0", borderTop: "1px solid #E8E8ED", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 32, flexWrap: "wrap" },
+  referralRow: { maxWidth: 1180, margin: "40px auto 0", padding: "32px 0", borderTop: "1px solid var(--border-color)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 32, flexWrap: "wrap" },
   referralText: { flex: 1, minWidth: 240 },
-  referralEyebrow: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1D5C8A", marginBottom: 6 },
-  referralHeading: { fontSize: 17, fontWeight: 700, color: "#1D1D1F", marginBottom: 4 },
-  referralSub: { fontSize: 13, color: "#6E6E73", marginBottom: 16, maxWidth: 420 },
+  referralEyebrow: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--accent)", marginBottom: 6 },
+  referralHeading: { fontSize: 17, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 },
+  referralSub: { fontSize: 13, color: "var(--text-secondary)", marginBottom: 16, maxWidth: 420 },
   referralActions: { display: "flex", gap: 10, flexWrap: "wrap" },
-  referralBtn: { display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius: 100, fontSize: 13, fontWeight: 600, textDecoration: "none", border: "1px solid #1D1D1F", color: "#1D1D1F", background: "none", cursor: "pointer" },
+  referralBtn: { display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius: 100, fontSize: 13, fontWeight: 600, textDecoration: "none", border: "1px solid #1D1D1F", color: "var(--text-primary)", background: "none", cursor: "pointer" },
   referralBtnWhatsapp: { borderColor: "#25D366", color: "#1c8a44" },
   referralQrBlock: { display: "flex", flexDirection: "column", alignItems: "center", gap: 8, flex: "0 0 auto" },
-  referralQrCaption: { fontSize: 11, color: "#6E6E73", textAlign: "center" },
-  docFooter: { maxWidth: 1180, margin: "30px auto 0", paddingTop: 14, borderTop: "1px solid #D9D9DE" },
+  referralQrCaption: { fontSize: 11, color: "var(--text-secondary)", textAlign: "center" },
+  docFooter: { maxWidth: 1180, margin: "30px auto 0", paddingTop: 14, borderTop: "1px solid var(--border-color)" },
   dfRow: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  dfBrand: { display: "flex", alignItems: "center", gap: 6, fontWeight: 600, fontSize: 14, color: "#1D1D1F" },
+  dfBrand: { display: "flex", alignItems: "center", gap: 6, fontWeight: 600, fontSize: 14, color: "var(--text-primary)" },
   dfMark: { height: 20, width: 20, display: "block" },
   dfText: { fontStyle: "normal" },
-  dfMeta: { fontSize: 11, color: "#6E6E73", fontFamily: "Arial, sans-serif" },
-  dfDisclaimer: { fontSize: 10, color: "#A0A0A6", marginTop: 4, fontFamily: "Arial, sans-serif" },
+  dfMeta: { fontSize: 11, color: "var(--text-secondary)", fontFamily: "Arial, sans-serif" },
+  dfDisclaimer: { fontSize: 10, color: "var(--text-secondary)", marginTop: 4, fontFamily: "Arial, sans-serif" },
 
-  detailPanel: { background: "#F5F5F7", padding: "16px 18px", borderBottom: "1px solid #F2F2F5" },
+  detailPanel: { background: "var(--bg-secondary)", padding: "16px 18px", borderBottom: "1px solid var(--border-color)" },
   detailGrid: { display: "grid", gridTemplateColumns: "minmax(170px,2.2fr) minmax(75px,0.75fr) minmax(70px,0.65fr) minmax(105px,1fr) minmax(105px,1fr) minmax(125px,1fr) minmax(125px,1fr)", gap: 12, overflowX: "auto" },
   detailField: { display: "flex", flexDirection: "column", gap: 5 },
-  currencyInputWrap: { display: "flex", alignItems: "center", gap: 4, background: "#FFFFFF", border: "1px solid #D9D9DE", borderRadius: 8, padding: "0 8px" },
-  currencyPrefix: { fontSize: 12.5, color: "#8E8E93" },
-  detailLabel: { fontSize: 10.5, letterSpacing: "0.08em", color: "#6E6E73", textTransform: "uppercase" },
-  notesTextarea: { width: "100%", minHeight: 60, background: "#F5F5F7", border: "1px solid transparent", borderRadius: 10, color: "#1D1D1F", fontSize: 13, padding: "8px 10px", fontFamily: "'Inter', sans-serif", resize: "vertical", marginTop: 5 },
+  currencyInputWrap: { display: "flex", alignItems: "center", gap: 4, background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 8, padding: "0 8px" },
+  currencyPrefix: { fontSize: 12.5, color: "var(--text-secondary)" },
+  detailLabel: { fontSize: 10.5, letterSpacing: "0.08em", color: "var(--text-secondary)", textTransform: "uppercase" },
+  notesTextarea: { width: "100%", minHeight: 60, background: "var(--bg-secondary)", border: "1px solid transparent", borderRadius: 10, color: "var(--text-primary)", fontSize: 13, padding: "8px 10px", fontFamily: "'Inter', sans-serif", resize: "vertical", marginTop: 5 },
   attachmentLink: { fontSize: 12, color: "#3D6FA6", textDecoration: "none" },
 
   chartGrid: { maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 14 },
-  chartCard: { background: "#FFFFFF", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
+  chartCard: { background: "var(--surface)", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
   chartCardGreen: { background: "radial-gradient(120% 100% at 100% 0%, rgba(76,122,92,0.10), rgba(76,122,92,0) 55%), #FFFFFF", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid #4C7A5C" },
   chartCardBlue: { background: "radial-gradient(120% 100% at 100% 0%, rgba(61,111,166,0.10), rgba(61,111,166,0) 55%), #FFFFFF", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid #3D6FA6" },
   chartCardRed: { background: "radial-gradient(120% 100% at 100% 0%, rgba(193,70,43,0.09), rgba(193,70,43,0) 55%), #FFFFFF", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid #C1462B" },
   chartCardGold: { background: "radial-gradient(120% 100% at 100% 0%, rgba(184,134,47,0.11), rgba(184,134,47,0) 55%), #FFFFFF", borderRadius: 18, padding: "22px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderLeft: "4px solid #B8862F" },
   chartDot: { display: "inline-block", width: 8, height: 8, borderRadius: "50%", marginRight: 7, position: "relative", top: -1 },
   chartTitle: { fontSize: 18, fontWeight: 600, marginBottom: 2 },
-  chartSub: { fontSize: 12, color: "#6E6E73", marginBottom: 16 },
+  chartSub: { fontSize: 12, color: "var(--text-secondary)", marginBottom: 16 },
 
-  trendRow: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #F2F2F5", minWidth: 560 },
-  trendHeadCell: { fontSize: 11, letterSpacing: "0.06em", color: "#6E6E73", textTransform: "uppercase" },
+  trendRow: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--border-color)", minWidth: 560 },
+  trendHeadCell: { fontSize: 11, letterSpacing: "0.06em", color: "var(--text-secondary)", textTransform: "uppercase" },
   trendCell: { fontSize: 12, fontFamily: "'Space Grotesk', sans-serif" },
 
-  quoteSheet: { maxWidth: 800, margin: "0 auto", background: "#FFFFFF", borderRadius: 18, padding: "36px 40px", boxShadow: "0 12px 34px rgba(0,0,0,0.08)" },
+  quoteSheet: { maxWidth: 800, margin: "0 auto", background: "var(--surface)", borderRadius: 18, padding: "36px 40px", boxShadow: "0 12px 34px rgba(0,0,0,0.08)" },
   quoteHead: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #1D1D1F", paddingBottom: 20, marginBottom: 28 },
-  quoteEyebrow: { fontSize: 12, letterSpacing: "0.14em", color: "#1D5C8A", fontWeight: 600, marginBottom: 6 },
-  quoteProjectName: { fontSize: 24, fontWeight: 700, letterSpacing: "-0.015em", color: "#1D1D1F" },
-  quoteMeta: { textAlign: "right", fontSize: 12.5, color: "#6E6E73", lineHeight: 1.7 },
-  quoteCatHeading: { fontSize: 13, letterSpacing: "0.06em", color: "#6E6E73", textTransform: "uppercase", marginBottom: 8, paddingBottom: 6, borderBottom: "1px solid #F2F2F5" },
-  quoteRow: { display: "flex", padding: "6px 0", fontSize: 14, color: "#1D1D1F" },
-  quoteTotalRow: { display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 600, color: "#1D1D1F", borderTop: "2px solid #1D1D1F", paddingTop: 14, marginTop: 10 },
-  quoteFootnote: { fontSize: 11.5, color: "#6E6E73", marginTop: 30, lineHeight: 1.6, borderTop: "1px solid #F2F2F5", paddingTop: 16 },
+  quoteEyebrow: { fontSize: 12, letterSpacing: "0.14em", color: "var(--accent)", fontWeight: 600, marginBottom: 6 },
+  quoteProjectName: { fontSize: 24, fontWeight: 700, letterSpacing: "-0.015em", color: "var(--text-primary)" },
+  quoteMeta: { textAlign: "right", fontSize: 12.5, color: "var(--text-secondary)", lineHeight: 1.7 },
+  quoteCatHeading: { fontSize: 13, letterSpacing: "0.06em", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: 8, paddingBottom: 6, borderBottom: "1px solid var(--border-color)" },
+  quoteRow: { display: "flex", padding: "6px 0", fontSize: 14, color: "var(--text-primary)" },
+  quoteTotalRow: { display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 600, color: "var(--text-primary)", borderTop: "2px solid #1D1D1F", paddingTop: 14, marginTop: 10 },
+  quoteFootnote: { fontSize: 11.5, color: "var(--text-secondary)", marginTop: 30, lineHeight: 1.6, borderTop: "1px solid var(--border-color)", paddingTop: 16 },
   quoteClientEditRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 18, flexWrap: "wrap" },
-  quoteClientEditLabel: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6E6E73" },
-  quoteClientBlock: { marginBottom: 24, paddingBottom: 20, borderBottom: "1px solid #F2F2F5" },
+  quoteClientEditLabel: { fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-secondary)" },
+  quoteClientBlock: { marginBottom: 24, paddingBottom: 20, borderBottom: "1px solid var(--border-color)" },
   quoteClientLogo: { height: 40, width: "auto", maxWidth: 160, objectFit: "contain", borderRadius: 4 },
-  quoteClientName: { fontSize: 15, fontWeight: 600, color: "#1D1D1F" },
+  quoteClientName: { fontSize: 15, fontWeight: 600, color: "var(--text-primary)" },
 
   modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 },
-  modalCard: { background: "#FFFFFF", borderRadius: 18, maxWidth: 760, width: "100%", maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 50px rgba(0,0,0,0.25)" },
-  modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "20px 24px", borderBottom: "1px solid #E8E8ED" },
-  modalTitle: { fontSize: 19, fontWeight: 700, letterSpacing: "-0.01em", color: "#1D1D1F" },
-  modalSub: { fontSize: 12.5, color: "#6E6E73", marginTop: 4, maxWidth: 480 },
+  modalCard: { background: "var(--surface)", borderRadius: 18, maxWidth: 760, width: "100%", maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 50px rgba(0,0,0,0.25)" },
+  modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "20px 24px", borderBottom: "1px solid var(--border-color)" },
+  modalTitle: { fontSize: 19, fontWeight: 700, letterSpacing: "-0.01em", color: "var(--text-primary)" },
+  modalSub: { fontSize: 12.5, color: "var(--text-secondary)", marginTop: 4, maxWidth: 480 },
   modalBody: { padding: "12px 24px", overflowY: "auto", flex: 1 },
-  modalFooter: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderTop: "1px solid #E8E8ED" },
-  previewHeaderRow: { display: "flex", gap: 10, fontSize: 11, letterSpacing: "0.06em", color: "#6E6E73", textTransform: "uppercase", padding: "8px 0", borderBottom: "1px solid #E8E8ED" },
-  previewRow: { display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 0", borderBottom: "1px solid #F2F2F5" },
-  previewInput: { width: "100%", background: "#F5F5F7", border: "1px solid transparent", borderRadius: 8, color: "#1D1D1F", fontSize: 13, padding: "6px 8px" },
-  previewNote: { fontSize: 10.5, color: "#6E6E73", marginTop: 3 },
+  modalFooter: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderTop: "1px solid var(--border-color)" },
+  previewHeaderRow: { display: "flex", gap: 10, fontSize: 11, letterSpacing: "0.06em", color: "var(--text-secondary)", textTransform: "uppercase", padding: "8px 0", borderBottom: "1px solid var(--border-color)" },
+  previewRow: { display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 0", borderBottom: "1px solid var(--border-color)" },
+  previewInput: { width: "100%", background: "var(--bg-secondary)", border: "1px solid transparent", borderRadius: 8, color: "var(--text-primary)", fontSize: 13, padding: "6px 8px" },
+  previewNote: { fontSize: 10.5, color: "var(--text-secondary)", marginTop: 3 },
 };

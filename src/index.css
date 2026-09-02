@@ -54,7 +54,7 @@ button {
 
 /* ---- auth ---- */
 .sm-auth-card {
-  max-width: 430px; margin: 0 auto; background: #FFFFFF; border-radius: 22px;
+  max-width: 430px; margin: 0 auto; background: var(--surface); border-radius: 22px;
   padding: 32px 30px 30px;
   box-shadow: 0 20px 50px -26px rgba(0,0,0,0.35), 0 2px 10px rgba(0,0,0,0.05);
 }
@@ -64,17 +64,17 @@ button {
    fields were invisible until focused. */
 .sm-auth-card input[type="email"],
 .sm-auth-card input[type="password"] {
-  width: 100%; background: #FFFFFF; border: 1px solid #D8D8DE; border-radius: 11px;
+  width: 100%; color: var(--text-primary); background: var(--surface); border: 1px solid var(--border-color); border-radius: 11px;
   font-size: 15px; padding: 12px 14px;
   transition: border-color .15s ease, box-shadow .15s ease;
 }
-.sm-auth-card input::placeholder { color: #A3A3AB; }
+.sm-auth-card input::placeholder { color: var(--text-secondary); }
 .sm-auth-card input:focus {
-  outline: none; border-color: #1D5C8A; box-shadow: 0 0 0 3px rgba(29,92,138,0.15);
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(29,92,138,0.15);
 }
 .sm-auth-card .sm-label {
   display: block; font-size: 12px; font-weight: 600; letter-spacing: .04em;
-  text-transform: uppercase; color: #6E6E73; margin-bottom: 6px;
+  text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px;
 }
 
 /* ---- diamond CTA, same button as sitemargin.co.za ---- */
@@ -111,7 +111,7 @@ button {
   .sm-plan-feat, .sm-plan-free { margin-top: 0 !important; }
 }
 .sm-plan {
-  position: relative; background: #FFFFFF; border-radius: 18px; padding: 26px 20px;
+  position: relative; background: var(--surface); border-radius: 18px; padding: 26px 20px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column;
 }
 .sm-plan .sm-plan-desc { flex: 1 0 auto; }
@@ -169,7 +169,7 @@ button {
    ============================================================ */
 :root {
   --bg-primary: #F5F5F7;
-  --bg-secondary: #F5F5F7;
+  --bg-secondary: #F2F2F5;
   --surface: #FFFFFF;
   --border-color: #E8E8ED;
   --text-primary: #1D1D1F;
