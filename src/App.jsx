@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "./supabaseClient";
+import { useRememberMeRestore, enableRememberMe, disableRememberMe } from "./useRememberMe";
+import { biometricAvailable, enableBiometricUnlock, unlockWithBiometrics, disableBiometricUnlock } from "./nativeBiometric";
 
 // xlsx and pdfjs-dist are both large libraries only needed by the "import a
 // spreadsheet/PDF" feature. They're loaded on demand (see xlsxBufferToRows
@@ -1609,6 +1611,11 @@ function AuthGate() {
   const [gateMenuOpen, setGateMenuOpen] = useState(false);
   const gateMenuWrapRef = useRef(null);
   const emailInputRef = useRef(null);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [biometricOffer, setBiometricOffer] = useState(null); // null | "show" | "saving"
+  const [nativeUnlockChecking, setNativeUnlockChecking] = useState(() => Capacitor.isNativePlatform());
+  const nativeUnlockAttemptedRef = useRef(false);
+  const rememberMeStatus = useRememberMeRestore(); // checking | restored | none
 
   // Strip ?tier= from the URL once it's been read into state above, so a
   // page refresh or the back button doesn't re-trigger the same intent.
@@ -1737,6 +1744,53 @@ function AuthGate() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Native cold-start: if Face ID/Touch ID unlock was previously turned on
+  // (see the post-login offer below) and there's no live session yet, try
+  // it once before falling back to the login form. A cancelled or failed
+  // prompt just falls through to the normal signed-out screen.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) { setNativeUnlockChecking(false); return; }
+    if (nativeUnlockAttemptedRef.current) return;
+    if (status !== "signedout") return;
+    let enabled = false;
+    try { enabled = localStorage.getItem("sm_biometric_enabled") === "1"; } catch {}
+    if (!enabled) { setNativeUnlockChecking(false); return; }
+    nativeUnlockAttemptedRef.current = true;
+    unlockWithBiometrics().finally(() => setNativeUnlockChecking(false));
+  }, [status]);
+
+  // Offer to turn on Face ID/Touch ID once, right after a native sign-in,
+  // instead of burying it in a settings screen no one finds on day one.
+  useEffect(() => {
+    if (status !== "approved" || !Capacitor.isNativePlatform()) return;
+    let dismissed = false, enabled = false;
+    try {
+      enabled = localStorage.getItem("sm_biometric_enabled") === "1";
+      dismissed = localStorage.getItem("sm_biometric_offer_dismissed") === "1";
+    } catch {}
+    if (enabled || dismissed) return;
+    let cancelled = false;
+    biometricAvailable().then((avail) => { if (!cancelled && avail) setBiometricOffer("show"); });
+    return () => { cancelled = true; };
+  }, [status]);
+
+  async function handleEnableBiometric() {
+    setBiometricOffer("saving");
+    try {
+      await enableBiometricUnlock();
+      try { localStorage.setItem("sm_biometric_enabled", "1"); } catch {}
+    } catch (err) {
+      console.warn("Enable Face ID/Touch ID failed", err);
+    } finally {
+      setBiometricOffer(null);
+    }
+  }
+
+  function dismissBiometricOffer() {
+    try { localStorage.setItem("sm_biometric_offer_dismissed", "1"); } catch {}
+    setBiometricOffer(null);
+  }
+
   // Same production-origin guard as sendMagicLink below, shared by every
   // Supabase auth call that needs an emailRedirectTo/redirectTo — sign-in
   // links should never silently point at localhost or a stray preview URL.
@@ -1800,6 +1854,10 @@ function AuthGate() {
       if (error) {
         setPasswordState("error");
         setErrorMsg(error.message);
+      } else if (rememberMe && !Capacitor.isNativePlatform()) {
+        // Native devices get "stay signed in" from the biometric-gated
+        // refresh token offered after login instead — see the effects above.
+        enableRememberMe().catch((err) => console.warn("enableRememberMe failed", err));
       }
       // On success the onAuthStateChange listener above picks up the new
       // session and checkAccess() takes it from here — nothing more to do.
@@ -1863,6 +1921,11 @@ function AuthGate() {
 
   async function signOut() {
     await supabase.auth.signOut();
+    disableRememberMe().catch(() => {});
+    if (Capacitor.isNativePlatform()) {
+      disableBiometricUnlock().catch(() => {});
+      try { localStorage.removeItem("sm_biometric_enabled"); } catch {}
+    }
     setStatus("signedout");
     setSession(null);
   }
@@ -1948,7 +2011,7 @@ function AuthGate() {
     );
   }
 
-  if (status === "checking") {
+  if (status === "checking" || (status === "signedout" && (rememberMeStatus === "checking" || nativeUnlockChecking))) {
     return (
       <div style={styles.page}>
         <GlobalStyles />
@@ -1958,7 +2021,32 @@ function AuthGate() {
   }
 
   if (status === "approved") {
-    return <AppShell userEmail={session?.user?.email} onSignOut={signOut} />;
+    return (
+      <>
+        <AppShell userEmail={session?.user?.email} onSignOut={signOut} />
+        {biometricOffer && (
+          <div style={{ position: "fixed", left: 16, right: 16, bottom: 16, zIndex: 9999, maxWidth: 420, margin: "0 auto", background: "#1D1D1F", color: "#fff", borderRadius: 14, padding: "14px 16px", boxShadow: "0 12px 32px rgba(0,0,0,.28)", display: "flex", alignItems: "center", gap: 12, fontSize: 13.5 }}>
+            <span style={{ flex: 1 }}>Enable Face ID / Touch ID to skip your password next time?</span>
+            <button
+              type="button"
+              onClick={handleEnableBiometric}
+              disabled={biometricOffer === "saving"}
+              style={{ background: "#1D5C8A", color: "#fff", border: "none", borderRadius: 8, padding: "7px 12px", fontWeight: 600, cursor: "pointer" }}
+            >
+              {biometricOffer === "saving" ? "Enabling…" : "Enable"}
+            </button>
+            <button
+              type="button"
+              onClick={dismissBiometricOffer}
+              disabled={biometricOffer === "saving"}
+              style={{ background: "transparent", color: "#C7C7CC", border: "none", padding: "7px 4px", cursor: "pointer" }}
+            >
+              Not now
+            </button>
+          </div>
+        )}
+      </>
+    );
   }
 
   if (status === "redirecting") {
@@ -2286,6 +2374,17 @@ function AuthGate() {
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         autoComplete="new-password"
                       />
+                    )}
+                    {isLoginIntent && (
+                      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#6b7280", margin: "2px 2px 4px" }}>
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          style={{ width: 15, height: 15 }}
+                        />
+                        Remember me on this device
+                      </label>
                     )}
                     <button type="submit" className="sm-dcta sm-dcta-block" disabled={passwordState === "sending"}>
                       {passwordState === "sending"
