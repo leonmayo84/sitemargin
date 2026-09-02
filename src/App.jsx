@@ -2591,7 +2591,7 @@ class ErrorBoundary extends React.Component {
         message: error?.message || String(error),
         stack: error?.stack || info?.componentStack || null,
         page_url: window.location.href,
-      });
+      }).then(() => {}, () => {}); // must be chained or the insert is never sent
     } catch (e) {
       // best-effort only — never let logging itself break the fallback UI
     }
@@ -2991,14 +2991,14 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
   // ProjectView uses for the project-name input.
   function setFlag(id, flag) {
     setSubs((prev) => prev.map((s) => (s.id === id ? { ...s, flag } : s)));
-    supabase.from("subcontractors").update({ flag }).eq("id", id);
+    supabase.from("subcontractors").update({ flag }).eq("id", id).then(({ error }) => { if (error) console.error("Save failed", error); });
   }
 
   function setNotes(id, notes) {
     setSubs((prev) => prev.map((s) => (s.id === id ? { ...s, notes } : s)));
     if (fieldSaveTimers.current[id]) clearTimeout(fieldSaveTimers.current[id]);
     fieldSaveTimers.current[id] = setTimeout(() => {
-      supabase.from("subcontractors").update({ notes }).eq("id", id);
+      supabase.from("subcontractors").update({ notes }).eq("id", id).then(({ error }) => { if (error) console.error("Save failed", error); });
     }, 600);
   }
 
@@ -3352,7 +3352,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
       if (t.id !== templateId) return t;
       if ((t.tags || []).includes(tag)) return t;
       const tags = [...(t.tags || []), tag];
-      supabase.from("templates").update({ tags }).eq("id", templateId);
+      supabase.from("templates").update({ tags }).eq("id", templateId).then(({ error }) => { if (error) console.error("Save failed", error); });
       return { ...t, tags };
     }));
     setTagDrafts((prev) => ({ ...prev, [templateId]: "" }));
@@ -3362,7 +3362,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
     setTemplates((prev) => prev.map((t) => {
       if (t.id !== templateId) return t;
       const tags = (t.tags || []).filter((x) => x !== tag);
-      supabase.from("templates").update({ tags }).eq("id", templateId);
+      supabase.from("templates").update({ tags }).eq("id", templateId).then(({ error }) => { if (error) console.error("Save failed", error); });
       return { ...t, tags };
     }));
   }
@@ -4237,11 +4237,16 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const plansInputRef = useRef(null);
   const saveTimers = useRef({});
   const pendingSaves = useRef({});
-  function flushPending(key) {
+  // supabase-js query builders are lazy: the HTTP request is only issued
+  // inside .then(), so a builder that is never awaited (or .then()'d) is
+  // silently discarded and the edit is lost. Every write below must be
+  // awaited or chained, and its error surfaced rather than swallowed.
+  async function flushPending(key) {
     const pending = pendingSaves.current[key];
     if (!pending) return;
     delete pendingSaves.current[key];
-    supabase.from(pending.table).update(pending.patch).eq("id", pending.id);
+    const { error } = await supabase.from(pending.table).update(pending.patch).eq("id", pending.id);
+    if (error) console.error("Save failed", pending.table, pending.patch, error);
   }
   // Quote tab: its own Download menu (PDF/Excel/Word) plus a ref around the
   // printable quote content so Word export can grab it. The quote's "client
@@ -5181,7 +5186,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                 onChange={(e) => {
                   const v = Number(e.target.value) || 0;
                   setProject((p) => ({ ...p, retention_pct: v }));
-                  supabase.from("projects_v2").update({ retention_pct: v }).eq("id", projectId);
+                  supabase.from("projects_v2").update({ retention_pct: v }).eq("id", projectId).then(({ error }) => { if (error) console.error("Save failed", error); });
                 }}
                 style={styles.retentionInput} />%
             </span>
