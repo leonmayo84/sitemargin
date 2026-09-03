@@ -1144,7 +1144,8 @@ function ScoreBar({ label, score, detail }) {
   );
 }
 
-function SummaryCard({ label, value, accent, slab, sub }) {
+function SummaryCard({ label, value, accent, slab, sub, popover, popoverLabel }) {
+  const [open, setOpen] = useState(false);
   if (slab) {
     return (
       <div style={styles.summaryCardSlab}>
@@ -1154,42 +1155,67 @@ function SummaryCard({ label, value, accent, slab, sub }) {
       </div>
     );
   }
+  const hasPopover = !!popover;
   return (
-    <div style={styles.summaryCard}>
-      <div style={styles.summaryLabel}>{label}</div>
+    <div
+      style={{ ...styles.summaryCard, position: "relative" }}
+      onMouseEnter={() => hasPopover && setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <div style={{ ...styles.summaryLabel, ...(hasPopover ? { paddingRight: 24 } : {}) }}>{label}</div>
       <div style={{ ...styles.summaryValue, ...(accent ? { color: accent } : {}) }}>{value}</div>
+      {sub && <div style={styles.summarySub}>{sub}</div>}
+      {hasPopover && (
+        <button
+          type="button"
+          aria-label={popoverLabel || label}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          style={{ ...styles.summaryInfoBtn, ...(open ? styles.summaryInfoBtnActive : {}) }}
+        >
+          <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+            <line x1="12" y1="16" x2="12" y2="11" />
+            <circle cx="12" cy="7.5" r="0.8" fill="currentColor" stroke="none" />
+            <circle cx="12" cy="12" r="9.2" />
+          </svg>
+        </button>
+      )}
+      {hasPopover && open && (
+        <div style={styles.summaryPopover}>
+          <div style={styles.summaryPopoverCaret} />
+          {popover}
+        </div>
+      )}
     </div>
   );
 }
 
-function FlaggedLinesCard({ label, value, accent, items }) {
-  const [hover, setHover] = useState(false);
+function FlaggedLinesCard({ label, value, accent, items, sub }) {
   const hasItems = items && items.length > 0;
   return (
-    <div
-      style={{ ...styles.summaryCard, position: "relative", cursor: hasItems ? "pointer" : "default" }}
-      onMouseEnter={() => hasItems && setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
-      <div style={styles.summaryLabel}>{label}</div>
-      <div style={{ ...styles.summaryValue, color: accent || "var(--text-primary)" }}>{value}</div>
-      {hover && hasItems && (
-        <div style={styles.flaggedPopover}>
-          <div style={styles.flaggedPopoverTitle}>Flagged line items</div>
-          <div style={styles.flaggedPopoverList}>
-            {items.map((f) => (
-              <div key={f.id} style={styles.flaggedPopoverRow}>
-                <span style={{ ...styles.flaggedDot, background: f.status === "over" ? "var(--danger)" : "var(--warning)" }} />
-                <span style={styles.flaggedPopoverName}>{f.name}</span>
-                <span style={{ ...styles.flaggedPopoverVariance, color: f.status === "over" ? "var(--danger)" : "var(--warning)" }}>
-                  {f.variance >= 0 ? "+" : ""}{fmt(f.variance)} · {f.pct >= 0 ? "+" : ""}{f.pct.toFixed(0)}%
+    <SummaryCard
+      label={label}
+      value={value}
+      accent={accent}
+      sub={sub}
+      popoverLabel="Flagged line items"
+      popover={
+        hasItems ? (
+          <>
+            <div style={styles.summaryPopoverTitle}>Flagged line items</div>
+            {items.map((f, idx) => (
+              <div key={f.id} style={idx === items.length - 1 ? styles.summaryPopoverRowLast : styles.summaryPopoverRow}>
+                <span style={{ ...styles.summaryPopoverDot, background: f.status === "over" ? "var(--tm-neg)" : "var(--tm-warn-mark)" }} />
+                <span style={styles.summaryPopoverName}>{f.name}</span>
+                <span style={{ ...styles.summaryPopoverValue, color: f.status === "over" ? "var(--tm-neg)" : "var(--tm-warn)" }}>
+                  {f.pct >= 0 ? "+" : ""}{f.pct.toFixed(1)}%
                 </span>
               </div>
             ))}
-          </div>
-        </div>
-      )}
-    </div>
+          </>
+        ) : null
+      }
+    />
   );
 }
 
@@ -3011,13 +3037,13 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
         <div style={styles.summaryStrip}>
           <SummaryCard label="Original quote allocation" value={fmt(portfolio.budget)} />
           {portfolio.revisedBudget !== portfolio.budget && (
-            <SummaryCard label="Revised allocation" value={fmt(portfolio.revisedBudget)} accent="var(--warning)" />
+            <SummaryCard label="Revised allocation" value={fmt(portfolio.revisedBudget)} accent="var(--tm-warn)" />
           )}
           <SummaryCard label="Actual spend" value={fmt(portfolio.actual)} />
           <SummaryCard
             label="Net variance"
-            value={`${portfolio.variance >= 0 ? "+" : ""}${fmt(portfolio.variance)}`}
-            accent={portfolio.variance > 0 ? "var(--danger)" : "var(--success)"}
+            value={`${portfolio.variance > 0 ? "+" : ""}${fmt(portfolio.variance)}`}
+            accent={portfolio.variance > 0 ? "var(--tm-neg)" : portfolio.variance < 0 ? "var(--tm-pos)" : undefined}
             slab={portfolio.variance > 0}
             sub={portfolio.variance > 0 ? `${portfolio.overCount} project${portfolio.overCount === 1 ? "" : "s"} over budget` : undefined}
           />
@@ -3025,7 +3051,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
           <SummaryCard
             label="Projects flagged"
             value={`${portfolio.overCount} over · ${portfolio.watchCount} watch`}
-            accent={portfolio.overCount ? "var(--danger)" : portfolio.watchCount ? "var(--warning)" : "var(--success)"}
+            accent={portfolio.overCount ? "var(--tm-neg)" : portfolio.watchCount ? "var(--tm-warn)" : "var(--tm-pos)"}
           />
           <SummaryCard label="Total line items" value={String(portfolio.lineCount)} />
         </div>
@@ -3071,7 +3097,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
         <div style={styles.projectGrid}>
           {projects.map((p) => {
             const pct = p.budget ? (p.variance / p.budget) * 100 : 0;
-            const color = p.variance > 0 ? "var(--danger)" : "var(--success)";
+            const color = p.variance > 0 ? "var(--tm-neg)" : p.variance < 0 ? "var(--tm-pos)" : "var(--neutral-mark, var(--text-secondary))";
             const spentPct = p.budget ? Math.min((p.actual / p.budget) * 100, 100) : 0;
             return (
               <div key={p.id} style={styles.projectCard} onClick={() => onOpen(p.id)}>
@@ -3085,7 +3111,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
                 <div style={styles.projectNums}>
                   <span>{fmt(p.budget)} budget</span>
                   <span style={{ color, fontWeight: 600 }}>
-                    {p.variance >= 0 ? "+" : ""}{fmt(p.variance)} ({pct >= 0 ? "+" : ""}{pct.toFixed(1)}%)
+                    {p.variance > 0 ? "+" : ""}{fmt(p.variance)} ({p.variance > 0 ? "+" : ""}{pct.toFixed(1)}%)
                   </span>
                 </div>
                 <div style={styles.projectMeta}>{p.lineCount} line items</div>
@@ -4523,9 +4549,10 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const approvedChangeOrders = useMemo(() => changeOrders.filter((c) => c.status === "approved"), [changeOrders]);
   const approvedCoTotal = useMemo(
-    () => changeOrders.filter((c) => c.status === "approved").reduce((s, c) => s + Number(c.amount || 0), 0),
-    [changeOrders]
+    () => approvedChangeOrders.reduce((s, c) => s + Number(c.amount || 0), 0),
+    [approvedChangeOrders]
   );
 
   const totals = useMemo(() => {
@@ -4585,6 +4612,28 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       };
     }).filter((c) => c.count > 0);
   }, [items]);
+
+  // Popover content for the summary-strip info icons — every figure here
+  // reuses categoryRollup/totals/flaggedItems, already computed above for
+  // the category strip and the flagged-lines card. No new queries.
+  const budgetByCategoryRows = useMemo(
+    () => categoryRollup.slice().sort((a, b) => b.budget - a.budget).map((c) => ({
+      key: c.category, dot: CATEGORY_COLOR[c.category], name: c.category, value: fmt(c.budget),
+    })),
+    [categoryRollup]
+  );
+  const spendByCategoryRows = useMemo(
+    () => categoryRollup.slice().sort((a, b) => b.variance - a.variance).map((c) => ({
+      key: c.category, dot: CATEGORY_COLOR[c.category], name: c.category,
+      value: c.variance > 0 ? `+${fmt(c.variance)}` : "on budget", over: c.variance > 0,
+    })),
+    [categoryRollup]
+  );
+  const overCategories = useMemo(
+    () => categoryRollup.filter((c) => c.variance > 0).sort((a, b) => b.variance - a.variance),
+    [categoryRollup]
+  );
+  const overCategoryTotal = overCategories.reduce((s, c) => s + c.variance, 0);
 
   function scheduleSave(itemId, patch) {
     setItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, ...patch } : i)));
@@ -5423,12 +5472,112 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       </div>
 
       <div style={styles.summaryStrip}>
-        <SummaryCard label="Original budget" value={fmt(totals.budget)} />
-        {approvedCoTotal !== 0 && <SummaryCard label="Revised budget" value={fmt(totals.revisedBudget)} accent="var(--tm-warn)" />}
-        <SummaryCard label="Actual spend" value={fmt(totals.actual)} />
-        <SummaryCard label="Variance" value={`${totals.variance > 0 ? "+" : ""}${fmt(totals.variance)}`} accent={totals.variance > 0 ? "var(--tm-neg)" : totals.variance < 0 ? "var(--tm-pos)" : undefined} />
-        <SummaryCard label="Retention held" value={fmt(totals.retentionHeld)} />
-        <FlaggedLinesCard label="Flagged lines" value={`${overCount} over · ${watchCount} watch`} accent={overCount ? "var(--tm-neg)" : watchCount ? "var(--tm-warn)" : "var(--tm-pos)"} items={flaggedItems} />
+        <SummaryCard
+          label="Original budget"
+          value={fmt(totals.budget)}
+          sub={`${items.length} line item${items.length === 1 ? "" : "s"}`}
+          popoverLabel="Budget by category"
+          popover={
+            budgetByCategoryRows.length ? (
+              <>
+                <div style={styles.summaryPopoverTitle}>Budget by category</div>
+                {budgetByCategoryRows.map((r, idx) => (
+                  <div key={r.key} style={idx === budgetByCategoryRows.length - 1 ? styles.summaryPopoverRowLast : styles.summaryPopoverRow}>
+                    <span style={{ ...styles.summaryPopoverDot, background: r.dot }} />
+                    <span style={styles.summaryPopoverName}>{r.name}</span>
+                    <span style={styles.summaryPopoverValue}>{r.value}</span>
+                  </div>
+                ))}
+              </>
+            ) : null
+          }
+        />
+        {approvedCoTotal !== 0 && (
+          <SummaryCard
+            label="Revised budget"
+            value={fmt(totals.revisedBudget)}
+            accent="var(--tm-warn)"
+            sub={`${approvedChangeOrders.length} approved change order${approvedChangeOrders.length === 1 ? "" : "s"}`}
+            popoverLabel="Approved change orders"
+            popover={
+              approvedChangeOrders.length ? (
+                <>
+                  <div style={styles.summaryPopoverTitle}>Approved change orders</div>
+                  {approvedChangeOrders.map((co, idx) => (
+                    <div key={co.id} style={idx === approvedChangeOrders.length - 1 ? styles.summaryPopoverRowLast : styles.summaryPopoverRow}>
+                      <span style={styles.summaryPopoverName}>{co.description || "Untitled"}</span>
+                      <span style={styles.summaryPopoverValue}>+{fmt(Number(co.amount || 0))}</span>
+                    </div>
+                  ))}
+                  <div style={styles.summaryPopoverFoot}>Adds {fmt(approvedCoTotal)} to the original budget.</div>
+                </>
+              ) : null
+            }
+          />
+        )}
+        <SummaryCard
+          label="Actual spend"
+          value={fmt(totals.actual)}
+          sub={totals.budget ? `${((totals.actual / totals.budget) * 100).toFixed(1)}% of original budget` : undefined}
+          popoverLabel="Spend by category"
+          popover={
+            spendByCategoryRows.length ? (
+              <>
+                <div style={styles.summaryPopoverTitle}>Spend vs budget</div>
+                {spendByCategoryRows.map((r, idx) => (
+                  <div key={r.key} style={idx === spendByCategoryRows.length - 1 ? styles.summaryPopoverRowLast : styles.summaryPopoverRow}>
+                    <span style={{ ...styles.summaryPopoverDot, background: r.dot }} />
+                    <span style={styles.summaryPopoverName}>{r.name}</span>
+                    <span style={{ ...styles.summaryPopoverValue, ...(r.over ? { color: "var(--tm-neg)" } : {}) }}>{r.value}</span>
+                  </div>
+                ))}
+              </>
+            ) : null
+          }
+        />
+        <SummaryCard
+          label="Variance"
+          value={`${totals.variance > 0 ? "+" : ""}${fmt(totals.variance)}`}
+          accent={totals.variance > 0 ? "var(--tm-neg)" : totals.variance < 0 ? "var(--tm-pos)" : undefined}
+          sub={`${totals.pct > 0 ? "+" : ""}${totals.pct.toFixed(1)}% · ${overCount} line${overCount === 1 ? "" : "s"} over`}
+          popoverLabel="What is driving the variance"
+          popover={
+            overCategories.length ? (
+              <>
+                <div style={styles.summaryPopoverTitle}>Driving the overrun</div>
+                {overCategories.map((c, idx) => (
+                  <div key={c.category} style={idx === overCategories.length - 1 ? styles.summaryPopoverRowLast : styles.summaryPopoverRow}>
+                    <span style={styles.summaryPopoverName}>{c.category}</span>
+                    <span style={{ ...styles.summaryPopoverValue, color: "var(--tm-neg)" }}>+{fmt(c.variance)}</span>
+                  </div>
+                ))}
+                <div style={styles.summaryPopoverFoot}>
+                  Together, {totals.variance > 0 ? Math.round((overCategoryTotal / totals.variance) * 100) : 100}% of the overrun.
+                </div>
+              </>
+            ) : (
+              <p style={styles.summaryPopoverNote}>No categories are currently over budget.</p>
+            )
+          }
+        />
+        <SummaryCard
+          label="Retention held"
+          value={fmt(totals.retentionHeld)}
+          sub={`${totals.retentionPct}% of certified claims`}
+          popoverLabel="About retention"
+          popover={
+            <p style={styles.summaryPopoverNote}>
+              Held back from certified claims at {totals.retentionPct}%, released on the practical completion certificate — not a cost, a timing difference.
+            </p>
+          }
+        />
+        <FlaggedLinesCard
+          label="Flagged lines"
+          value={`${overCount} over · ${watchCount} watch`}
+          accent={overCount ? "var(--tm-neg)" : watchCount ? "var(--tm-warn)" : "var(--tm-pos)"}
+          items={flaggedItems}
+          sub={`of ${items.length} line item${items.length === 1 ? "" : "s"}`}
+        />
       </div>
 
       {totals.pct > 0 && (
@@ -7170,17 +7319,28 @@ const styles = {
   // card's value sits on the same baseline regardless of how its label wraps.
   summaryLabel: { fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 9.5, lineHeight: 1.35, minHeight: 26, letterSpacing: "0.13em", color: "var(--text-secondary)", marginBottom: 10, textTransform: "uppercase", fontWeight: 600 },
   summaryLabelSlab: { fontSize: 11, lineHeight: 1.3, minHeight: 29, letterSpacing: "0.07em", color: "rgba(255,255,255,.55)", marginBottom: 7, textTransform: "uppercase", fontWeight: 700 },
-  summaryValue: { fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 21, fontWeight: 600, letterSpacing: "-0.022em", color: "var(--text-primary)" },
+  summaryValue: { fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 23, fontWeight: 600, letterSpacing: "-0.022em", color: "var(--text-primary)" },
   summaryValueSlab: { fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 19, fontWeight: 600, color: "#F2F6F9" },
   summarySubSlab: { fontSize: 10.5, color: "#FCA891", marginTop: 3, fontWeight: 600 },
+  summarySub: { fontFamily: "'Inter', system-ui, sans-serif", fontSize: 12, lineHeight: 1.4, color: "var(--text-secondary)", marginTop: 7, fontWeight: 500 },
 
-  flaggedPopover: { position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, width: 280, background: "var(--surface)", borderRadius: 14, boxShadow: "0 8px 28px rgba(0,0,0,0.16)", border: "1px solid var(--border-color)", padding: "12px 14px" },
-  flaggedPopoverTitle: { fontSize: 10.5, letterSpacing: "0.08em", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: 8 },
-  flaggedPopoverList: { display: "flex", flexDirection: "column", gap: 8, maxHeight: 220, overflowY: "auto" },
-  flaggedPopoverRow: { display: "flex", alignItems: "center", gap: 8 },
-  flaggedDot: { width: 7, height: 7, borderRadius: "50%", flexShrink: 0 },
-  flaggedPopoverName: { flex: 1, fontSize: 12.5, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
-  flaggedPopoverVariance: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontVariantNumeric: "tabular-nums", flexShrink: 0 },
+  // Info-icon expand, shared by every non-slab SummaryCard: a small circular
+  // affordance top-right that reveals a popover on hover/focus of the whole
+  // card. Kept as React state (not a CSS :hover rule) to match the codebase's
+  // established pattern — inline styles always beat stylesheet selectors, so
+  // hover/focus state here has to live in JS, same as LitButton.
+  summaryInfoBtn: { position: "absolute", top: 12, right: 12, width: 19, height: 19, borderRadius: "50%", border: "1px solid var(--tm-brd)", background: "transparent", color: "var(--text-secondary)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0, transition: "border-color .14s ease, color .14s ease, background .14s ease" },
+  summaryInfoBtnActive: { borderColor: "var(--tm-pos)", color: "var(--tm-pos)", background: "var(--tm-pos-fill)" },
+  summaryPopover: { position: "absolute", top: "calc(100% + 8px)", right: 0, width: 230, zIndex: 30, background: "var(--tm-pop-surface)", border: "1px solid var(--tm-pop-brd)", borderRadius: 11, boxShadow: "var(--tm-pop-shadow)", padding: "13px 14px 12px" },
+  summaryPopoverCaret: { position: "absolute", top: -6, right: 16, width: 11, height: 11, background: "var(--tm-pop-surface)", borderLeft: "1px solid var(--tm-pop-brd)", borderTop: "1px solid var(--tm-pop-brd)", transform: "rotate(45deg)" },
+  summaryPopoverTitle: { fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: 10 },
+  summaryPopoverNote: { fontSize: 12.5, lineHeight: 1.5, color: "var(--text-primary)", margin: 0 },
+  summaryPopoverRow: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", fontSize: 12.5, borderBottom: "1px solid var(--tm-pop-brd)" },
+  summaryPopoverRowLast: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", fontSize: 12.5 },
+  summaryPopoverDot: { width: 7, height: 7, borderRadius: 2, flexShrink: 0 },
+  summaryPopoverName: { flex: 1, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },
+  summaryPopoverValue: { fontVariantNumeric: "tabular-nums", fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap", flexShrink: 0 },
+  summaryPopoverFoot: { marginTop: 9, paddingTop: 8, borderTop: "1px solid var(--tm-pop-brd)", fontSize: 11.5, fontWeight: 500, color: "var(--text-secondary)" },
 
   // A severity edge rather than a full saturated outline — a ring of pure
   // danger colour round a whole paragraph shouts louder than the sentence does.
