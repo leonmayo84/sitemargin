@@ -4463,6 +4463,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const [documents, setDocuments] = useState([]);
   const [docCategory, setDocCategory] = useState("Drawings");
   const [docLineItemId, setDocLineItemId] = useState("");
+  const [overrunDetailOpen, setOverrunDetailOpen] = useState(false);
   const documentsInputRef = useRef(null);
   const DOC_CATEGORIES = ["Drawings", "Contracts", "Specifications", "Photos", "Correspondence", "Other"];
   // Client Reports: a per-project saved configuration (which sections show,
@@ -5617,7 +5618,29 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
       {totals.pct > 0 && (
         <div style={styles.warningBanner}>
-          You're trending {totals.pct.toFixed(1)}% over the revised budget on this project. Review flagged lines below before your next client meeting.
+          <div style={styles.warningBannerRow}>
+            <span>You're trending {totals.pct.toFixed(1)}% over the revised budget on this project. Review flagged lines below before your next client meeting.</span>
+            <button type="button" style={styles.warningBannerToggle} onClick={() => setOverrunDetailOpen((v) => !v)}>
+              {overrunDetailOpen ? "Hide detail" : "What's driving this?"}
+            </button>
+          </div>
+          {overrunDetailOpen && (() => {
+            const overItems = flaggedItems.filter((f) => f.status === "over");
+            return (
+              <div style={styles.warningBannerDetail}>
+                {overItems.length ? (
+                  overItems.map((f, idx) => (
+                    <div key={f.id} style={idx === overItems.length - 1 ? styles.warningBannerRowLast : styles.warningBannerRowItem}>
+                      <span style={styles.warningBannerItemName}>{f.name}</span>
+                      <span style={styles.warningBannerItemValue}>+{fmt(f.variance)} · +{f.pct.toFixed(1)}%</span>
+                    </div>
+                  ))
+                ) : (
+                  <div style={styles.warningBannerNote}>No individual line is over its own budget — this comes from approved change orders raising the revised budget's baseline.</div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
       {aheadCount > 0 && (
@@ -7396,6 +7419,14 @@ const styles = {
   // A severity edge rather than a full saturated outline — a ring of pure
   // danger colour round a whole paragraph shouts louder than the sentence does.
   warningBanner: { maxWidth: 1180, margin: "0 auto 12px", background: "var(--tm-neg-fill)", border: "1px solid var(--tm-brd)", borderLeft: "3px solid var(--tm-neg)", borderRadius: 10, padding: "13px 17px", fontSize: 14, color: "var(--text-primary)" },
+  warningBannerRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 },
+  warningBannerToggle: { flexShrink: 0, background: "none", border: "none", borderBottom: "1px solid var(--tm-neg)", color: "var(--tm-neg)", fontFamily: "'Inter', system-ui, sans-serif", fontSize: 12.5, fontWeight: 600, cursor: "pointer", padding: 0 },
+  warningBannerDetail: { marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--tm-brd)" },
+  warningBannerRowItem: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", fontSize: 13, borderBottom: "1px solid var(--tm-brd)" },
+  warningBannerRowLast: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", fontSize: 13 },
+  warningBannerItemName: { color: "var(--text-primary)" },
+  warningBannerItemValue: { fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontWeight: 600, color: "var(--tm-neg)", flexShrink: 0 },
+  warningBannerNote: { fontSize: 13, color: "var(--text-secondary)" },
 
   categoryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, maxWidth: 1180, margin: "0 auto 16px" },
   categoryCard: { background: "linear-gradient(0deg, var(--tm-glass), var(--tm-glass)), var(--surface)", border: "1px solid var(--tm-brd)", borderRadius: 13, padding: "11px 14px", boxShadow: "var(--tm-lift)" },
