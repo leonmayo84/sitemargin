@@ -22,7 +22,7 @@ export type Tier = {
 
 export const TIERS: Record<string, Tier> = {
   contractor: { amount: "199.00", label: "SiteMargin — Contractor plan", recurring: true },
-  firm: { amount: "599.00", label: "SiteMargin — Company plan", recurring: true },
+  firm: { amount: "399.00", label: "SiteMargin — Company plan", recurring: true },
   // Once-off: R899 for permanent access to a single project, not a monthly
   // charge — see the `recurring: false` handling in both functions below.
   homeowner: { amount: "899.00", label: "SiteMargin — Home Owner plan", recurring: false },

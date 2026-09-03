@@ -345,10 +345,10 @@ const HEADER_TIER_BADGE = {
    than the pricing page promises, never less.
    --------------------------------------------------------------------------- */
 const PLAN_FEATURES = {
-  free:       { changeorders: false, payments: false, documents: false, export: false },
-  contractor: { changeorders: true,  payments: true,  documents: true,  export: true  },
-  firm:       { changeorders: true,  payments: true,  documents: true,  export: true  },
-  homeowner:  { changeorders: true,  payments: true,  documents: true,  export: true  },
+  free:       { changeorders: false, payments: false, documents: false, export: false, reportSchedule: false },
+  contractor: { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: false },
+  firm:       { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: true  },
+  homeowner:  { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: false },
 };
 
 const PAID_FEATURE_COPY = {
@@ -2762,7 +2762,7 @@ function AuthGate() {
                   <div className="sm-plan" style={selectedTier === "firm" ? styles.checkoutCardSelected : undefined}>
                     <div style={styles.checkoutTier}>Company</div>
                     <div style={styles.checkoutPrice}>
-                      R599<span style={styles.checkoutPriceUnit}>/month</span>
+                      R399<span style={styles.checkoutPriceUnit}>/month</span>
                     </div>
                     <div style={styles.checkoutDesc} className="sm-plan-desc">Everything in Contractor, plus unlimited attachments and priority support.</div>
                     <button type="button" className="sm-dcta sm-dcta-block" onClick={() => chooseTier("firm")}>
@@ -2815,7 +2815,7 @@ function AuthGate() {
               <div style={{ ...styles.checkoutCard, ...(selectedTier === "firm" ? styles.checkoutCardSelected : {}) }}>
                 <div style={styles.checkoutTier}>Company</div>
                 <div style={styles.checkoutPrice}>
-                  R599<span style={styles.checkoutPriceUnit}>/month</span>
+                  R399<span style={styles.checkoutPriceUnit}>/month</span>
                 </div>
                 <div style={styles.checkoutDesc}>Everything in Contractor, plus unlimited attachments and priority support.</div>
                 <button style={styles.addBtn} onClick={() => startCheckout("firm")} disabled={checkoutTier !== null}>
@@ -7090,7 +7090,12 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
               <span style={{ fontSize: 13, fontWeight: 600 }}>Repeat this report</span>
-              <label style={{ position: "relative", display: "inline-block", width: 36, height: 20 }}>
+              {locked("reportSchedule") && (
+                <button type="button" style={styles.schedulePlanPill} onClick={() => onNavigate("storage")}>
+                  On Company
+                </button>
+              )}
+              <label style={{ position: "relative", display: can("reportSchedule") ? "inline-block" : "none", width: 36, height: 20 }}>
                 <input
                   type="checkbox"
                   checked={reportFrequency !== "none"}
@@ -7102,7 +7107,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               </label>
             </div>
 
-            {reportFrequency !== "none" && (
+            {reportFrequency !== "none" && can("reportSchedule") && (
               <div style={{ background: "var(--bg-secondary)", borderRadius: 12, padding: 14 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Frequency</div>
                 <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
@@ -7563,6 +7568,9 @@ const styles = {
   exportLockedTitle: { fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 },
   exportLockedBody: { fontSize: 12.5, lineHeight: 1.5, color: "var(--text-secondary)", margin: "0 0 12px" },
   exportLockedBtn: { width: "100%", background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 9, padding: "8px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
+  // Recurring sends are the Company plan's own feature. Sending a report by
+  // hand stays available on every paid tier -- only the schedule is gated.
+  schedulePlanPill: { background: "var(--tm-warn-fill)", color: "var(--tm-warn)", border: "none", borderRadius: 100, padding: "4px 11px", fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 10.5, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer" },
 
   categoryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, maxWidth: 1180, margin: "0 auto 16px" },
   categoryCard: { background: "linear-gradient(0deg, var(--tm-glass), var(--tm-glass)), var(--surface)", border: "1px solid var(--tm-brd)", borderRadius: 13, padding: "11px 14px", boxShadow: "var(--tm-lift)" },

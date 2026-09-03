@@ -38,7 +38,7 @@ const APP_ORIGIN = Deno.env.get("APP_ORIGIN") ?? "https://app.sitemargin.co.za";
 
 const PLAN_PRICE: Record<string, string> = {
   contractor: "199.00",
-  firm: "599.00",
+  firm: "399.00",
   homeowner: "899.00",
 };
 const PLAN_NAME: Record<string, string> = {
