@@ -357,15 +357,23 @@ function scoreSubcontractor(items) {
       Math.max(((Number(i.actual) - Number(i.budget)) / Number(i.budget)) * 100, 0)
     );
     const avgOverrun = overruns.reduce((s, v) => s + v, 0) / overruns.length;
-    budgetScore = Math.max(0, Math.min(100, 100 - avgOverrun * 4)); // 25% over => 0
+    // 50% over => 0. The previous curve (x4) bottomed out at 25%, which put a
+    // sub 27% over budget and one 300% over on the same score of zero — the
+    // dimension stopped discriminating exactly where real jobs live.
+    budgetScore = Math.max(0, Math.min(100, 100 - avgOverrun * 2));
   }
 
   const scheduled = items.filter((i) => i.due_date && i.completed_date);
   let scheduleScore = null;
   let avgDaysLate = null;
+  let worstDaysLate = null;
+  let onTimeRate = null;
+  let lateness = [];
   if (scheduled.length > 0) {
-    const lateness = scheduled.map((i) => daysBetween(i.due_date, i.completed_date) ?? 0);
+    lateness = scheduled.map((i) => daysBetween(i.due_date, i.completed_date) ?? 0);
     avgDaysLate = lateness.reduce((s, v) => s + v, 0) / lateness.length;
+    worstDaysLate = Math.max(...lateness);
+    onTimeRate = (lateness.filter((v) => v <= 0).length / lateness.length) * 100;
     scheduleScore = Math.max(0, Math.min(100, 100 - Math.max(avgDaysLate, 0) * 5)); // 20 days late => 0
   }
 
@@ -383,11 +391,51 @@ function scoreSubcontractor(items) {
   const totalBudget = items.reduce((s, i) => s + Number(i.budget || 0), 0);
   const totalActual = items.reduce((s, i) => s + Number(i.actual || 0), 0);
 
+  // Rand, not score. "Has cost you R11 000 above budget" is a sentence someone
+  // can act on; "budget accuracy 0" is a grade they have to translate first.
+  const overrunRand = items.reduce(
+    (s, i) => s + Math.max(Number(i.actual || 0) - Number(i.budget || 0), 0), 0
+  );
+
+  // What is late right now, as opposed to what was late historically. This is
+  // the only figure on the card that should change what you do today.
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const overdueItems = items.filter(
+    (i) => i.due_date && !i.completed_date && new Date(i.due_date) < today
+  );
+  const overdueValue = overdueItems.reduce((s, i) => s + Number(i.budget || 0), 0);
+
+  const projectCount = new Set(items.map((i) => i.project_id).filter(Boolean)).size;
+
+  // Direction of travel on budget: mean overrun of the older completed half
+  // against the newer half. Positive means improving.
+  let trend = null;
+  const datedBudget = withBudget
+    .filter((i) => i.completed_date)
+    .sort((a, b) => new Date(a.completed_date) - new Date(b.completed_date));
+  if (datedBudget.length >= 4) {
+    const meanOverrun = (arr) =>
+      arr.reduce((s, i) => s + Math.max(((Number(i.actual) - Number(i.budget)) / Number(i.budget)) * 100, 0), 0) / arr.length;
+    const half = Math.floor(datedBudget.length / 2);
+    trend = meanOverrun(datedBudget.slice(0, half)) - meanOverrun(datedBudget.slice(half));
+  }
+
+  // How much weight the overall number can bear. A 30 earned across one item
+  // and a 30 earned across fifty are not the same claim, and until now the
+  // card presented them identically.
+  const dimensions = present.length;
+  const confidence =
+    items.length >= 8 && dimensions >= 2 ? "high"
+    : items.length >= 3 && dimensions >= 1 ? "medium"
+    : "low";
+
   return {
     budgetScore, scheduleScore, qualityScore, overall,
-    avgDaysLate, avgQuality,
+    avgDaysLate, worstDaysLate, onTimeRate, avgQuality,
     itemCount: items.length, ratedCount: rated.length, scheduledCount: scheduled.length,
     totalBudget, totalActual, variance: totalActual - totalBudget,
+    overrunRand, overdueCount: overdueItems.length, overdueValue,
+    projectCount, trend, confidence, dimensions,
   };
 }
 
@@ -957,6 +1005,49 @@ function LegendDot({ color, label }) {
 
 function EmptyChart({ label }) {
   return <div style={{ fontSize: 13, color: "var(--text-secondary)", padding: "24px 0" }}>{label}</div>;
+}
+
+// One figure with its label and supporting line — used for the exposure strip
+// on a subcontractor card, where the numbers are context for the scores below
+// rather than scores themselves.
+function SubMetric({ label, value, sub, tone }) {
+  return (
+    <div style={{ minWidth: 96, flex: "1 1 96px" }}>
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.13em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: 5 }}>{label}</div>
+      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 15, fontWeight: 600, letterSpacing: "-0.015em", color: tone || "var(--text-primary)" }}>{value}</div>
+      {sub && <div style={{ fontSize: 10.5, color: "var(--text-secondary)", marginTop: 3, lineHeight: 1.35 }}>{sub}</div>}
+    </div>
+  );
+}
+
+// The spend mix of a template, as a share-of-total bar. Lets you tell a
+// residential build from a shopfit without opening either one.
+function TemplateComposition({ items }) {
+  const total = items.reduce((s, i) => s + Number(i.budget || 0), 0);
+  if (!total) return null;
+  const byCat = {};
+  items.forEach((i) => {
+    const c = i.category || "Other";
+    byCat[c] = (byCat[c] || 0) + Number(i.budget || 0);
+  });
+  const parts = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+  const [topCat, topVal] = parts[0];
+  return (
+    <div style={{ marginTop: 10, maxWidth: 460 }}>
+      <div style={{ display: "flex", gap: 2, height: 7, borderRadius: 100, overflow: "hidden", background: "var(--bg-secondary)" }}>
+        {parts.map(([cat, v]) => (
+          <div
+            key={cat}
+            title={`${cat} — ${fmt(v)} (${Math.round((v / total) * 100)}%)`}
+            style={{ width: `${(v / total) * 100}%`, background: CATEGORY_COLOR[cat] || "#8C8C94" }}
+          />
+        ))}
+      </div>
+      <div style={{ fontSize: 11.5, color: "var(--text-secondary)", marginTop: 6 }}>
+        Spans {parts.length} trade{parts.length === 1 ? "" : "s"} · heaviest in {topCat} ({Math.round((topVal / total) * 100)}%)
+      </div>
+    </div>
+  );
 }
 
 function ScoreBar({ label, score, detail }) {
@@ -3125,6 +3216,13 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 600, color: scoreColor(score.overall) }}>
                         {score.overall == null ? "—" : Math.round(score.overall)}
                       </div>
+                      {score.overall != null && (
+                        <div style={{ fontSize: 9.5, color: "var(--text-secondary)", marginTop: 1 }}>
+                          {score.confidence === "high" ? "well evidenced"
+                            : score.confidence === "medium" ? "limited evidence"
+                            : "thin evidence"}
+                        </div>
+                      )}
                     </div>
                     <button style={styles.deleteProjectBtn} className="no-print" onClick={() => removeSub(sub.id, sub.name)}>✕</button>
                   </div>
@@ -3148,6 +3246,36 @@ function SubcontractorsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                 {sub.flag && sub.flag !== "none" && (
                   <div className="print-only-status" style={{ fontSize: 11.5, fontWeight: 600, marginBottom: 8, color: sub.flag === "red" ? "var(--danger)" : "var(--warning)" }}>
                     {sub.flag === "red" ? "⛔ Red flag — don't rehire" : "⚠ Amber flag — watch"}
+                  </div>
+                )}
+
+                {score.itemCount > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 14, padding: "11px 13px", marginBottom: 14, background: "var(--tm-glass)", border: "1px solid var(--tm-brd)", borderRadius: 10 }}>
+                    <SubMetric
+                      label="Exposure"
+                      value={fmt(score.totalBudget)}
+                      sub={`${score.itemCount} item${score.itemCount === 1 ? "" : "s"} · ${score.projectCount} project${score.projectCount === 1 ? "" : "s"}`}
+                    />
+                    <SubMetric
+                      label="Over budget"
+                      value={score.overrunRand > 0 ? `+${fmt(score.overrunRand)}` : "None"}
+                      tone={score.overrunRand > 0 ? "var(--tm-neg)" : "var(--tm-pos)"}
+                      sub={score.overrunRand > 0 ? "across assigned items" : "actuals within budget"}
+                    />
+                    <SubMetric
+                      label="Overdue now"
+                      value={score.overdueCount > 0 ? String(score.overdueCount) : "None"}
+                      tone={score.overdueCount > 0 ? "var(--tm-neg)" : "var(--tm-pos)"}
+                      sub={score.overdueCount > 0 ? `${fmt(score.overdueValue)} held up` : "nothing past due"}
+                    />
+                    {score.trend != null && (
+                      <SubMetric
+                        label="Trend"
+                        value={`${score.trend >= 0 ? "▲" : "▼"} ${Math.abs(score.trend).toFixed(1)}pt`}
+                        tone={score.trend >= 0 ? "var(--tm-pos)" : "var(--tm-neg)"}
+                        sub={score.trend >= 0 ? "improving on budget" : "worsening on budget"}
+                      />
+                    )}
                   </div>
                 )}
 
@@ -3256,6 +3384,9 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
   const [itemCategory, setItemCategory] = useState(CATEGORIES[0]);
   const [itemBudget, setItemBudget] = useState("");
   const [tagFilter, setTagFilter] = useState("all");
+  // The two instruction blocks are worth keeping but not worth the fold —
+  // they were pushing the actual templates below the first screen.
+  const [helpOpen, setHelpOpen] = useState(false);
   const [tagDrafts, setTagDrafts] = useState({}); // { [templateId]: string being typed }
   const [importMessage, setImportMessage] = useState(null);
   const importFileRef = useRef(null);
@@ -3423,6 +3554,18 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
       <GlobalStyles />
       <PageHeader title="Templates" current="templates" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
 
+      <div className="no-print" style={{ maxWidth: 1180, margin: "0 auto 14px" }}>
+        <button
+          className="sm-upgrade"
+          onClick={() => setHelpOpen((v) => !v)}
+          style={{ ...styles.importBtn, fontSize: 12.5, padding: "7px 15px" }}
+          aria-expanded={helpOpen}
+        >
+          {helpOpen ? "Hide guidance" : "How templates work"}
+        </button>
+      </div>
+
+      {helpOpen && (<>
       <div style={styles.explainer}>
         Build a standard line-item set once — a typical residential build, a shopfit, whatever you repeat — then apply it
         to any new project in one click instead of retyping it. You can also save an existing project's line items
@@ -3441,6 +3584,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
         Used from inside a project: open its <b>Cost & Progress</b> tab → <b>Apply a template…</b> drops these
         items straight into the ledger. Or click <b>Save as template</b> there to turn that project into a new one.
       </div>
+      </>)}
 
       <input ref={importFileRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={handleImportFile} style={{ display: "none" }} />
 
@@ -3498,6 +3642,7 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                     <div style={{ fontSize: 11.5, color: "var(--text-secondary)", marginTop: 6, fontFamily: "'Space Grotesk', sans-serif" }}>
                       {tItems.length} line item{tItems.length === 1 ? "" : "s"} · {fmt(total)}
                     </div>
+                    <TemplateComposition items={tItems} />
                     {(t.tags || []).length > 0 && (
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
                         {t.tags.map((tag) => (
@@ -4114,6 +4259,7 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
               {upgradeOptions.map((opt) => (
                 <button
                   key={opt.tier}
+                  className="sm-upgrade"
                   style={{ ...styles.importBtn, display: "flex", flexDirection: "column", alignItems: "flex-start", padding: "10px 14px" }}
                   disabled={upgrading === opt.tier}
                   onClick={() => upgrade(opt.tier)}
@@ -5200,11 +5346,11 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
       <div style={styles.summaryStrip}>
         <SummaryCard label="Original budget" value={fmt(totals.budget)} />
-        {approvedCoTotal !== 0 && <SummaryCard label="Revised budget" value={fmt(totals.revisedBudget)} accent="var(--warning)" />}
+        {approvedCoTotal !== 0 && <SummaryCard label="Revised budget" value={fmt(totals.revisedBudget)} accent="var(--tm-warn)" />}
         <SummaryCard label="Actual spend" value={fmt(totals.actual)} />
-        <SummaryCard label="Variance" value={`${totals.variance >= 0 ? "+" : ""}${fmt(totals.variance)}`} accent={totals.variance > 0 ? "var(--danger)" : "var(--success)"} />
+        <SummaryCard label="Variance" value={`${totals.variance >= 0 ? "+" : ""}${fmt(totals.variance)}`} accent={totals.variance > 0 ? "var(--tm-neg)" : "var(--tm-pos)"} />
         <SummaryCard label="Retention held" value={fmt(totals.retentionHeld)} />
-        <FlaggedLinesCard label="Flagged lines" value={`${overCount} over · ${watchCount} watch`} accent={overCount ? "var(--danger)" : watchCount ? "var(--warning)" : "var(--success)"} items={flaggedItems} />
+        <FlaggedLinesCard label="Flagged lines" value={`${overCount} over · ${watchCount} watch`} accent={overCount ? "var(--tm-neg)" : watchCount ? "var(--tm-warn)" : "var(--tm-pos)"} items={flaggedItems} />
       </div>
 
       {totals.pct > 0 && (
@@ -5213,7 +5359,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         </div>
       )}
       {aheadCount > 0 && (
-        <div style={{ ...styles.warningBanner, borderColor: "var(--warning)", background: "rgba(184,134,47,0.1)", color: "var(--text-primary)" }}>
+        <div style={{ ...styles.warningBanner, borderLeftColor: "var(--tm-warn-mark)", background: "var(--tm-warn-fill)", color: "var(--text-primary)" }}>
           {aheadCount} line{aheadCount > 1 ? "s are" : " is"} spending ahead of physical progress. Check the Progress column below.
         </div>
       )}
@@ -5227,7 +5373,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             </div>
             <div style={styles.categoryNums}>
               <span style={styles.categoryBudget}>{fmt(c.budget)}</span>
-              <span style={{ ...styles.categoryVariance, color: c.variance > 0 ? "var(--danger)" : "var(--success)" }}>
+              <span style={{ ...styles.categoryVariance, color: c.variance > 0 ? "var(--tm-neg)" : "var(--tm-pos)" }}>
                 {c.variance >= 0 ? "+" : ""}{fmt(c.variance)}
               </span>
             </div>
@@ -6938,15 +7084,19 @@ const styles = {
   tbValue: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 2 },
   retentionInput: { width: 34, background: "var(--bg-secondary)", border: "1px solid transparent", borderRadius: 6, color: "var(--text-primary)", fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, padding: "1px 4px", textAlign: "right" },
 
-  summaryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, maxWidth: 1180, margin: "0 auto 16px" },
-  summaryCard: { background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 14, padding: "14px 15px", boxShadow: "var(--shadow-card)" },
+  // The bloom paints on the strip itself, showing through the grid gaps and
+  // the translucent cards. Deliberately no backdrop-filter: over a near-flat
+  // ground the blur is invisible, and in Android WebView every blurred panel
+  // becomes a composited layer that re-rasterises on each scroll frame.
+  summaryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, maxWidth: 1180, margin: "0 auto 16px", backgroundImage: "var(--tm-bloom)" },
+  summaryCard: { background: "var(--tm-glass)", border: "1px solid var(--tm-brd)", borderRadius: 13, padding: "15px 16px", boxShadow: "var(--tm-lift)" },
   summaryCardSlab: { background: "linear-gradient(150deg,#23272E 0%,#14171C 60%,#090B0E 100%)", border: "none", borderRadius: 14, padding: "14px 15px", boxShadow: "0 12px 26px -14px rgba(2,6,23,.55)" },
   // lineHeight + minHeight reserve room for two lines of label text (e.g.
   // "ORIGINAL QUOTE ALLOCATION" wraps, "ACTUAL SPEND" doesn't) so every
   // card's value sits on the same baseline regardless of how its label wraps.
-  summaryLabel: { fontSize: 11, lineHeight: 1.3, minHeight: 29, letterSpacing: "0.07em", color: "var(--text-secondary)", marginBottom: 7, textTransform: "uppercase", fontWeight: 700 },
+  summaryLabel: { fontSize: 9.5, lineHeight: 1.35, minHeight: 26, letterSpacing: "0.13em", color: "var(--text-secondary)", marginBottom: 10, textTransform: "uppercase", fontWeight: 700 },
   summaryLabelSlab: { fontSize: 11, lineHeight: 1.3, minHeight: 29, letterSpacing: "0.07em", color: "rgba(255,255,255,.55)", marginBottom: 7, textTransform: "uppercase", fontWeight: 700 },
-  summaryValue: { fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 19, fontWeight: 600, color: "var(--text-primary)" },
+  summaryValue: { fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 21, fontWeight: 600, letterSpacing: "-0.022em", color: "var(--text-primary)" },
   summaryValueSlab: { fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 19, fontWeight: 600, color: "#F2F6F9" },
   summarySubSlab: { fontSize: 10.5, color: "#FCA891", marginTop: 3, fontWeight: 600 },
 
@@ -6958,14 +7108,16 @@ const styles = {
   flaggedPopoverName: { flex: 1, fontSize: 12.5, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
   flaggedPopoverVariance: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontVariantNumeric: "tabular-nums", flexShrink: 0 },
 
-  warningBanner: { maxWidth: 1180, margin: "0 auto 12px", background: "rgba(193,70,43,0.07)", border: "1px solid var(--danger)", borderRadius: 14, padding: "12px 16px", fontSize: 14, color: "var(--text-primary)" },
+  // A severity edge rather than a full saturated outline — a ring of pure
+  // danger colour round a whole paragraph shouts louder than the sentence does.
+  warningBanner: { maxWidth: 1180, margin: "0 auto 12px", background: "var(--tm-neg-fill)", border: "1px solid var(--tm-brd)", borderLeft: "3px solid var(--tm-neg)", borderRadius: 10, padding: "13px 17px", fontSize: 14, color: "var(--text-primary)" },
 
   categoryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, maxWidth: 1180, margin: "0 auto 16px" },
-  categoryCard: { background: "var(--surface)", borderRadius: 12, padding: "10px 14px", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" },
+  categoryCard: { background: "var(--tm-glass)", border: "1px solid var(--tm-brd)", borderRadius: 13, padding: "11px 14px", boxShadow: "var(--tm-lift)" },
   categoryHead: { display: "flex", alignItems: "center", gap: 6, marginBottom: 4 },
   categoryDot: { width: 8, height: 8, borderRadius: "50%" },
   categoryName: { fontSize: 12, color: "var(--text-secondary)", fontWeight: 500 },
-  categoryNums: { display: "flex", justifyContent: "space-between", fontFamily: "'Space Grotesk', sans-serif", fontSize: 13 },
+  categoryNums: { display: "flex", justifyContent: "space-between", fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 13 },
   categoryBudget: { color: "var(--text-secondary)" },
   categoryVariance: { fontWeight: 600 },
 
