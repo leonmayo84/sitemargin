@@ -328,6 +328,92 @@ const HEADER_TIER_BADGE = {
   homeowner: { label: "Home Owner", tint: "rgba(76,122,92,0.10)", color: "var(--success)" },
 };
 
+/* ---------------------------------------------------------------------------
+   PLAN FEATURE MATRIX — the single source of truth for what each tier unlocks.
+
+   These four are exactly the paid line items advertised on
+   sitemargin.co.za/pricing.html, which until now were sold as paid but never
+   enforced anywhere in the app. Planning stays free and uncapped — unlimited
+   line items, budgets, categories, tolerance and progress-vs-spend — because
+   that is where a new account finds out whether the product works at all.
+   The wall lands at the execution phase, which is where the pricing page has
+   always said it lands.
+
+   Change orders aren't listed on the Home Owner plan, but a homeowner tracking
+   variations on their own build needs them more than anyone does — granted
+   deliberately rather than withheld on a copywriting technicality. Grant more
+   than the pricing page promises, never less.
+   --------------------------------------------------------------------------- */
+const PLAN_FEATURES = {
+  free:       { changeorders: false, payments: false, documents: false, export: false },
+  contractor: { changeorders: true,  payments: true,  documents: true,  export: true  },
+  firm:       { changeorders: true,  payments: true,  documents: true,  export: true  },
+  homeowner:  { changeorders: true,  payments: true,  documents: true,  export: true  },
+};
+
+const PAID_FEATURE_COPY = {
+  changeorders: {
+    title: "Change orders are on the paid plans",
+    body: "Track variations against the contract sum. Every approved change lifts the revised budget, so your variance keeps telling the truth once the scope moves.",
+  },
+  payments: {
+    title: "Payments and retention are on the paid plans",
+    body: "Track claimed, certified and retention held on every line — so you know what has actually been paid, and what is still being held back.",
+  },
+  documents: {
+    title: "The document register is on the paid plans",
+    body: "Keep drawings, contracts, quotes and site photos filed against the project they belong to, instead of scattered across email.",
+  },
+  export: {
+    title: "Export is on the paid plans",
+    body: "Download a clean PDF or Excel of your budget to send to a client, a bank, or your builder.",
+  },
+};
+
+function planAllows(tier, feature) {
+  const row = PLAN_FEATURES[tier] || PLAN_FEATURES.free;
+  return row[feature] === true;
+}
+
+// Shown in place of a gated view. Deliberately not a dead end: it names what
+// the feature does, confirms nothing already captured has been lost, and puts
+// the plans one click away.
+function PaywallPanel({ feature, onNavigate }) {
+  const copy = PAID_FEATURE_COPY[feature];
+  if (!copy) return null;
+  return (
+    <div style={styles.paywallPanel}>
+      <div style={styles.paywallLock} aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      </div>
+      <div style={styles.paywallTitle}>{copy.title}</div>
+      <p style={styles.paywallBody}>{copy.body}</p>
+      <p style={styles.paywallBody}>
+        Anything you have already captured here is safe — it stays on the project and comes
+        back the moment you are on a paid plan. Your budget, line items and progress tracking
+        stay free either way.
+      </p>
+      <div style={styles.paywallActions}>
+        <button style={styles.addBtn} onClick={() => onNavigate("storage")}>See plans</button>
+      </div>
+    </div>
+  );
+}
+
+// The same message sized for the inside of a Download popover.
+function ExportLockedMenu({ onNavigate }) {
+  return (
+    <div style={styles.exportLocked}>
+      <div style={styles.exportLockedTitle}>{PAID_FEATURE_COPY.export.title}</div>
+      <p style={styles.exportLockedBody}>{PAID_FEATURE_COPY.export.body}</p>
+      <button style={styles.exportLockedBtn} onClick={() => onNavigate("storage")}>See plans</button>
+    </div>
+  );
+}
+
 function statusFor(budget, actual) {
   if (budget <= 0) return "ok";
   const ratio = actual / budget;
@@ -4464,6 +4550,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const [docCategory, setDocCategory] = useState("Drawings");
   const [docLineItemId, setDocLineItemId] = useState("");
   const [overrunDetailOpen, setOverrunDetailOpen] = useState(false);
+  // Plan gating. `null` means the subscription row is still in flight, and
+  // both helpers return false while it is — a gated view renders nothing for
+  // that beat rather than flashing either the feature or the paywall at
+  // someone who turns out to be entitled to the opposite.
+  const [planTier, setPlanTier] = useState(null);
+  const can = (feature) => planTier !== null && planAllows(planTier, feature);
+  const locked = (feature) => planTier !== null && !planAllows(planTier, feature);
   const documentsInputRef = useRef(null);
   const DOC_CATEGORIES = ["Drawings", "Contracts", "Specifications", "Photos", "Correspondence", "Other"];
   // Client Reports: a per-project saved configuration (which sections show,
@@ -4577,6 +4670,21 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   }
 
   useEffect(() => { loadAll(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [projectId]);
+
+  // A cancelled or lapsed subscription reads as free here, matching how
+  // Dashboard already decides the project cap.
+  useEffect(() => {
+    let live = true;
+    supabase
+      .from("subscriptions")
+      .select("tier, status")
+      .eq("email", userEmail)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (live) setPlanTier(data?.status === "active" ? (data.tier || "free") : "free");
+      });
+    return () => { live = false; };
+  }, [userEmail]);
 
   useEffect(() => {
     return () => {
@@ -5680,9 +5788,15 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           <button style={styles.exportBtn} onClick={() => setDownloadMenuOpen((v) => !v)}>Download</button>
           {downloadMenuOpen && (
             <div style={styles.downloadMenuPopover}>
-              <button style={styles.logoMenuItem} onClick={exportLedgerPdf}>PDF</button>
-              <button style={styles.logoMenuItem} onClick={exportLedgerExcel}>Excel</button>
-              <button style={styles.logoMenuItem} onClick={exportLedgerCsv}>CSV</button>
+              {can("export") ? (
+                <>
+                  <button style={styles.logoMenuItem} onClick={exportLedgerPdf}>PDF</button>
+                  <button style={styles.logoMenuItem} onClick={exportLedgerExcel}>Excel</button>
+                  <button style={styles.logoMenuItem} onClick={exportLedgerCsv}>CSV</button>
+                </>
+              ) : locked("export") ? (
+                <ExportLockedMenu onNavigate={onNavigate} />
+              ) : null}
             </div>
           )}
         </div>
@@ -5747,6 +5861,10 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           })}
         </div>
       </div>
+
+      {view === "payments" && locked("payments") && <PaywallPanel feature="payments" onNavigate={onNavigate} />}
+      {view === "changeorders" && locked("changeorders") && <PaywallPanel feature="changeorders" onNavigate={onNavigate} />}
+      {view === "documents" && locked("documents") && <PaywallPanel feature="documents" onNavigate={onNavigate} />}
 
       {view === "ledger" && (
         <>
@@ -6015,9 +6133,15 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
               <button style={styles.exportBtn} onClick={() => setQuoteDownloadMenuOpen((v) => !v)}>Download</button>
               {quoteDownloadMenuOpen && (
                 <div style={styles.downloadMenuPopover}>
-                  <button style={styles.logoMenuItem} onClick={exportQuotePdf}>PDF</button>
-                  <button style={styles.logoMenuItem} onClick={exportQuoteExcel}>Excel</button>
-                  <button style={styles.logoMenuItem} onClick={exportQuoteWord}>Word</button>
+                  {can("export") ? (
+                    <>
+                      <button style={styles.logoMenuItem} onClick={exportQuotePdf}>PDF</button>
+                      <button style={styles.logoMenuItem} onClick={exportQuoteExcel}>Excel</button>
+                      <button style={styles.logoMenuItem} onClick={exportQuoteWord}>Word</button>
+                    </>
+                  ) : locked("export") ? (
+                    <ExportLockedMenu onNavigate={onNavigate} />
+                  ) : null}
                 </div>
               )}
             </div>
@@ -6080,7 +6204,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         </div>
       )}
 
-      {view === "payments" && (
+      {view === "payments" && can("payments") && (
         <>
           <ModuleBanner
             moduleKey="payments"
@@ -6177,7 +6301,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         </>
       )}
 
-      {view === "changeorders" && (
+      {view === "changeorders" && can("changeorders") && (
         <>
           <ModuleBanner
             moduleKey="changeorders"
@@ -6487,7 +6611,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         );
       })()}
 
-      {view === "documents" && (
+      {view === "documents" && can("documents") && (
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
           <ModuleBanner moduleKey="documents" stat={String(documents.length)} statLabel={documents.length === 1 ? "file" : "files"} />
           <input
@@ -7427,6 +7551,18 @@ const styles = {
   warningBannerItemName: { color: "var(--text-primary)" },
   warningBannerItemValue: { fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontWeight: 600, color: "var(--tm-neg)", flexShrink: 0 },
   warningBannerNote: { fontSize: 13, color: "var(--text-secondary)" },
+
+  // Paywall shown in place of a gated view -- same card recipe as the rest of
+  // the project surface, so it reads as part of the app rather than an error.
+  paywallPanel: { maxWidth: 620, margin: "8px auto 0", background: "linear-gradient(0deg, var(--tm-glass), var(--tm-glass)), var(--surface)", border: "1px solid var(--tm-brd)", borderRadius: 14, padding: "30px 32px 28px", boxShadow: "var(--tm-lift)", textAlign: "center" },
+  paywallLock: { width: 42, height: 42, borderRadius: "50%", margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--tm-warn-fill)", color: "var(--tm-warn)" },
+  paywallTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 19, fontWeight: 600, letterSpacing: "-0.015em", color: "var(--text-primary)", marginBottom: 10 },
+  paywallBody: { fontSize: 14, lineHeight: 1.6, color: "var(--text-secondary)", maxWidth: 460, margin: "0 auto 12px" },
+  paywallActions: { marginTop: 18, display: "flex", justifyContent: "center", gap: 10 },
+  exportLocked: { padding: "14px 16px 16px", maxWidth: 250 },
+  exportLockedTitle: { fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 6 },
+  exportLockedBody: { fontSize: 12.5, lineHeight: 1.5, color: "var(--text-secondary)", margin: "0 0 12px" },
+  exportLockedBtn: { width: "100%", background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 9, padding: "8px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer" },
 
   categoryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, maxWidth: 1180, margin: "0 auto 16px" },
   categoryCard: { background: "linear-gradient(0deg, var(--tm-glass), var(--tm-glass)), var(--surface)", border: "1px solid var(--tm-brd)", borderRadius: 13, padding: "11px 14px", boxShadow: "var(--tm-lift)" },
