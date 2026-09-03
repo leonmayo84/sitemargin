@@ -1007,13 +1007,89 @@ function EmptyChart({ label }) {
   return <div style={{ fontSize: 13, color: "var(--text-secondary)", padding: "24px 0" }}>{label}</div>;
 }
 
+// This app styles everything through the inline `style` prop, and inline
+// styles beat stylesheet selectors — so a `:hover` rule in index.css loses to
+// every property the style prop already sets. Interactive states therefore
+// live in React state, the same way FlaggedLinesCard handles its popover.
+// onFocus/onBlur mirror the pointer events: a control that only answers to a
+// mouse is half a control.
+const REDUCED_MOTION =
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+function LitButton({ children, style, litStyle, disabled, onClick, ...rest }) {
+  const [lit, setLit] = useState(false);
+  const on = lit && !disabled;
+  const active = on ? { ...litStyle } : {};
+  if (on && REDUCED_MOTION) delete active.transform;
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      onMouseEnter={() => setLit(true)}
+      onMouseLeave={() => setLit(false)}
+      onFocus={() => setLit(true)}
+      onBlur={() => setLit(false)}
+      style={{
+        outline: "none",
+        transition: REDUCED_MOTION ? "none" : "border-color .16s ease, background .16s ease, box-shadow .16s ease, transform .16s ease, color .16s ease",
+        ...style,
+        ...active,
+      }}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+}
+
 // One figure with its label and supporting line — used for the exposure strip
 // on a subcontractor card, where the numbers are context for the scores below
 // rather than scores themselves.
+// Storage upgrade tile. The price line brightens along with the border so the
+// whole tile reads as one lit object rather than a box with a glowing edge.
+function UpgradeOption({ label, price, busy, onClick }) {
+  const [lit, setLit] = useState(false);
+  const on = lit && !busy;
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onClick}
+      onMouseEnter={() => setLit(true)}
+      onMouseLeave={() => setLit(false)}
+      onFocus={() => setLit(true)}
+      onBlur={() => setLit(false)}
+      style={{
+        ...styles.importBtn,
+        display: "flex", flexDirection: "column", alignItems: "flex-start",
+        padding: "10px 14px", textAlign: "left", outline: "none",
+        borderColor: on ? "var(--accent)" : "var(--border-color)",
+        background: on ? "var(--bg-secondary)" : "var(--surface)",
+        boxShadow: on
+          ? "0 0 0 3px var(--accent-glow), 0 8px 20px -12px var(--accent-glow)"
+          : "0 1px 6px rgba(0,0,0,0.06)",
+        transform: on && !REDUCED_MOTION ? "translateY(-1px)" : "none",
+        opacity: busy ? 0.6 : 1,
+        cursor: busy ? "default" : "pointer",
+        transition: REDUCED_MOTION ? "none" : "border-color .16s ease, background .16s ease, box-shadow .16s ease, transform .16s ease",
+      }}
+    >
+      <span style={{ fontWeight: 600 }}>{busy ? "Redirecting…" : label}</span>
+      <span style={{
+        fontSize: 12, fontWeight: 400, marginTop: 1,
+        color: on ? "var(--text-primary)" : "var(--text-secondary)",
+        transition: REDUCED_MOTION ? "none" : "color .16s ease",
+      }}>{price}</span>
+    </button>
+  );
+}
+
 function SubMetric({ label, value, sub, tone }) {
   return (
     <div style={{ minWidth: 96, flex: "1 1 96px" }}>
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.13em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: 5 }}>{label}</div>
+      <div style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 9, fontWeight: 600, letterSpacing: "0.13em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: 5 }}>{label}</div>
       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 15, fontWeight: 600, letterSpacing: "-0.015em", color: tone || "var(--text-primary)" }}>{value}</div>
       {sub && <div style={{ fontSize: 10.5, color: "var(--text-secondary)", marginTop: 3, lineHeight: 1.35 }}>{sub}</div>}
     </div>
@@ -3555,14 +3631,19 @@ function TemplatesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
       <PageHeader title="Templates" current="templates" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
 
       <div className="no-print" style={{ maxWidth: 1180, margin: "0 auto 14px" }}>
-        <button
-          className="sm-upgrade"
+        <LitButton
           onClick={() => setHelpOpen((v) => !v)}
           style={{ ...styles.importBtn, fontSize: 12.5, padding: "7px 15px" }}
+          litStyle={{
+            borderColor: "var(--accent)",
+            background: "var(--bg-secondary)",
+            boxShadow: "0 0 0 3px var(--accent-glow), 0 8px 20px -12px var(--accent-glow)",
+            transform: "translateY(-1px)",
+          }}
           aria-expanded={helpOpen}
         >
           {helpOpen ? "Hide guidance" : "How templates work"}
-        </button>
+        </LitButton>
       </div>
 
       {helpOpen && (<>
@@ -4257,16 +4338,13 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               {upgradeOptions.map((opt) => (
-                <button
+                <UpgradeOption
                   key={opt.tier}
-                  className="sm-upgrade"
-                  style={{ ...styles.importBtn, display: "flex", flexDirection: "column", alignItems: "flex-start", padding: "10px 14px" }}
-                  disabled={upgrading === opt.tier}
+                  label={opt.label}
+                  price={opt.price}
+                  busy={upgrading === opt.tier}
                   onClick={() => upgrade(opt.tier)}
-                >
-                  <span style={{ fontWeight: 600 }}>{upgrading === opt.tier ? "Redirecting…" : opt.label}</span>
-                  <span style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 400 }}>{opt.price}</span>
-                </button>
+                />
               ))}
             </div>
           </>
@@ -5348,7 +5426,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         <SummaryCard label="Original budget" value={fmt(totals.budget)} />
         {approvedCoTotal !== 0 && <SummaryCard label="Revised budget" value={fmt(totals.revisedBudget)} accent="var(--tm-warn)" />}
         <SummaryCard label="Actual spend" value={fmt(totals.actual)} />
-        <SummaryCard label="Variance" value={`${totals.variance >= 0 ? "+" : ""}${fmt(totals.variance)}`} accent={totals.variance > 0 ? "var(--tm-neg)" : "var(--tm-pos)"} />
+        <SummaryCard label="Variance" value={`${totals.variance > 0 ? "+" : ""}${fmt(totals.variance)}`} accent={totals.variance > 0 ? "var(--tm-neg)" : totals.variance < 0 ? "var(--tm-pos)" : undefined} />
         <SummaryCard label="Retention held" value={fmt(totals.retentionHeld)} />
         <FlaggedLinesCard label="Flagged lines" value={`${overCount} over · ${watchCount} watch`} accent={overCount ? "var(--tm-neg)" : watchCount ? "var(--tm-warn)" : "var(--tm-pos)"} items={flaggedItems} />
       </div>
@@ -5373,8 +5451,8 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             </div>
             <div style={styles.categoryNums}>
               <span style={styles.categoryBudget}>{fmt(c.budget)}</span>
-              <span style={{ ...styles.categoryVariance, color: c.variance > 0 ? "var(--tm-neg)" : "var(--tm-pos)" }}>
-                {c.variance >= 0 ? "+" : ""}{fmt(c.variance)}
+              <span style={{ ...styles.categoryVariance, color: c.variance > 0 ? "var(--tm-neg)" : c.variance < 0 ? "var(--tm-pos)" : "var(--text-secondary)" }}>
+                {c.variance > 0 ? "+" : ""}{fmt(c.variance)}
               </span>
             </div>
           </div>
@@ -7084,17 +7162,13 @@ const styles = {
   tbValue: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 15, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 2 },
   retentionInput: { width: 34, background: "var(--bg-secondary)", border: "1px solid transparent", borderRadius: 6, color: "var(--text-primary)", fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, padding: "1px 4px", textAlign: "right" },
 
-  // The bloom paints on the strip itself, showing through the grid gaps and
-  // the translucent cards. Deliberately no backdrop-filter: over a near-flat
-  // ground the blur is invisible, and in Android WebView every blurred panel
-  // becomes a composited layer that re-rasterises on each scroll frame.
-  summaryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, maxWidth: 1180, margin: "0 auto 16px", backgroundImage: "var(--tm-bloom)" },
-  summaryCard: { background: "var(--tm-glass)", border: "1px solid var(--tm-brd)", borderRadius: 13, padding: "15px 16px", boxShadow: "var(--tm-lift)" },
+  summaryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, maxWidth: 1180, margin: "0 auto 16px" },
+  summaryCard: { background: "linear-gradient(0deg, var(--tm-glass), var(--tm-glass)), var(--surface)", border: "1px solid var(--tm-brd)", borderRadius: 13, padding: "15px 16px", boxShadow: "var(--tm-lift)" },
   summaryCardSlab: { background: "linear-gradient(150deg,#23272E 0%,#14171C 60%,#090B0E 100%)", border: "none", borderRadius: 14, padding: "14px 15px", boxShadow: "0 12px 26px -14px rgba(2,6,23,.55)" },
   // lineHeight + minHeight reserve room for two lines of label text (e.g.
   // "ORIGINAL QUOTE ALLOCATION" wraps, "ACTUAL SPEND" doesn't) so every
   // card's value sits on the same baseline regardless of how its label wraps.
-  summaryLabel: { fontSize: 9.5, lineHeight: 1.35, minHeight: 26, letterSpacing: "0.13em", color: "var(--text-secondary)", marginBottom: 10, textTransform: "uppercase", fontWeight: 700 },
+  summaryLabel: { fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: 9.5, lineHeight: 1.35, minHeight: 26, letterSpacing: "0.13em", color: "var(--text-secondary)", marginBottom: 10, textTransform: "uppercase", fontWeight: 600 },
   summaryLabelSlab: { fontSize: 11, lineHeight: 1.3, minHeight: 29, letterSpacing: "0.07em", color: "rgba(255,255,255,.55)", marginBottom: 7, textTransform: "uppercase", fontWeight: 700 },
   summaryValue: { fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 21, fontWeight: 600, letterSpacing: "-0.022em", color: "var(--text-primary)" },
   summaryValueSlab: { fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 19, fontWeight: 600, color: "#F2F6F9" },
@@ -7113,7 +7187,7 @@ const styles = {
   warningBanner: { maxWidth: 1180, margin: "0 auto 12px", background: "var(--tm-neg-fill)", border: "1px solid var(--tm-brd)", borderLeft: "3px solid var(--tm-neg)", borderRadius: 10, padding: "13px 17px", fontSize: 14, color: "var(--text-primary)" },
 
   categoryStrip: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10, maxWidth: 1180, margin: "0 auto 16px" },
-  categoryCard: { background: "var(--tm-glass)", border: "1px solid var(--tm-brd)", borderRadius: 13, padding: "11px 14px", boxShadow: "var(--tm-lift)" },
+  categoryCard: { background: "linear-gradient(0deg, var(--tm-glass), var(--tm-glass)), var(--surface)", border: "1px solid var(--tm-brd)", borderRadius: 13, padding: "11px 14px", boxShadow: "var(--tm-lift)" },
   categoryHead: { display: "flex", alignItems: "center", gap: 6, marginBottom: 4 },
   categoryDot: { width: 8, height: 8, borderRadius: "50%" },
   categoryName: { fontSize: 12, color: "var(--text-secondary)", fontWeight: 500 },
