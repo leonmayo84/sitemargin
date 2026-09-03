@@ -1144,7 +1144,7 @@ function ScoreBar({ label, score, detail }) {
   );
 }
 
-function SummaryCard({ label, value, accent, slab, sub, popover, popoverLabel }) {
+function SummaryCard({ label, value, accent, slab, sub, popover, popoverLabel, glow }) {
   const [open, setOpen] = useState(false);
   if (slab) {
     return (
@@ -1158,10 +1158,13 @@ function SummaryCard({ label, value, accent, slab, sub, popover, popoverLabel })
   const hasPopover = !!popover;
   return (
     <div
-      style={{ ...styles.summaryCard, position: "relative" }}
+      style={{ ...styles.summaryCard, position: "relative", overflow: hasPopover ? "visible" : "hidden" }}
       onMouseEnter={() => hasPopover && setOpen(true)}
       onMouseLeave={() => setOpen(false)}
     >
+      {glow && (
+        <div style={{ ...styles.summaryGlowBar, ...(glow === "neg" ? styles.summaryGlowNeg : styles.summaryGlowPos) }} />
+      )}
       <div style={{ ...styles.summaryLabel, ...(hasPopover ? { paddingRight: 24 } : {}) }}>{label}</div>
       <div style={{ ...styles.summaryValue, ...(accent ? { color: accent } : {}) }}>{value}</div>
       {sub && <div style={styles.summarySub}>{sub}</div>}
@@ -3044,7 +3047,7 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
             label="Net variance"
             value={`${portfolio.variance > 0 ? "+" : ""}${fmt(portfolio.variance)}`}
             accent={portfolio.variance > 0 ? "var(--tm-neg)" : portfolio.variance < 0 ? "var(--tm-pos)" : undefined}
-            slab={portfolio.variance > 0}
+            glow={portfolio.variance > 0 ? "neg" : portfolio.variance < 0 ? "pos" : undefined}
             sub={portfolio.variance > 0 ? `${portfolio.overCount} project${portfolio.overCount === 1 ? "" : "s"} over budget` : undefined}
           />
           <SummaryCard label="Retention held" value={fmt(portfolio.retentionHeld)} />
@@ -7323,6 +7326,14 @@ const styles = {
   summaryValueSlab: { fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontSize: 19, fontWeight: 600, color: "#F2F6F9" },
   summarySubSlab: { fontSize: 10.5, color: "#FCA891", marginTop: 3, fontWeight: 600 },
   summarySub: { fontFamily: "'Inter', system-ui, sans-serif", fontSize: 12, lineHeight: 1.4, color: "var(--text-secondary)", marginTop: 7, fontWeight: 500 },
+
+  // Variance glow — a lit strip along a card's top edge, replacing the old
+  // black "slab" treatment on Dashboard's Net Variance card. Relies on the
+  // card switching to overflow:hidden (see SummaryCard) so the flush bar
+  // clips to the card's own rounded top corners instead of squaring them off.
+  summaryGlowBar: { position: "absolute", left: 0, right: 0, top: 0, height: 3 },
+  summaryGlowNeg: { background: "var(--tm-neg)", boxShadow: "0 0 12px 2px var(--tm-neg-fill), 0 0 3px 0 var(--tm-neg)" },
+  summaryGlowPos: { background: "var(--tm-pos)", boxShadow: "0 0 12px 2px var(--tm-pos-fill), 0 0 3px 0 var(--tm-pos)" },
 
   // Info-icon expand, shared by every non-slab SummaryCard: a small circular
   // affordance top-right that reveals a popover on hover/focus of the whole
