@@ -3101,15 +3101,47 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
           {projects.map((p) => {
             const pct = p.budget ? (p.variance / p.budget) * 100 : 0;
             const color = p.variance > 0 ? "var(--tm-neg)" : p.variance < 0 ? "var(--tm-pos)" : "var(--neutral-mark, var(--text-secondary))";
-            const spentPct = p.budget ? Math.min((p.actual / p.budget) * 100, 100) : 0;
+            // Uncapped this time — the old Math.min(...,100) is exactly why an
+            // 8% overrun and a 60% overrun used to render as the same solid bar.
+            const spentPct = p.budget ? (p.actual / p.budget) * 100 : 0;
+            const overPct = Math.max(spentPct - 100, 0);
+            // Bullet-meter domain: at least 130%, or 15pts of headroom past
+            // whatever's actually been spent, so the overflow segment (and the
+            // ring's outer lap) always has room to show its own length instead
+            // of pinning to the edge.
+            const domainMax = Math.max(130, spentPct + 15);
+            const tickPct = (100 / domainMax) * 100;
+            const usedPct = Math.min(spentPct, domainMax) / domainMax * 100;
+            const ringFrac = Math.min(spentPct, 100) / 100;
+            const overflowFrac = Math.min(overPct / 50, 1);
+            const RING_R = 11, RING_C = 2 * Math.PI * RING_R;
+            const OUT_R = 14.5, OUT_C = 2 * Math.PI * OUT_R;
             return (
               <div key={p.id} style={styles.projectCard} onClick={() => onOpen(p.id)}>
                 <div style={styles.projectCardTop}>
                   <div style={styles.projectName}>{p.name}</div>
-                  <button style={styles.deleteProjectBtn} className="no-print" onClick={(e) => { e.stopPropagation(); deleteProject(p.id, p.name); }}>✕</button>
+                  <div style={styles.projectCardTopRight}>
+                    <svg width="30" height="30" viewBox="0 0 30 30" style={{ flexShrink: 0 }} aria-hidden="true">
+                      <circle cx="15" cy="15" r={RING_R} fill="none" stroke="var(--bg-secondary)" strokeWidth="3" />
+                      <circle
+                        cx="15" cy="15" r={RING_R} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round"
+                        strokeDasharray={`${(ringFrac * RING_C).toFixed(1)} ${RING_C.toFixed(1)}`}
+                        transform="rotate(-90 15 15)"
+                      />
+                      {overPct > 0 && (
+                        <circle
+                          cx="15" cy="15" r={OUT_R} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round"
+                          strokeDasharray={`${(overflowFrac * OUT_C).toFixed(1)} ${OUT_C.toFixed(1)}`}
+                          transform="rotate(-90 15 15)"
+                        />
+                      )}
+                    </svg>
+                    <button style={styles.deleteProjectBtn} className="no-print" onClick={(e) => { e.stopPropagation(); deleteProject(p.id, p.name); }}>✕</button>
+                  </div>
                 </div>
-                <div style={{ height: 5, background: "var(--bg-secondary)", borderRadius: 3, marginBottom: 10 }}>
-                  <div style={{ width: `${spentPct}%`, height: "100%", background: color, borderRadius: 3 }} />
+                <div style={styles.projectBarTrack}>
+                  <div style={{ ...styles.projectBarFill, width: `${usedPct}%`, background: color }} />
+                  <div style={{ ...styles.projectBarTick, left: `${tickPct}%` }} />
                 </div>
                 <div style={styles.projectNums}>
                   <span>{fmt(p.budget)} budget</span>
@@ -7296,7 +7328,15 @@ const styles = {
   templateCard: { background: "var(--surface)", borderRadius: 18, padding: "20px 22px", marginBottom: 12, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" },
   projectCardTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 },
   projectName: { fontSize: 20, fontWeight: 600 },
+  projectCardTopRight: { display: "flex", alignItems: "center", gap: 8, flexShrink: 0 },
   deleteProjectBtn: { background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: 14 },
+  // Bullet meter: track scaled past 100% (see domainMax above) so the fill's
+  // length past the tick is the overrun, not just its presence -- paired with
+  // the ring badge in the card header, which shows the same story compactly
+  // (a second, thinner lap for whatever's over budget).
+  projectBarTrack: { position: "relative", height: 6, background: "var(--bg-secondary)", borderRadius: 3, marginBottom: 10 },
+  projectBarFill: { position: "absolute", left: 0, top: 0, height: "100%", borderRadius: 3 },
+  projectBarTick: { position: "absolute", top: -3, width: 2, height: 12, background: "var(--text-primary)", opacity: 0.35, borderRadius: 1, transform: "translateX(-1px)" },
   projectNums: { display: "flex", justifyContent: "space-between", fontSize: 13, fontFamily: "'Space Grotesk', sans-serif", color: "var(--text-secondary)" },
   projectMeta: { fontSize: 12, color: "var(--text-secondary)", marginTop: 8 },
   subItemRow: { display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--border-color)" },
