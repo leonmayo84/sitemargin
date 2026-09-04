@@ -315,36 +315,570 @@ const MODULE_INFO = {
 // from actual project data; `chartArg` is an optional extra passed through
 // to that module's chart renderer (only "payments" uses it, for the donut's
 // fill fraction).
-function ModuleBanner({ moduleKey, stat, statLabel, chartArg }) {
+function ModuleBanner({ moduleKey, stat, statLabel, chartArg, compact }) {
   const mc = MODULE_COLOR[moduleKey];
   const info = MODULE_INFO[moduleKey];
   if (!mc || !info) return null;
+  // `compact` is the phone rendering inside the v2 shell: one short row, no
+  // decorative chart, so the banner reads as a heading rather than a hero.
   return (
     <div
-      className="no-print"
+      className="no-print sm-modbanner"
       style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        borderRadius: 14, padding: "16px 22px", position: "relative", overflow: "hidden",
-        boxShadow: "0 1px 6px rgba(0,0,0,0.04)", maxWidth: 1180, margin: "0 auto 16px",
-        background: mc.banner,
+        borderRadius: 14, padding: compact ? "10px 14px" : "16px 22px", position: "relative", overflow: "hidden",
+        boxShadow: "0 1px 6px rgba(0,0,0,0.04)", maxWidth: 1180, margin: compact ? "0 auto 12px" : "0 auto 16px",
+        // The pastel is a fixed light hex, which turned the banner's text
+        // invisible in dark mode. index.css's .sm-modbanner picks the pastel
+        // in light and the module's translucent tint over the dark surface
+        // in dark, so the text tokens stay readable in both.
+        "--sm-banner": mc.banner, "--sm-banner-tint": mc.tint, gap: 12,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 14, zIndex: 1 }}>
-        <div style={{ width: 38, height: 38, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: mc.solid }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8">{info.icon}</svg>
+      <div style={{ display: "flex", alignItems: "center", gap: compact ? 10 : 14, zIndex: 1, minWidth: 0 }}>
+        <div style={{ width: compact ? 30 : 38, height: compact ? 30 : 38, borderRadius: compact ? 8 : 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: mc.solid }}>
+          <svg width={compact ? 16 : 20} height={compact ? 16 : 20} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8">{info.icon}</svg>
         </div>
-        <div>
-          <p style={{ fontSize: 15, fontWeight: 700, margin: "0 0 2px" }}>{info.label}</p>
-          <p style={{ fontSize: 12.5, margin: 0, color: "var(--text-secondary)" }}>{info.sub}</p>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ fontSize: compact ? 13.5 : 15, fontWeight: 700, margin: "0 0 2px" }}>{info.label}</p>
+          {!compact && <p style={{ fontSize: 12.5, margin: 0, color: "var(--text-secondary)" }}>{info.sub}</p>}
         </div>
       </div>
-      <svg style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 220, opacity: 0.5 }} viewBox="0 0 220 60" preserveAspectRatio="none">
-        {info.chart(mc.solid, chartArg)}
-      </svg>
-      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, zIndex: 1, textAlign: "right", color: mc.solid }}>
+      {!compact && (
+        <svg style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 220, opacity: 0.5 }} viewBox="0 0 220 60" preserveAspectRatio="none">
+          {info.chart(mc.solid, chartArg)}
+        </svg>
+      )}
+      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: compact ? 15 : 20, fontWeight: 700, zIndex: 1, textAlign: "right", color: mc.solid, flexShrink: 0 }}>
         {stat}
-        <span style={{ display: "block", fontSize: 10, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-secondary)", marginTop: 2 }}>{statLabel}</span>
+        <span style={{ display: "block", fontSize: compact ? 9 : 10, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-secondary)", marginTop: 2 }}>{statLabel}</span>
       </div>
+    </div>
+  );
+}
+
+/* ============================== PROJECT SHELL (v2) ==============================
+   Split-pane "command center" layout for ProjectView: the project's modules in
+   a sidebar on the left, the module itself in the middle, and a summary
+   inspector on the right. One navigation config (PROJECT_NAV) drives every
+   breakpoint — a text sidebar on desktop, an icon rail on tablet, and a bottom
+   tab bar + "More" sheet on a phone (the Android build included).
+
+   SHELL_V2 is the kill switch. false puts the previous stacked layout back
+   exactly as it was (KPI cards, the two alert banners, category cards, the
+   import row and both pill rows) — that code still lives in ProjectView behind
+   the same flag, so flipping this is a one-line revert with no rebuild of the
+   old markup needed. Delete the legacy branch once the shell has settled. */
+const SHELL_V2 = true;
+
+// Breakpoints. Below 700px is a phone (bottom tabs + sheets); 700–1179 a
+// tablet, which also catches a phone turned sideways (icon rail + slide-over);
+// 1180 and up is the full three-pane desktop.
+const SHELL_PHONE_MAX = 699;
+const SHELL_TABLET_MAX = 1179;
+
+const PROJECT_NAV = [
+  { key: "project", label: "Project", items: [
+    { key: "ledger", label: "Cost & Progress" },
+    { key: "schedule", label: "Schedule", count: true },
+    { key: "dailylog", label: "Daily Log" },
+    { key: "punchlist", label: "Punch List", count: true },
+    { key: "documents", label: "Documents" },
+    { key: "plans", label: "Plans" },
+    { key: "contacts", label: "Contacts" },
+  ] },
+  { key: "money", label: "Money", items: [
+    { key: "purchaseorders", label: "Purchase Orders", count: true },
+    { key: "tenders", label: "Tenders", count: true },
+    { key: "changeorders", label: "Change Orders", count: true },
+    { key: "payments", label: "Payments & Retention" },
+    { key: "quote", label: "Quote" },
+  ] },
+  { key: "reports", label: "Reports", items: [
+    { key: "charts", label: "Charts" },
+    { key: "trend", label: "Trend" },
+    { key: "clientreports", label: "Client Reports" },
+  ] },
+];
+
+// The four modules a contractor actually opens on site — checking the numbers,
+// writing today's log, ticking snags, seeing what's due — so they get the
+// thumb-reachable bottom tabs. Everything else is one tap away under "More".
+const PHONE_TABS = ["ledger", "dailylog", "punchlist", "schedule"];
+
+// Account-level pages (PageHeader's hamburger tabs), pinned to the foot of the
+// sidebar and to the last group of the phone's More sheet.
+const WORKSPACE_NAV = [
+  ["dashboard", "All projects"],
+  ["retention", "Retention"],
+  ["cashflow", "Cash Flow"],
+  ["subcontractors", "Subcontractors"],
+  ["templates", "Templates"],
+  ["resources", "Resources"],
+  ["integrations", "Accounting"],
+  ["storage", "Plan and Storage"],
+];
+
+// Glyphs for the rail and bottom tabs. Modules that have a ModuleBanner reuse
+// that artwork (MODULE_INFO); the rest get a simple line icon here so no tab
+// is ever blank.
+const NAV_ICON = {
+  purchaseorders: <><path d="M6 6h15l-1.5 9h-12z" /><circle cx="9" cy="20" r="1.5" /><circle cx="18" cy="20" r="1.5" /><path d="M6 6L5 3H2" /></>,
+  tenders: <><path d="M4 4h16v16H4z" /><path d="M8 9h8M8 13h8M8 17h5" /></>,
+  quote: <><path d="M5 3h14v18H5z" /><path d="M9 8h6M9 12h6M9 16h3" /></>,
+  charts: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></>,
+  trend: <><path d="M3 17l6-6 4 4 8-8" /><path d="M14 7h7v7" /></>,
+  clientreports: <><path d="M4 4h16v16H4z" /><path d="M4 9h16M9 9v11" /></>,
+  more: <><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></>,
+  workspace: <><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>,
+};
+
+function NavIcon({ moduleKey, size = 20 }) {
+  const glyph = MODULE_INFO[moduleKey]?.icon || NAV_ICON[moduleKey] || NAV_ICON.workspace;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {glyph}
+    </svg>
+  );
+}
+
+function readViewport() {
+  if (typeof window === "undefined") return "desktop";
+  const w = window.innerWidth;
+  return w <= SHELL_PHONE_MAX ? "phone" : w <= SHELL_TABLET_MAX ? "tablet" : "desktop";
+}
+
+// 'phone' | 'tablet' | 'desktop'. Only the shell reads this; module content
+// keeps laying itself out with its own flex/wrap rules as before.
+function useViewport() {
+  const [viewport, setViewport] = useState(readViewport);
+  useEffect(() => {
+    const onResize = () => setViewport(readViewport());
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, []);
+  return viewport;
+}
+
+// One sheet primitive for everything modal in the shell: bottom sheets on a
+// phone (summary, More, line actions, project switcher), the right-anchored
+// slide-over on a tablet, and the left-anchored full sidebar the tablet rail
+// expands into. While open it pushes one history entry, so the Android
+// hardware/gesture back — and a browser's back button — closes the sheet
+// instead of leaving the project. Capacitor's default back handling is
+// "go back in the WebView's history if it can", which is exactly this; no
+// native plugin needed. Body scroll is locked underneath.
+let smOpenSheets = 0;
+function Sheet({ open, onClose, side = "bottom", title, children, tall }) {
+  const panelRef = useRef(null);
+  const pushedRef = useRef(false);
+  // Latest onClose without re-running the open/close effect on every render
+  // (the popstate/keydown handlers read it through the ref).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; });
+
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    smOpenSheets += 1;
+    try {
+      window.history.pushState({ smSheet: true }, "");
+      pushedRef.current = true;
+    } catch {
+      pushedRef.current = false;
+    }
+    const onPop = () => { pushedRef.current = false; onCloseRef.current(); };
+    const onKey = (e) => { if (e.key === "Escape") onCloseRef.current(); };
+    window.addEventListener("popstate", onPop);
+    document.addEventListener("keydown", onKey);
+    if (panelRef.current) panelRef.current.focus();
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      smOpenSheets = Math.max(0, smOpenSheets - 1);
+      window.removeEventListener("popstate", onPop);
+      document.removeEventListener("keydown", onKey);
+      if (pushedRef.current) {
+        pushedRef.current = false;
+        try { window.history.back(); } catch { /* nothing to unwind */ }
+      }
+    };
+  }, [open]);
+
+  if (!open) return null;
+  return (
+    <div className="sm-sheet-scrim no-print" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title || "Panel"}
+        className={`sm-sheet sm-sheet-${side}${tall ? " sm-sheet-tall" : ""}`}
+      >
+        {side === "bottom" && <div className="sm-sheet-handle" />}
+        {title && (
+          <div className="sm-sheet-head">
+            <span>{title}</span>
+            <button type="button" className="sm-sheet-close" aria-label="Close" onClick={onClose}>✕</button>
+          </div>
+        )}
+        <div className="sm-sheet-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// The one persistent headline: variance against the (revised) budget. Lives
+// in the sidebar / rail / phone header so it's visible from every module, and
+// opens the summary on the tiers that don't show the inspector permanently.
+function VarianceChip({ totals, onClick, compact }) {
+  const over = totals.variance > 0;
+  const under = totals.variance < 0;
+  const color = over ? "var(--danger)" : under ? "var(--success)" : "var(--text-secondary)";
+  const bg = over ? "rgba(193,70,43,0.12)" : under ? "rgba(76,122,92,0.12)" : "var(--bg-secondary)";
+  const label = `${over ? "+" : under ? "-" : ""}${fmt(Math.abs(totals.variance))}`;
+  return (
+    <button type="button" className="sm-vchip" style={{ color, background: bg }} onClick={onClick} aria-label="Project summary">
+      <span>{label}</span>
+      {!compact && totals.pct !== 0 && <span style={{ fontWeight: 600, opacity: 0.85 }}>· {Math.abs(totals.pct).toFixed(1)}%</span>}
+    </button>
+  );
+}
+
+function ProjectSidebar({ project, onRename, onSwitch, totals, onSummary, view, setView, counts, onBack, onNavigate, showChip, dense }) {
+  return (
+    <nav className={`sm-side${dense ? " sm-side-dense" : ""}`} aria-label="Project">
+      <div className="sm-side-head">
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <input
+            className="sm-side-name"
+            value={project.name}
+            onChange={(e) => onRename(e.target.value)}
+            aria-label="Project name"
+          />
+          <button type="button" className="sm-side-switch" onClick={onSwitch} aria-label="Switch project" title="Switch project">▾</button>
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>
+          as at {new Date().toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}
+        </div>
+        {showChip && <div style={{ marginTop: 8 }}><VarianceChip totals={totals} onClick={onSummary} /></div>}
+      </div>
+      {PROJECT_NAV.map((group) => (
+        <div key={group.key}>
+          <div className="sm-side-grp">{group.label}</div>
+          {group.items.map((item) => {
+            const n = item.count ? counts[item.key] : 0;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                className={`sm-side-item${view === item.key ? " is-active" : ""}`}
+                onClick={() => setView(item.key)}
+                aria-current={view === item.key ? "page" : undefined}
+              >
+                <span>{item.label}</span>
+                {n > 0 && <span className="sm-side-count">{n}</span>}
+              </button>
+            );
+          })}
+        </div>
+      ))}
+      <div className="sm-side-ws">
+        <div className="sm-side-grp">Workspace</div>
+        {WORKSPACE_NAV.map(([key, label]) => (
+          <button key={key} type="button" className="sm-side-item" onClick={() => (key === "dashboard" ? onBack() : onNavigate(key))}>
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+function ProjectRail({ project, onExpand, view, setView, counts, totals, onSummary }) {
+  const short = { ledger: "Cost", schedule: "Sched", dailylog: "Log", punchlist: "Punch", documents: "Docs", plans: "Plans", contacts: "People", purchaseorders: "POs", tenders: "Tenders", changeorders: "COs", payments: "Pay", quote: "Quote", charts: "Charts", trend: "Trend", clientreports: "Reports" };
+  const initials = (project.name || "P").trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 3).toUpperCase();
+  return (
+    <nav className="sm-rail" aria-label="Project">
+      <button type="button" className="sm-rail-item sm-rail-proj" onClick={onExpand} aria-label="Open full menu" title={project.name}>
+        <span className="sm-rail-avatar">{initials}</span>
+        <span>Menu</span>
+      </button>
+      <button type="button" className="sm-rail-item" onClick={onSummary} aria-label="Project summary" style={{ color: totals.variance > 0 ? "var(--danger)" : totals.variance < 0 ? "var(--success)" : undefined }}>
+        <NavIcon moduleKey="trend" size={18} />
+        <span>Summary</span>
+      </button>
+      {PROJECT_NAV.map((group, gi) => (
+        <React.Fragment key={group.key}>
+          {gi > 0 && <div className="sm-rail-div" />}
+          {group.items.map((item) => {
+            const n = item.count ? counts[item.key] : 0;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                className={`sm-rail-item${view === item.key ? " is-active" : ""}`}
+                onClick={() => setView(item.key)}
+                aria-label={item.label}
+                title={item.label}
+              >
+                <span style={{ position: "relative", display: "flex" }}>
+                  <NavIcon moduleKey={item.key} size={18} />
+                  {n > 0 && <span className="sm-rail-badge">{n}</span>}
+                </span>
+                <span>{short[item.key] || item.label}</span>
+              </button>
+            );
+          })}
+        </React.Fragment>
+      ))}
+    </nav>
+  );
+}
+
+function BottomTabs({ view, setView, counts, onMore, moreActive }) {
+  const short = { ledger: "Cost", dailylog: "Log", punchlist: "Punch", schedule: "Schedule" };
+  return (
+    <nav className="sm-tabs no-print" aria-label="Project">
+      {PHONE_TABS.map((key) => {
+        const n = counts[key] || 0;
+        const active = !moreActive && view === key;
+        return (
+          <button key={key} type="button" className={`sm-tab${active ? " is-active" : ""}`} onClick={() => setView(key)} aria-current={active ? "page" : undefined}>
+            <span className="sm-tab-ic" style={{ position: "relative" }}>
+              <NavIcon moduleKey={key} size={19} />
+              {n > 0 && key !== "ledger" && <span className="sm-rail-badge">{n}</span>}
+            </span>
+            <span>{short[key]}</span>
+          </button>
+        );
+      })}
+      <button type="button" className={`sm-tab${moreActive ? " is-active" : ""}`} onClick={onMore} aria-haspopup="dialog">
+        <span className="sm-tab-ic"><NavIcon moduleKey="more" size={19} /></span>
+        <span>More</span>
+      </button>
+    </nav>
+  );
+}
+
+function MoreGrid({ view, setView, counts, onBack, onNavigate, onDone }) {
+  const pick = (fn) => () => { fn(); onDone(); };
+  return (
+    <>
+      {PROJECT_NAV.map((group) => {
+        const items = group.items.filter((i) => !PHONE_TABS.includes(i.key));
+        if (!items.length) return null;
+        return (
+          <div key={group.key}>
+            <div className="sm-side-grp" style={{ paddingLeft: 0 }}>{group.label}</div>
+            <div className="sm-more-grid">
+              {items.map((item) => {
+                const n = item.count ? counts[item.key] : 0;
+                return (
+                  <button key={item.key} type="button" className={`sm-more-it${view === item.key ? " is-active" : ""}`} onClick={pick(() => setView(item.key))}>
+                    <span className="sm-more-ic">
+                      <NavIcon moduleKey={item.key} size={20} />
+                      {n > 0 && <span className="sm-more-badge">{n}</span>}
+                    </span>
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      <div className="sm-side-grp" style={{ paddingLeft: 0 }}>Workspace</div>
+      <div className="sm-more-grid">
+        {WORKSPACE_NAV.map(([key, label]) => (
+          <button key={key} type="button" className="sm-more-it" onClick={pick(() => (key === "dashboard" ? onBack() : onNavigate(key)))}>
+            <span className="sm-more-ic"><NavIcon moduleKey="workspace" size={20} /></span>
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
+// Everything the five KPI cards, the Flagged Lines card, both alert banners
+// and the category cards used to say, as two short lists beside the table.
+// Reads the same totals / flaggedItems ProjectView already computes — no new
+// queries. When a line is expanded in the table it shows that line first.
+function ProjectInspector({ totals, itemsCount, approvedCoTotal, approvedChangeOrders, flaggedItems, aheadCount, retentionPct, onRetentionChange, selectedItem, onClearSelection, subs }) {
+  const over = flaggedItems.filter((f) => f.status === "over");
+  const watch = flaggedItems.filter((f) => f.status === "watch");
+  const subName = selectedItem && subs.find((sb) => sb.id === selectedItem.subcontractor_id)?.name;
+  const selVariance = selectedItem ? Number(selectedItem.actual || 0) - Number(selectedItem.budget || 0) : 0;
+  return (
+    <div className="sm-insp">
+      {selectedItem && (
+        <div className="sm-insp-blk sm-insp-sel">
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <p className="sm-insp-h" style={{ margin: 0 }}>Selected line</p>
+            <button type="button" className="sm-sheet-close" style={{ width: 26, height: 26, fontSize: 12 }} aria-label="Clear selection" onClick={onClearSelection}>✕</button>
+          </div>
+          <div style={{ fontWeight: 600, fontSize: 14, margin: "6px 0 2px" }}>{selectedItem.name || "Untitled line"}</div>
+          <div style={{ fontSize: 11.5, color: "var(--text-secondary)", marginBottom: 6 }}>
+            {selectedItem.category || "Other"}{subName ? ` · ${subName}` : ""}
+          </div>
+          <div className="sm-kv"><span className="k">Budget</span><span className="v">{fmt(selectedItem.budget)}</span></div>
+          <div className="sm-kv"><span className="k">Actual</span><span className="v">{fmt(selectedItem.actual)}</span></div>
+          <div className="sm-kv"><span className="k">Variance</span><span className="v" style={{ color: selVariance > 0 ? "var(--danger)" : selVariance < 0 ? "var(--success)" : undefined }}>{selVariance > 0 ? "+" : ""}{fmt(selVariance)}</span></div>
+          <div className="sm-kv"><span className="k">Complete</span><span className="v">{selectedItem.percent_complete != null ? `${Number(selectedItem.percent_complete).toFixed(0)}%` : "—"}</span></div>
+          <div className="sm-kv"><span className="k">Certified</span><span className="v">{fmt(selectedItem.certified || 0)}</span></div>
+          {selectedItem.notes && <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 8, lineHeight: 1.45 }}>{selectedItem.notes}</div>}
+          <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 8 }}>Edit in the expanded row below the line.</div>
+        </div>
+      )}
+      <div className="sm-insp-blk">
+        <p className="sm-insp-h">Summary</p>
+        <div className="sm-kv"><span className="k">{approvedCoTotal ? "Original budget" : "Budget"}</span><span className="v">{fmt(totals.budget)}</span></div>
+        {approvedCoTotal !== 0 && (
+          <div className="sm-kv">
+            <span className="k">Revised budget <span style={{ opacity: 0.7 }}>· {approvedChangeOrders.length} CO{approvedChangeOrders.length === 1 ? "" : "s"}</span></span>
+            <span className="v">{fmt(totals.revisedBudget)}</span>
+          </div>
+        )}
+        <div className="sm-kv"><span className="k">Spent</span><span className="v">{fmt(totals.actual)}</span></div>
+        <div className="sm-kv">
+          <span className="k">Variance</span>
+          <span className="v" style={{ color: totals.variance > 0 ? "var(--danger)" : totals.variance < 0 ? "var(--success)" : undefined }}>
+            {totals.variance > 0 ? "+" : ""}{fmt(totals.variance)}{totals.pct !== 0 ? ` · ${totals.pct > 0 ? "+" : ""}${totals.pct.toFixed(1)}%` : ""}
+          </span>
+        </div>
+        <div className="sm-kv"><span className="k">Retention held</span><span className="v">{fmt(totals.retentionHeld)}</span></div>
+        <div className="sm-kv"><span className="k">Line items</span><span className="v">{itemsCount}</span></div>
+      </div>
+      <div className="sm-insp-blk">
+        <p className="sm-insp-h">Driving the variance</p>
+        {over.length === 0 && watch.length === 0 ? (
+          <div style={{ fontSize: 12.5, color: "var(--text-secondary)" }}>
+            {totals.variance > 0
+              ? "No single line is over its own budget — the overrun comes from approved change orders raising the revised baseline."
+              : "Nothing over or on watch."}
+          </div>
+        ) : (
+          <>
+            {over.slice(0, 6).map((f) => (
+              <div key={f.id} className="sm-kv"><span className="k" style={{ color: "var(--text-primary)" }}>{f.name}</span><span className="v" style={{ color: "var(--danger)" }}>+{fmt(f.variance)}</span></div>
+            ))}
+            {watch.slice(0, 4).map((f) => (
+              <div key={f.id} className="sm-kv"><span className="k" style={{ color: "var(--text-primary)" }}>{f.name}</span><span className="v" style={{ color: "var(--warning)", fontSize: 11, letterSpacing: "0.05em" }}>WATCH</span></div>
+            ))}
+          </>
+        )}
+        {aheadCount > 0 && (
+          <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 8 }}>
+            {aheadCount} line{aheadCount === 1 ? " is" : "s are"} spending ahead of physical progress — filter the table by “Ahead”.
+          </div>
+        )}
+      </div>
+      <div className="sm-insp-blk">
+        <p className="sm-insp-h">Settings</p>
+        <div className="sm-kv">
+          <span className="k">Retention rate</span>
+          <span className="v" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+            <input type="number" value={retentionPct} onChange={(e) => onRetentionChange(Number(e.target.value) || 0)} style={styles.retentionInput} aria-label="Retention percentage" />%
+          </span>
+        </div>
+        <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 6, lineHeight: 1.4 }}>Held back from certified claims, released on the practical completion certificate — a timing difference, not a cost.</div>
+      </div>
+    </div>
+  );
+}
+
+// The frame around ProjectView's module content. Owns the open/closed state
+// of every sheet so ProjectView doesn't have to know which tier it's on.
+function ProjectShell({ viewport, project, onRename, projects, onOpenProject, totals, view, setView, counts, onBack, onNavigate, inspector, children }) {
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [railOpen, setRailOpen] = useState(false);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+
+  // Any navigation closes whatever sheet was used to get there.
+  const go = (key) => { setView(key); setMoreOpen(false); setRailOpen(false); setSummaryOpen(false); };
+
+  const sidebarProps = {
+    project, onRename, onSwitch: () => setSwitcherOpen(true), totals,
+    onSummary: () => setSummaryOpen(true), view, setView: go, counts, onBack, onNavigate,
+  };
+
+  const switcher = (
+    <Sheet open={switcherOpen} onClose={() => setSwitcherOpen(false)} title="Switch project">
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {projects.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            className={`sm-side-item${p.id === project.id ? " is-active" : ""}`}
+            style={{ minHeight: 44 }}
+            onClick={() => { setSwitcherOpen(false); if (p.id !== project.id) onOpenProject(p.id); }}
+          >
+            <span>{p.name || "Untitled project"}</span>
+          </button>
+        ))}
+        <button type="button" className="sm-side-item" style={{ color: "var(--text-secondary)", minHeight: 44 }} onClick={() => { setSwitcherOpen(false); onBack(); }}>
+          <span>All projects →</span>
+        </button>
+      </div>
+    </Sheet>
+  );
+
+  if (viewport === "phone") {
+    return (
+      <div className="sm-shell sm-shell-phone">
+        <div className="sm-ph-head no-print">
+          <input className="sm-side-name" value={project.name} onChange={(e) => onRename(e.target.value)} aria-label="Project name" style={{ flex: 1, minWidth: 0 }} />
+          <button type="button" className="sm-side-switch" onClick={() => setSwitcherOpen(true)} aria-label="Switch project">▾</button>
+          <VarianceChip totals={totals} onClick={() => setSummaryOpen(true)} compact />
+        </div>
+        <main className="sm-shell-main">{children}</main>
+        <BottomTabs view={view} setView={go} counts={counts} onMore={() => setMoreOpen(true)} moreActive={moreOpen || !PHONE_TABS.includes(view)} />
+        <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="More" tall>
+          <MoreGrid view={view} setView={go} counts={counts} onBack={onBack} onNavigate={onNavigate} onDone={() => setMoreOpen(false)} />
+        </Sheet>
+        <Sheet open={summaryOpen} onClose={() => setSummaryOpen(false)} title={`${project.name || "Project"} · summary`} tall>
+          {inspector}
+        </Sheet>
+        {switcher}
+      </div>
+    );
+  }
+
+  if (viewport === "tablet") {
+    return (
+      <div className="sm-shell sm-shell-tablet">
+        <aside className="sm-shell-rail no-print">
+          <ProjectRail project={project} onExpand={() => setRailOpen(true)} view={view} setView={go} counts={counts} totals={totals} onSummary={() => setSummaryOpen(true)} />
+        </aside>
+        <main className="sm-shell-main">{children}</main>
+        <Sheet open={railOpen} onClose={() => setRailOpen(false)} side="left">
+          <ProjectSidebar {...sidebarProps} showChip dense />
+        </Sheet>
+        <Sheet open={summaryOpen} onClose={() => setSummaryOpen(false)} side="right" title="Summary">
+          {inspector}
+        </Sheet>
+        {switcher}
+      </div>
+    );
+  }
+
+  return (
+    <div className="sm-shell sm-shell-desktop">
+      <aside className="sm-shell-side no-print">
+        {/* On Cost & Progress the module banner already carries the variance
+            figure, so the chip stands down there and shows everywhere else. */}
+        <ProjectSidebar {...sidebarProps} showChip={view !== "ledger"} />
+      </aside>
+      <main className="sm-shell-main">{children}</main>
+      <aside className="sm-shell-insp no-print">{inspector}</aside>
+      {switcher}
     </div>
   );
 }
@@ -1555,6 +2089,7 @@ function GlobalStyles() {
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
       .print-only-status { display: none; }
       .print-only-footer { display: none; }
+      .sm-print-title { display: none; }
       .sm-logo-menu-item:hover { background: #F5F5F7; }
       /* Hover highlight for every link/button row inside the hamburger
          drawer — blueprint blue rather than the old accent orange, to stay
@@ -1608,6 +2143,8 @@ function GlobalStyles() {
         body, html { background: #fff !important; }
         .print-only-status { display: inline !important; text-transform: capitalize; }
         .print-only-footer { display: block !important; }
+        .sm-print-title { display: flex !important; }
+        .sm-shell { display: block !important; }
       }
       @media (max-width: 640px) {
         /* TopNav duplicates everything (tabs, Print, email, Sign out) that's
@@ -1622,7 +2159,7 @@ function GlobalStyles() {
   );
 }
 
-function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl, hideTitle, titleNode, logoNode }) {
+function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl, hideTitle, titleNode, logoNode, wide }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuWrapRef = useRef(null);
 
@@ -1676,7 +2213,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
   }, [menuOpen]);
 
   return (
-    <div style={styles.dashHeader}>
+    <div style={{ ...styles.dashHeader, ...(wide ? { maxWidth: 1480 } : {}) }}>
       <div style={styles.dashNavBar}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <AppLogo />
@@ -2033,6 +2570,7 @@ function AppShell({ userEmail, onSignOut }) {
       <ProjectView
         projectId={route.projectId}
         onBack={() => setRoute({ page: "dashboard", projectId: null })}
+        onOpenProject={(id) => setRoute({ page: "project", projectId: id })}
         onNavigate={navigate}
         userEmail={userEmail}
         onSignOut={onSignOut}
@@ -5561,7 +6099,7 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
 
 /* ============================== PROJECT VIEW ============================== */
 
-function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logoUrl }) {
+function ProjectView({ projectId, onBack, onNavigate, onOpenProject, userEmail, onSignOut, logoUrl }) {
   const [project, setProject] = useState(null);
   const [items, setItems] = useState([]);
   const [changeOrders, setChangeOrders] = useState([]);
@@ -5573,6 +6111,17 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const [templates, setTemplates] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState("ledger");
+  // v2 shell: which tier we're on, the ledger's filter chips, the Budget ▾
+  // menu that replaced the import row, the phone's "⋯" actions sheet, and
+  // the project list behind the sidebar's switcher.
+  const viewport = useViewport();
+  const [ledgerFilter, setLedgerFilter] = useState("all");
+  const [budgetMenuOpen, setBudgetMenuOpen] = useState(false);
+  const budgetMenuRef = useRef(null);
+  const [ledgerActionsOpen, setLedgerActionsOpen] = useState(false);
+  const [projectList, setProjectList] = useState([]);
+  const onBackRef = useRef(onBack);
+  useEffect(() => { onBackRef.current = onBack; });
   const [newName, setNewName] = useState("");
   const [newCategory, setNewCategory] = useState(CATEGORIES[0]);
   const [newBudget, setNewBudget] = useState("");
@@ -5803,6 +6352,51 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       .filter(Boolean)
       .sort((a, b) => b.variance - a.variance);
   }, [items]);
+
+  // The ledger's filter chips (All / Over / Watch / Ahead) replaced the
+  // Flagged Lines card and the "spending ahead of progress" banner — a count
+  // you can click instead of one you can only read. On a phone the list is
+  // worst-first: someone checking on site wants the problem lines, not
+  // alphabetical order.
+  const visibleItems = useMemo(() => {
+    let list = items;
+    if (ledgerFilter === "over" || ledgerFilter === "watch") {
+      list = items.filter((i) => statusFor(i.budget, i.actual) === ledgerFilter);
+    } else if (ledgerFilter === "ahead") {
+      list = items.filter((i) => {
+        const gap = progressGapFor(i.budget, i.actual, i.percent_complete);
+        return gap != null && gap > 15;
+      });
+    }
+    if (SHELL_V2 && viewport === "phone") {
+      list = list.slice().sort((a, b) =>
+        (Number(b.actual || 0) - Number(b.budget || 0)) - (Number(a.actual || 0) - Number(a.budget || 0)));
+    }
+    return list;
+  }, [items, ledgerFilter, viewport]);
+
+  // Counts shown next to the sidebar / rail / More-sheet entries — only where
+  // the number is something to act on (open snags, live orders), not a total
+  // for its own sake.
+  const navCounts = {
+    schedule: scheduleTasks.length,
+    punchlist: punchItems.filter((p) => p.status !== "verified").length,
+    purchaseorders: purchaseOrders.length,
+    tenders: tenders.length,
+    changeorders: changeOrders.length,
+  };
+
+  function renameProject(name) {
+    setProject((p) => ({ ...p, name }));
+    pendingSaves.current["project:name"] = { table: "projects_v2", id: projectId, patch: { name } };
+    if (saveTimers.current.projectName) clearTimeout(saveTimers.current.projectName);
+    saveTimers.current.projectName = setTimeout(() => flushPending("project:name"), 500);
+  }
+
+  function setRetentionPct(v) {
+    setProject((p) => ({ ...p, retention_pct: v }));
+    supabase.from("projects_v2").update({ retention_pct: v }).eq("id", projectId).then(({ error }) => { if (error) console.error("Save failed", error); });
+  }
 
   const categoryRollup = useMemo(() => {
     return CATEGORIES.map((cat) => {
@@ -6535,6 +7129,42 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   }, [downloadMenuOpen]);
 
   useEffect(() => {
+    if (!budgetMenuOpen) return;
+    function handleOutside(e) {
+      if (budgetMenuRef.current && !budgetMenuRef.current.contains(e.target)) setBudgetMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [budgetMenuOpen]);
+
+  // Names for the sidebar's project switcher — id + name only, RLS scopes it
+  // to the signed-in owner exactly as the dashboard's own query is.
+  useEffect(() => {
+    if (!SHELL_V2) return;
+    let cancelled = false;
+    supabase.from("projects_v2").select("id,name").order("created_at", { ascending: false }).then(({ data }) => {
+      if (!cancelled) setProjectList(data || []);
+    });
+    return () => { cancelled = true; };
+  }, [projectId]);
+
+  // One history entry per open project, so the Android hardware/gesture back
+  // (and a browser's back button) goes to All projects instead of leaving the
+  // app. Sheets push their own entry on top and handle their own pop (see
+  // Sheet); smOpenSheets tells us to stand down while one of them is open.
+  useEffect(() => {
+    if (!SHELL_V2) return;
+    try { window.history.pushState({ smProject: projectId }, ""); } catch { /* history unavailable */ }
+    const onPop = (e) => {
+      if (smOpenSheets > 0) return;
+      if (e.state && e.state.smProject === projectId) return;
+      onBackRef.current();
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [projectId]);
+
+  useEffect(() => {
     if (!quoteDownloadMenuOpen) return;
     function handleOutside(e) {
       if (quoteDownloadMenuRef.current && !quoteDownloadMenuRef.current.contains(e.target)) setQuoteDownloadMenuOpen(false);
@@ -6726,322 +7356,11 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     );
   }
 
-  return (
-    <div style={styles.page}>
-      <GlobalStyles />
-      <input ref={fileInputRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.pdf,application/pdf" onChange={handleImportFile} style={{ display: "none" }} />
-      <input ref={attachInputRef} type="file" onChange={handleAttachFile} style={{ display: "none" }} />
-
-      {/* Shared app nav (logo, hamburger, full-screen menu overlay), same
-          component every other page uses — this page previously had none of
-          its own, which was the main inconsistency. Its own title block
-          (eyebrow, editable project name, logo) still renders below, so the
-          shared header's title row is hidden here. */}
-      <PageHeader current={null} onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} hideTitle />
-
-      <div className="no-print" style={styles.backRow}>
-        <button style={styles.backBtn} onClick={onBack}>← All projects</button>
-      </div>
-
-      <div style={styles.titleBlock}>
-        <div style={styles.titleBlockLeft}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-            {/* Deliberately not "no-print" — this is the header of the
-                exported/printed cost sheet, so the company logo needs to
-                pull through onto the PDF, not just show on screen. */}
-            {logoUrl && <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />}
-            <div style={{ ...styles.eyebrowProminent, marginLeft: 12 }}>COST VARIANCE SHEET</div>
-            <span style={styles.titleDivider}>·</span>
-            <input
-              style={styles.projectInput}
-              value={project.name}
-              onChange={(e) => {
-                const name = e.target.value;
-                setProject((p) => ({ ...p, name }));
-                pendingSaves.current["project:name"] = { table: "projects_v2", id: projectId, patch: { name } };
-                if (saveTimers.current.projectName) clearTimeout(saveTimers.current.projectName);
-                saveTimers.current.projectName = setTimeout(() => flushPending("project:name"), 500);
-              }}
-            />
-          </div>
-        </div>
-        <div style={styles.titleBlockRight} className="no-print">
-          <div style={styles.tbCell}>
-            <span style={styles.tbLabel}>DATE</span>
-            <span style={styles.tbValue}>{new Date().toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}</span>
-          </div>
-          <div style={styles.tbCell}>
-            <span style={styles.tbLabel}>RETENTION</span>
-            <span style={styles.tbValue}>
-              <input type="number" value={totals.retentionPct}
-                onChange={(e) => {
-                  const v = Number(e.target.value) || 0;
-                  setProject((p) => ({ ...p, retention_pct: v }));
-                  supabase.from("projects_v2").update({ retention_pct: v }).eq("id", projectId).then(({ error }) => { if (error) console.error("Save failed", error); });
-                }}
-                style={styles.retentionInput} />%
-            </span>
-          </div>
-          <div style={styles.tbCell}>
-            <span style={styles.tbLabel}>LINES</span>
-            <span style={styles.tbValue}>{items.length}</span>
-          </div>
-        </div>
-      </div>
-
-      <div style={styles.summaryStrip}>
-        <SummaryCard
-          label="Original budget"
-          value={fmt(totals.budget)}
-          sub={`${items.length} line item${items.length === 1 ? "" : "s"}`}
-          popoverLabel="Budget by category"
-          popover={
-            budgetByCategoryRows.length ? (
-              <>
-                <div style={styles.summaryPopoverTitle}>Budget by category</div>
-                {budgetByCategoryRows.map((r, idx) => (
-                  <div key={r.key} style={idx === budgetByCategoryRows.length - 1 ? styles.summaryPopoverRowLast : styles.summaryPopoverRow}>
-                    <span style={{ ...styles.summaryPopoverDot, background: r.dot }} />
-                    <span style={styles.summaryPopoverName}>{r.name}</span>
-                    <span style={styles.summaryPopoverValue}>{r.value}</span>
-                  </div>
-                ))}
-              </>
-            ) : null
-          }
-        />
-        {approvedCoTotal !== 0 && (
-          <SummaryCard
-            label="Revised budget"
-            value={fmt(totals.revisedBudget)}
-            accent="var(--tm-warn)"
-            sub={`${approvedChangeOrders.length} approved change order${approvedChangeOrders.length === 1 ? "" : "s"}`}
-            popoverLabel="Approved change orders"
-            popover={
-              approvedChangeOrders.length ? (
-                <>
-                  <div style={styles.summaryPopoverTitle}>Approved change orders</div>
-                  {approvedChangeOrders.map((co, idx) => (
-                    <div key={co.id} style={idx === approvedChangeOrders.length - 1 ? styles.summaryPopoverRowLast : styles.summaryPopoverRow}>
-                      <span style={styles.summaryPopoverName}>{co.description || "Untitled"}</span>
-                      <span style={styles.summaryPopoverValue}>+{fmt(Number(co.amount || 0))}</span>
-                    </div>
-                  ))}
-                  <div style={styles.summaryPopoverFoot}>Adds {fmt(approvedCoTotal)} to the original budget.</div>
-                </>
-              ) : null
-            }
-          />
-        )}
-        <SummaryCard
-          label="Actual spend"
-          value={fmt(totals.actual)}
-          sub={totals.budget ? `${((totals.actual / totals.budget) * 100).toFixed(1)}% of original budget` : undefined}
-          popoverLabel="Spend by category"
-          popover={
-            spendByCategoryRows.length ? (
-              <>
-                <div style={styles.summaryPopoverTitle}>Spend vs budget</div>
-                {spendByCategoryRows.map((r, idx) => (
-                  <div key={r.key} style={idx === spendByCategoryRows.length - 1 ? styles.summaryPopoverRowLast : styles.summaryPopoverRow}>
-                    <span style={{ ...styles.summaryPopoverDot, background: r.dot }} />
-                    <span style={styles.summaryPopoverName}>{r.name}</span>
-                    <span style={{ ...styles.summaryPopoverValue, ...(r.over ? { color: "var(--tm-neg)" } : {}) }}>{r.value}</span>
-                  </div>
-                ))}
-              </>
-            ) : null
-          }
-        />
-        <SummaryCard
-          label="Variance"
-          value={`${totals.variance > 0 ? "+" : ""}${fmt(totals.variance)}`}
-          accent={totals.variance > 0 ? "var(--tm-neg)" : totals.variance < 0 ? "var(--tm-pos)" : undefined}
-          sub={`${totals.pct > 0 ? "+" : ""}${totals.pct.toFixed(1)}% · ${overCount} line${overCount === 1 ? "" : "s"} over`}
-          popoverLabel="What is driving the variance"
-          popover={
-            overCategories.length ? (
-              <>
-                <div style={styles.summaryPopoverTitle}>Driving the overrun</div>
-                {overCategories.map((c, idx) => (
-                  <div key={c.category} style={idx === overCategories.length - 1 ? styles.summaryPopoverRowLast : styles.summaryPopoverRow}>
-                    <span style={styles.summaryPopoverName}>{c.category}</span>
-                    <span style={{ ...styles.summaryPopoverValue, color: "var(--tm-neg)" }}>+{fmt(c.variance)}</span>
-                  </div>
-                ))}
-                <div style={styles.summaryPopoverFoot}>
-                  Together, {totals.variance > 0 ? Math.round((overCategoryTotal / totals.variance) * 100) : 100}% of the overrun.
-                </div>
-              </>
-            ) : (
-              <p style={styles.summaryPopoverNote}>No categories are currently over budget.</p>
-            )
-          }
-        />
-        <SummaryCard
-          label="Retention held"
-          value={fmt(totals.retentionHeld)}
-          sub={`${totals.retentionPct}% of certified claims`}
-          popoverLabel="About retention"
-          popover={
-            <p style={styles.summaryPopoverNote}>
-              Held back from certified claims at {totals.retentionPct}%, released on the practical completion certificate — not a cost, a timing difference.
-            </p>
-          }
-        />
-        <FlaggedLinesCard
-          label="Flagged lines"
-          value={`${overCount} over · ${watchCount} watch`}
-          accent={overCount ? "var(--tm-neg)" : watchCount ? "var(--tm-warn)" : "var(--tm-pos)"}
-          items={flaggedItems}
-          sub={`of ${items.length} line item${items.length === 1 ? "" : "s"}`}
-        />
-      </div>
-
-      {totals.pct > 0 && (
-        <div style={styles.warningBanner}>
-          <div style={styles.warningBannerRow}>
-            <span>You're trending {totals.pct.toFixed(1)}% over the revised budget on this project. Review flagged lines below before your next client meeting.</span>
-            <button type="button" style={styles.warningBannerToggle} onClick={() => setOverrunDetailOpen((v) => !v)}>
-              {overrunDetailOpen ? "Hide detail" : "What's driving this?"}
-            </button>
-          </div>
-          {overrunDetailOpen && (() => {
-            const overItems = flaggedItems.filter((f) => f.status === "over");
-            return (
-              <div style={styles.warningBannerDetail}>
-                {overItems.length ? (
-                  overItems.map((f, idx) => (
-                    <div key={f.id} style={idx === overItems.length - 1 ? styles.warningBannerRowLast : styles.warningBannerRowItem}>
-                      <span style={styles.warningBannerItemName}>{f.name}</span>
-                      <span style={styles.warningBannerItemValue}>+{fmt(f.variance)} · +{f.pct.toFixed(1)}%</span>
-                    </div>
-                  ))
-                ) : (
-                  <div style={styles.warningBannerNote}>No individual line is over its own budget — this comes from approved change orders raising the revised budget's baseline.</div>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-      )}
-      {aheadCount > 0 && (
-        <div style={{ ...styles.warningBanner, borderLeftColor: "var(--tm-warn-mark)", background: "var(--tm-warn-fill)", color: "var(--text-primary)" }}>
-          {aheadCount} line{aheadCount > 1 ? "s are" : " is"} spending ahead of physical progress. Check the Progress column below.
-        </div>
-      )}
-
-      <div className="no-print" style={styles.categoryStrip}>
-        {categoryRollup.map((c) => (
-          <div key={c.category} style={styles.categoryCard}>
-            <div style={styles.categoryHead}>
-              <span style={{ ...styles.categoryDot, background: CATEGORY_COLOR[c.category] }} />
-              <span style={styles.categoryName}>{c.category}</span>
-            </div>
-            <div style={styles.categoryNums}>
-              <span style={styles.categoryBudget}>{fmt(c.budget)}</span>
-              <span style={{ ...styles.categoryVariance, color: c.variance > 0 ? "var(--tm-neg)" : c.variance < 0 ? "var(--tm-pos)" : "var(--text-secondary)" }}>
-                {c.variance > 0 ? "+" : ""}{fmt(c.variance)}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="no-print" style={styles.importRow}>
-        <button style={styles.importBtn} onClick={() => fileInputRef.current?.click()} disabled={importBusy}>
-          {importBusy ? "Reading…" : "Import a budget"}
-        </button>
-        <button style={styles.templateLink} onClick={downloadImportTemplate}>Blank template</button>
-        <select style={{ ...styles.addInput, maxWidth: 220 }} defaultValue="" onChange={(e) => { applyTemplate(e.target.value); e.target.value = ""; }}>
-          <option value="">Apply a template…</option>
-          {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-        <button style={styles.importBtn} onClick={saveAsTemplate}>Save as template</button>
-        {importMessage && (
-          <span style={{ fontSize: 12.5, color: importMessage.type === "error" ? "var(--danger)" : "var(--success)" }}>{importMessage.text}</span>
-        )}
-        <div ref={downloadMenuRef} style={{ position: "relative", marginLeft: "auto" }}>
-          <button style={styles.exportBtn} onClick={() => setDownloadMenuOpen((v) => !v)}>Download</button>
-          {downloadMenuOpen && (
-            <div style={styles.downloadMenuPopover}>
-              {can("export") ? (
-                <>
-                  <button style={styles.logoMenuItem} onClick={exportLedgerPdf}>PDF</button>
-                  <button style={styles.logoMenuItem} onClick={exportLedgerExcel}>Excel</button>
-                  <button style={styles.logoMenuItem} onClick={exportLedgerCsv}>CSV</button>
-                </>
-              ) : locked("export") ? (
-                <ExportLockedMenu onNavigate={onNavigate} />
-              ) : null}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="no-print" style={styles.toggleGroupWrap}>
-        <div style={styles.toggleGroupLabel}>Site & Delivery</div>
-        <div style={styles.viewToggle}>
-          {[
-            ["purchaseorders", `Purchase Orders${purchaseOrders.length ? ` (${purchaseOrders.length})` : ""}`],
-            ["tenders", `Tenders${tenders.length ? ` (${tenders.length})` : ""}`],
-            ["schedule", `Schedule${scheduleTasks.length ? ` (${scheduleTasks.length})` : ""}`],
-            ["dailylog", `Daily Log${dailyLogs.length ? ` (${dailyLogs.length})` : ""}`],
-            ["documents", `Documents${documents.length ? ` (${documents.length})` : ""}`],
-            ["contacts", `Contacts${contacts.length ? ` (${contacts.length})` : ""}`],
-            ["plans", `Plans${(project?.plans || []).length ? ` (${(project.plans || []).length})` : ""}`],
-            ["punchlist", `Punch List${punchItems.length ? ` (${punchItems.length})` : ""}`],
-            ["changeorders", `Change Orders${changeOrders.length ? ` (${changeOrders.length})` : ""}`],
-          ].map(([key, label]) => {
-            const mc = MODULE_COLOR[key];
-            const active = view === key;
-            return (
-              <button
-                key={key}
-                style={{
-                  ...styles.toggleBtn,
-                  ...(mc ? { color: mc.solid, background: mc.tint } : {}),
-                  ...(active ? (mc ? { background: mc.solid, color: "#FFFFFF", fontWeight: 600 } : styles.toggleBtnActive) : {}),
-                }}
-                onClick={() => setView(key)}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="no-print" style={styles.toggleGroupWrap}>
-        <div style={styles.toggleGroupLabel}>Budget & Reporting</div>
-        <div style={styles.viewToggle}>
-          {[
-            ["ledger", "Cost & Progress"],
-            ["quote", "Quote"],
-            ["payments", "Payments & Retention"],
-            ["charts", "Charts"],
-            ["trend", "Trend"],
-            ["clientreports", "Client Reports"],
-          ].map(([key, label]) => {
-            const mc = MODULE_COLOR[key];
-            const active = view === key;
-            return (
-              <button
-                key={key}
-                style={{
-                  ...styles.toggleBtn,
-                  ...(mc ? { color: mc.solid, background: mc.tint } : {}),
-                  ...(active ? (mc ? { background: mc.solid, color: "#FFFFFF", fontWeight: 600 } : styles.toggleBtnActive) : {}),
-                }}
-                onClick={() => setView(key)}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
+  // Everything below the navigation — the paywalls and every module's own
+  // content — is one block so it can sit inside the v2 shell or, with the
+  // flag off, straight under the legacy bands.
+  const moduleContent = (
+    <>
       {view === "payments" && locked("payments") && <PaywallPanel feature="payments" onNavigate={onNavigate} />}
       {view === "changeorders" && locked("changeorders") && <PaywallPanel feature="changeorders" onNavigate={onNavigate} />}
       {view === "documents" && locked("documents") && <PaywallPanel feature="documents" onNavigate={onNavigate} />}
@@ -7053,8 +7372,88 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             moduleKey="ledger"
             stat={`${totals.variance >= 0 ? "+" : "-"}${fmt(Math.abs(totals.variance))}`}
             statLabel={totals.variance > 0 ? "over budget" : "under budget"}
+            compact={SHELL_V2 && viewport === "phone"}
           />
+          {SHELL_V2 && (
+            <div className={`sm-ltb no-print${viewport === "phone" ? " sm-ltb-phone" : ""}`}>
+              {viewport !== "phone" && <span className="sm-ltb-title">Line items</span>}
+              {[["all", "All", items.length], ["over", "Over", overCount], ["watch", "Watch", watchCount], ["ahead", "Ahead", aheadCount]].map(([key, label, n]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`sm-chip${ledgerFilter === key ? " is-active" : ""}${key === "over" ? " sm-chip-danger" : key === "watch" ? " sm-chip-warn" : ""}`}
+                  onClick={() => setLedgerFilter(key)}
+                  aria-pressed={ledgerFilter === key}
+                >
+                  {label} <span className="sm-chip-n">{n}</span>
+                </button>
+              ))}
+              {viewport === "phone" ? (
+                <button type="button" className="sm-chip" aria-label="More actions" onClick={() => setLedgerActionsOpen(true)}>⋯</button>
+              ) : (
+                <>
+                  <div ref={budgetMenuRef} style={{ position: "relative", marginLeft: 6 }}>
+                    <button type="button" style={styles.importBtn} onClick={() => setBudgetMenuOpen((v) => !v)} disabled={importBusy} aria-haspopup="menu" aria-expanded={budgetMenuOpen}>
+                      {importBusy ? "Reading…" : "Budget ▾"}
+                    </button>
+                    {budgetMenuOpen && (
+                      <div className="sm-menu-pop" role="menu">
+                        <button style={styles.logoMenuItem} onClick={() => { setBudgetMenuOpen(false); fileInputRef.current?.click(); }}>Import a budget…</button>
+                        <button style={styles.logoMenuItem} onClick={() => { setBudgetMenuOpen(false); downloadImportTemplate(); }}>Blank import template</button>
+                        <button style={styles.logoMenuItem} onClick={() => { setBudgetMenuOpen(false); saveAsTemplate(); }}>Save as template</button>
+                        {templates.length > 0 && <div className="sm-side-grp" style={{ padding: "8px 12px 2px" }}>Apply a template</div>}
+                        {templates.map((t) => (
+                          <button key={t.id} style={styles.logoMenuItem} onClick={() => { setBudgetMenuOpen(false); applyTemplate(t.id); }}>{t.name}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div ref={downloadMenuRef} style={{ position: "relative" }}>
+                    <button style={styles.exportBtn} onClick={() => setDownloadMenuOpen((v) => !v)}>Download</button>
+                    {downloadMenuOpen && (
+                      <div style={styles.downloadMenuPopover}>
+                        {can("export") ? (
+                          <>
+                            <button style={styles.logoMenuItem} onClick={exportLedgerPdf}>PDF</button>
+                            <button style={styles.logoMenuItem} onClick={exportLedgerExcel}>Excel</button>
+                            <button style={styles.logoMenuItem} onClick={exportLedgerCsv}>CSV</button>
+                          </>
+                        ) : locked("export") ? (
+                          <ExportLockedMenu onNavigate={onNavigate} />
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          {SHELL_V2 && importMessage && (
+            <div className="no-print" style={{ maxWidth: 1180, margin: "0 auto 10px", fontSize: 12.5, color: importMessage.type === "error" ? "var(--danger)" : "var(--success)" }}>{importMessage.text}</div>
+          )}
+          {SHELL_V2 && viewport === "phone" && (
+            <Sheet open={ledgerActionsOpen} onClose={() => setLedgerActionsOpen(false)} title="Line items">
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {can("export") && (
+                  <>
+                    <button type="button" className="sm-side-item" style={{ minHeight: 44 }} onClick={() => { setLedgerActionsOpen(false); exportLedgerPdf(); }}><span>Download PDF</span></button>
+                    <button type="button" className="sm-side-item" style={{ minHeight: 44 }} onClick={() => { setLedgerActionsOpen(false); exportLedgerExcel(); }}><span>Download Excel</span></button>
+                    <button type="button" className="sm-side-item" style={{ minHeight: 44 }} onClick={() => { setLedgerActionsOpen(false); exportLedgerCsv(); }}><span>Download CSV</span></button>
+                  </>
+                )}
+                {locked("export") && <div style={{ padding: "4px 6px" }}><ExportLockedMenu onNavigate={onNavigate} /></div>}
+                <div className="sm-side-grp">Budget</div>
+                <button type="button" className="sm-side-item" style={{ minHeight: 44 }} onClick={() => { setLedgerActionsOpen(false); fileInputRef.current?.click(); }}><span>Import a budget…</span></button>
+                <button type="button" className="sm-side-item" style={{ minHeight: 44 }} onClick={() => { setLedgerActionsOpen(false); downloadImportTemplate(); }}><span>Blank import template</span></button>
+                <button type="button" className="sm-side-item" style={{ minHeight: 44 }} onClick={() => { setLedgerActionsOpen(false); saveAsTemplate(); }}><span>Save as template</span></button>
+                {templates.map((t) => (
+                  <button key={t.id} type="button" className="sm-side-item" style={{ minHeight: 44 }} onClick={() => { setLedgerActionsOpen(false); applyTemplate(t.id); }}><span>Apply: {t.name}</span></button>
+                ))}
+              </div>
+            </Sheet>
+          )}
         <div style={styles.ledger}>
+          {!(SHELL_V2 && viewport === "phone") && (
           <div style={styles.ledgerHeaderRow}>
             <span style={{ ...styles.thCell, flex: 2.4 }}>Line item</span>
             <span style={{ ...styles.thCell, flex: 1.1, textAlign: "right" }}>Budget</span>
@@ -7064,8 +7463,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             <span style={{ ...styles.thCell, flex: 0.9, textAlign: "center" }}>Status</span>
             <span style={{ ...styles.thCell, flex: 0.6 }} className="no-print"></span>
           </div>
+          )}
 
-          {items.map((item) => {
+          {(SHELL_V2 ? visibleItems : items).map((item) => {
             const status = statusFor(item.budget, item.actual);
             const s = STATUS[status];
             const ratio = item.budget ? Math.min(item.actual / item.budget, 1.4) : 0;
@@ -7076,9 +7476,56 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             const gapFlag = gap != null && gap > 15;
             const isOpen = expandedRow === item.id;
             const subName = subs.find((sb) => sb.id === item.subcontractor_id)?.name;
+            const isPhone = SHELL_V2 && viewport === "phone";
+            const lineVariance = Number(item.actual || 0) - Number(item.budget || 0);
 
             return (
               <React.Fragment key={item.id}>
+                {isPhone ? (
+                <div className="sm-lcard">
+                  <div className="sm-lcard-r1">
+                    <span className="sm-lcard-name">{item.name}</span>
+                    <span className="sm-lcard-var" style={{ color: lineVariance === 0 ? "var(--text-secondary)" : s.color }}>
+                      {lineVariance === 0 ? "—" : `${lineVariance > 0 ? "+" : ""}${fmt(lineVariance)}`}
+                    </span>
+                  </div>
+                  <div className="sm-lcard-r2">
+                    <span>Budget <b>{fmt(item.budget)}</b></span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      Actual{" "}
+                      {editingCell === `${item.id}:actual` ? (
+                        <input autoFocus style={{ ...styles.inlineInput, width: 110 }} value={editValue} type="number"
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={() => saveEdit(item.id, "actual")}
+                          onKeyDown={(e) => e.key === "Enter" && saveEdit(item.id, "actual")} />
+                      ) : (
+                        <button style={{ ...styles.actualButton, fontWeight: 600, minHeight: 28 }} onClick={() => startEdit(item.id, "actual", item.actual)}>{fmt(item.actual)}</button>
+                      )}
+                    </span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: CATEGORY_COLOR[item.category] || "#6E6E73" }} />
+                      {item.category || "Other"}{subName ? ` · ${subName}` : ""}
+                    </span>
+                  </div>
+                  <div className="sm-lcard-bars">
+                    <span>Spent</span>
+                    <span className="sm-lcard-bar"><i style={{ width: `${spentPct}%`, background: gapFlag ? "var(--danger)" : "#3D6FA6" }} /></span>
+                    <span className="sm-lcard-pct">{spentPct.toFixed(0)}%</span>
+                    <span>Progress</span>
+                    <span className="sm-lcard-bar"><i style={{ width: `${progPct}%`, background: "var(--success)" }} /></span>
+                    <span className="sm-lcard-pct">{progPct.toFixed(0)}%</span>
+                  </div>
+                  <div className="sm-lcard-foot no-print">
+                    <span style={{ ...styles.statusPill, color: s.color, background: s.bg }}>{s.label}</span>
+                    {gapFlag && <span style={{ ...styles.statusPill, color: "var(--danger)", background: "rgba(193,70,43,0.12)", fontSize: 9 }}>SPEND AHEAD</span>}
+                    <button style={{ ...styles.miniLink, marginLeft: "auto", fontSize: 12.5, minHeight: 32 }} onClick={() => { setExpandedRow(isOpen ? null : item.id); setNoteDraft(item.notes || ""); }}>
+                      {isOpen ? "Close" : "Details"}
+                    </button>
+                    <button style={{ ...styles.removeBtn, minHeight: 32, minWidth: 32 }} onClick={() => removeItem(item.id)} aria-label="Remove line">✕</button>
+                  </div>
+                </div>
+                ) : (
                 <div style={styles.row}>
                   <span style={{ ...styles.tdCell, flex: 2.4 }}>
                     <div style={{ fontWeight: 500 }}>{item.name}</div>
@@ -7134,6 +7581,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
                     <button style={styles.removeBtn} onClick={() => removeItem(item.id)}>✕</button>
                   </span>
                 </div>
+                )}
 
                 {isOpen && (
                   <div className="no-print" style={styles.detailPanel}>
@@ -8556,6 +9004,378 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         );
       })()}
 
+    </>
+  );
+
+  return (
+    <div style={styles.page}>
+      <GlobalStyles />
+      <input ref={fileInputRef} type="file" accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.pdf,application/pdf" onChange={handleImportFile} style={{ display: "none" }} />
+      <input ref={attachInputRef} type="file" onChange={handleAttachFile} style={{ display: "none" }} />
+
+      {/* Shared app nav (logo, hamburger, full-screen menu overlay), same
+          component every other page uses — this page previously had none of
+          its own, which was the main inconsistency. Its own title block
+          (eyebrow, editable project name, logo) still renders below, so the
+          shared header's title row is hidden here. */}
+      <PageHeader current={null} onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} hideTitle wide={SHELL_V2} />
+
+      {/* Legacy stacked layout — KPI cards, alert banners, category cards,
+          import row and both pill rows. Kept intact behind SHELL_V2 as the
+          kill switch; delete once the shell has settled. */}
+      {!SHELL_V2 && (
+      <>
+      <div className="no-print" style={styles.backRow}>
+        <button style={styles.backBtn} onClick={onBack}>← All projects</button>
+      </div>
+
+      <div style={styles.titleBlock}>
+        <div style={styles.titleBlockLeft}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            {/* Deliberately not "no-print" — this is the header of the
+                exported/printed cost sheet, so the company logo needs to
+                pull through onto the PDF, not just show on screen. */}
+            {logoUrl && <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />}
+            <div style={{ ...styles.eyebrowProminent, marginLeft: 12 }}>COST VARIANCE SHEET</div>
+            <span style={styles.titleDivider}>·</span>
+            <input
+              style={styles.projectInput}
+              value={project.name}
+              onChange={(e) => {
+                const name = e.target.value;
+                setProject((p) => ({ ...p, name }));
+                pendingSaves.current["project:name"] = { table: "projects_v2", id: projectId, patch: { name } };
+                if (saveTimers.current.projectName) clearTimeout(saveTimers.current.projectName);
+                saveTimers.current.projectName = setTimeout(() => flushPending("project:name"), 500);
+              }}
+            />
+          </div>
+        </div>
+        <div style={styles.titleBlockRight} className="no-print">
+          <div style={styles.tbCell}>
+            <span style={styles.tbLabel}>DATE</span>
+            <span style={styles.tbValue}>{new Date().toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}</span>
+          </div>
+          <div style={styles.tbCell}>
+            <span style={styles.tbLabel}>RETENTION</span>
+            <span style={styles.tbValue}>
+              <input type="number" value={totals.retentionPct}
+                onChange={(e) => {
+                  const v = Number(e.target.value) || 0;
+                  setProject((p) => ({ ...p, retention_pct: v }));
+                  supabase.from("projects_v2").update({ retention_pct: v }).eq("id", projectId).then(({ error }) => { if (error) console.error("Save failed", error); });
+                }}
+                style={styles.retentionInput} />%
+            </span>
+          </div>
+          <div style={styles.tbCell}>
+            <span style={styles.tbLabel}>LINES</span>
+            <span style={styles.tbValue}>{items.length}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style={styles.summaryStrip}>
+        <SummaryCard
+          label="Original budget"
+          value={fmt(totals.budget)}
+          sub={`${items.length} line item${items.length === 1 ? "" : "s"}`}
+          popoverLabel="Budget by category"
+          popover={
+            budgetByCategoryRows.length ? (
+              <>
+                <div style={styles.summaryPopoverTitle}>Budget by category</div>
+                {budgetByCategoryRows.map((r, idx) => (
+                  <div key={r.key} style={idx === budgetByCategoryRows.length - 1 ? styles.summaryPopoverRowLast : styles.summaryPopoverRow}>
+                    <span style={{ ...styles.summaryPopoverDot, background: r.dot }} />
+                    <span style={styles.summaryPopoverName}>{r.name}</span>
+                    <span style={styles.summaryPopoverValue}>{r.value}</span>
+                  </div>
+                ))}
+              </>
+            ) : null
+          }
+        />
+        {approvedCoTotal !== 0 && (
+          <SummaryCard
+            label="Revised budget"
+            value={fmt(totals.revisedBudget)}
+            accent="var(--tm-warn)"
+            sub={`${approvedChangeOrders.length} approved change order${approvedChangeOrders.length === 1 ? "" : "s"}`}
+            popoverLabel="Approved change orders"
+            popover={
+              approvedChangeOrders.length ? (
+                <>
+                  <div style={styles.summaryPopoverTitle}>Approved change orders</div>
+                  {approvedChangeOrders.map((co, idx) => (
+                    <div key={co.id} style={idx === approvedChangeOrders.length - 1 ? styles.summaryPopoverRowLast : styles.summaryPopoverRow}>
+                      <span style={styles.summaryPopoverName}>{co.description || "Untitled"}</span>
+                      <span style={styles.summaryPopoverValue}>+{fmt(Number(co.amount || 0))}</span>
+                    </div>
+                  ))}
+                  <div style={styles.summaryPopoverFoot}>Adds {fmt(approvedCoTotal)} to the original budget.</div>
+                </>
+              ) : null
+            }
+          />
+        )}
+        <SummaryCard
+          label="Actual spend"
+          value={fmt(totals.actual)}
+          sub={totals.budget ? `${((totals.actual / totals.budget) * 100).toFixed(1)}% of original budget` : undefined}
+          popoverLabel="Spend by category"
+          popover={
+            spendByCategoryRows.length ? (
+              <>
+                <div style={styles.summaryPopoverTitle}>Spend vs budget</div>
+                {spendByCategoryRows.map((r, idx) => (
+                  <div key={r.key} style={idx === spendByCategoryRows.length - 1 ? styles.summaryPopoverRowLast : styles.summaryPopoverRow}>
+                    <span style={{ ...styles.summaryPopoverDot, background: r.dot }} />
+                    <span style={styles.summaryPopoverName}>{r.name}</span>
+                    <span style={{ ...styles.summaryPopoverValue, ...(r.over ? { color: "var(--tm-neg)" } : {}) }}>{r.value}</span>
+                  </div>
+                ))}
+              </>
+            ) : null
+          }
+        />
+        <SummaryCard
+          label="Variance"
+          value={`${totals.variance > 0 ? "+" : ""}${fmt(totals.variance)}`}
+          accent={totals.variance > 0 ? "var(--tm-neg)" : totals.variance < 0 ? "var(--tm-pos)" : undefined}
+          sub={`${totals.pct > 0 ? "+" : ""}${totals.pct.toFixed(1)}% · ${overCount} line${overCount === 1 ? "" : "s"} over`}
+          popoverLabel="What is driving the variance"
+          popover={
+            overCategories.length ? (
+              <>
+                <div style={styles.summaryPopoverTitle}>Driving the overrun</div>
+                {overCategories.map((c, idx) => (
+                  <div key={c.category} style={idx === overCategories.length - 1 ? styles.summaryPopoverRowLast : styles.summaryPopoverRow}>
+                    <span style={styles.summaryPopoverName}>{c.category}</span>
+                    <span style={{ ...styles.summaryPopoverValue, color: "var(--tm-neg)" }}>+{fmt(c.variance)}</span>
+                  </div>
+                ))}
+                <div style={styles.summaryPopoverFoot}>
+                  Together, {totals.variance > 0 ? Math.round((overCategoryTotal / totals.variance) * 100) : 100}% of the overrun.
+                </div>
+              </>
+            ) : (
+              <p style={styles.summaryPopoverNote}>No categories are currently over budget.</p>
+            )
+          }
+        />
+        <SummaryCard
+          label="Retention held"
+          value={fmt(totals.retentionHeld)}
+          sub={`${totals.retentionPct}% of certified claims`}
+          popoverLabel="About retention"
+          popover={
+            <p style={styles.summaryPopoverNote}>
+              Held back from certified claims at {totals.retentionPct}%, released on the practical completion certificate — not a cost, a timing difference.
+            </p>
+          }
+        />
+        <FlaggedLinesCard
+          label="Flagged lines"
+          value={`${overCount} over · ${watchCount} watch`}
+          accent={overCount ? "var(--tm-neg)" : watchCount ? "var(--tm-warn)" : "var(--tm-pos)"}
+          items={flaggedItems}
+          sub={`of ${items.length} line item${items.length === 1 ? "" : "s"}`}
+        />
+      </div>
+
+      {totals.pct > 0 && (
+        <div style={styles.warningBanner}>
+          <div style={styles.warningBannerRow}>
+            <span>You're trending {totals.pct.toFixed(1)}% over the revised budget on this project. Review flagged lines below before your next client meeting.</span>
+            <button type="button" style={styles.warningBannerToggle} onClick={() => setOverrunDetailOpen((v) => !v)}>
+              {overrunDetailOpen ? "Hide detail" : "What's driving this?"}
+            </button>
+          </div>
+          {overrunDetailOpen && (() => {
+            const overItems = flaggedItems.filter((f) => f.status === "over");
+            return (
+              <div style={styles.warningBannerDetail}>
+                {overItems.length ? (
+                  overItems.map((f, idx) => (
+                    <div key={f.id} style={idx === overItems.length - 1 ? styles.warningBannerRowLast : styles.warningBannerRowItem}>
+                      <span style={styles.warningBannerItemName}>{f.name}</span>
+                      <span style={styles.warningBannerItemValue}>+{fmt(f.variance)} · +{f.pct.toFixed(1)}%</span>
+                    </div>
+                  ))
+                ) : (
+                  <div style={styles.warningBannerNote}>No individual line is over its own budget — this comes from approved change orders raising the revised budget's baseline.</div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+      {aheadCount > 0 && (
+        <div style={{ ...styles.warningBanner, borderLeftColor: "var(--tm-warn-mark)", background: "var(--tm-warn-fill)", color: "var(--text-primary)" }}>
+          {aheadCount} line{aheadCount > 1 ? "s are" : " is"} spending ahead of physical progress. Check the Progress column below.
+        </div>
+      )}
+
+      <div className="no-print" style={styles.categoryStrip}>
+        {categoryRollup.map((c) => (
+          <div key={c.category} style={styles.categoryCard}>
+            <div style={styles.categoryHead}>
+              <span style={{ ...styles.categoryDot, background: CATEGORY_COLOR[c.category] }} />
+              <span style={styles.categoryName}>{c.category}</span>
+            </div>
+            <div style={styles.categoryNums}>
+              <span style={styles.categoryBudget}>{fmt(c.budget)}</span>
+              <span style={{ ...styles.categoryVariance, color: c.variance > 0 ? "var(--tm-neg)" : c.variance < 0 ? "var(--tm-pos)" : "var(--text-secondary)" }}>
+                {c.variance > 0 ? "+" : ""}{fmt(c.variance)}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="no-print" style={styles.importRow}>
+        <button style={styles.importBtn} onClick={() => fileInputRef.current?.click()} disabled={importBusy}>
+          {importBusy ? "Reading…" : "Import a budget"}
+        </button>
+        <button style={styles.templateLink} onClick={downloadImportTemplate}>Blank template</button>
+        <select style={{ ...styles.addInput, maxWidth: 220 }} defaultValue="" onChange={(e) => { applyTemplate(e.target.value); e.target.value = ""; }}>
+          <option value="">Apply a template…</option>
+          {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+        <button style={styles.importBtn} onClick={saveAsTemplate}>Save as template</button>
+        {importMessage && (
+          <span style={{ fontSize: 12.5, color: importMessage.type === "error" ? "var(--danger)" : "var(--success)" }}>{importMessage.text}</span>
+        )}
+        <div ref={downloadMenuRef} style={{ position: "relative", marginLeft: "auto" }}>
+          <button style={styles.exportBtn} onClick={() => setDownloadMenuOpen((v) => !v)}>Download</button>
+          {downloadMenuOpen && (
+            <div style={styles.downloadMenuPopover}>
+              {can("export") ? (
+                <>
+                  <button style={styles.logoMenuItem} onClick={exportLedgerPdf}>PDF</button>
+                  <button style={styles.logoMenuItem} onClick={exportLedgerExcel}>Excel</button>
+                  <button style={styles.logoMenuItem} onClick={exportLedgerCsv}>CSV</button>
+                </>
+              ) : locked("export") ? (
+                <ExportLockedMenu onNavigate={onNavigate} />
+              ) : null}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="no-print" style={styles.toggleGroupWrap}>
+        <div style={styles.toggleGroupLabel}>Site & Delivery</div>
+        <div style={styles.viewToggle}>
+          {[
+            ["purchaseorders", `Purchase Orders${purchaseOrders.length ? ` (${purchaseOrders.length})` : ""}`],
+            ["tenders", `Tenders${tenders.length ? ` (${tenders.length})` : ""}`],
+            ["schedule", `Schedule${scheduleTasks.length ? ` (${scheduleTasks.length})` : ""}`],
+            ["dailylog", `Daily Log${dailyLogs.length ? ` (${dailyLogs.length})` : ""}`],
+            ["documents", `Documents${documents.length ? ` (${documents.length})` : ""}`],
+            ["contacts", `Contacts${contacts.length ? ` (${contacts.length})` : ""}`],
+            ["plans", `Plans${(project?.plans || []).length ? ` (${(project.plans || []).length})` : ""}`],
+            ["punchlist", `Punch List${punchItems.length ? ` (${punchItems.length})` : ""}`],
+            ["changeorders", `Change Orders${changeOrders.length ? ` (${changeOrders.length})` : ""}`],
+          ].map(([key, label]) => {
+            const mc = MODULE_COLOR[key];
+            const active = view === key;
+            return (
+              <button
+                key={key}
+                style={{
+                  ...styles.toggleBtn,
+                  ...(mc ? { color: mc.solid, background: mc.tint } : {}),
+                  ...(active ? (mc ? { background: mc.solid, color: "#FFFFFF", fontWeight: 600 } : styles.toggleBtnActive) : {}),
+                }}
+                onClick={() => setView(key)}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="no-print" style={styles.toggleGroupWrap}>
+        <div style={styles.toggleGroupLabel}>Budget & Reporting</div>
+        <div style={styles.viewToggle}>
+          {[
+            ["ledger", "Cost & Progress"],
+            ["quote", "Quote"],
+            ["payments", "Payments & Retention"],
+            ["charts", "Charts"],
+            ["trend", "Trend"],
+            ["clientreports", "Client Reports"],
+          ].map(([key, label]) => {
+            const mc = MODULE_COLOR[key];
+            const active = view === key;
+            return (
+              <button
+                key={key}
+                style={{
+                  ...styles.toggleBtn,
+                  ...(mc ? { color: mc.solid, background: mc.tint } : {}),
+                  ...(active ? (mc ? { background: mc.solid, color: "#FFFFFF", fontWeight: 600 } : styles.toggleBtnActive) : {}),
+                }}
+                onClick={() => setView(key)}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      </>
+      )}
+
+      {/* Print header for the v2 shell — the on-screen title row above is
+          legacy-only now, but the exported cost sheet still needs the company
+          logo and project name at the top of page one. */}
+      {SHELL_V2 && (
+        <div className="sm-print-title" style={{ alignItems: "center", gap: 14, maxWidth: 1180, margin: "0 auto 16px", borderBottom: "2px solid var(--border-color)", paddingBottom: 10 }}>
+          {logoUrl && <img src={logoUrl} alt="Company logo" style={styles.companyLogoMark} />}
+          <span style={styles.eyebrowProminent}>COST VARIANCE SHEET</span>
+          <span style={styles.titleDivider}>·</span>
+          <span style={{ fontSize: 17, fontWeight: 800, letterSpacing: "0.02em", textTransform: "uppercase" }}>{project.name}</span>
+        </div>
+      )}
+
+      {SHELL_V2 ? (
+        <ProjectShell
+          viewport={viewport}
+          project={project}
+          onRename={renameProject}
+          projects={projectList}
+          onOpenProject={(id) => { setExpandedRow(null); setLedgerFilter("all"); if (onOpenProject) onOpenProject(id); }}
+          totals={totals}
+          view={view}
+          setView={setView}
+          counts={navCounts}
+          onBack={onBack}
+          onNavigate={onNavigate}
+          inspector={
+            <ProjectInspector
+              totals={totals}
+              itemsCount={items.length}
+              approvedCoTotal={approvedCoTotal}
+              approvedChangeOrders={approvedChangeOrders}
+              flaggedItems={flaggedItems}
+              aheadCount={aheadCount}
+              retentionPct={totals.retentionPct}
+              onRetentionChange={setRetentionPct}
+              selectedItem={items.find((i) => i.id === expandedRow) || null}
+              onClearSelection={() => setExpandedRow(null)}
+              subs={subs}
+            />
+          }
+        >
+          {moduleContent}
+        </ProjectShell>
+      ) : moduleContent}
+
       <div className="print-only-footer" style={styles.docFooter}>
         <div style={styles.dfRow}>
           <div style={styles.dfBrand}>
@@ -8581,6 +9401,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       </div>
 
       <AppFooter />
+      {SHELL_V2 && viewport === "phone" && <div className="no-print" style={{ height: "calc(84px + env(safe-area-inset-bottom, 0px))" }} />}
 
       <ImportPreviewModal
         items={importPreviewItems}
