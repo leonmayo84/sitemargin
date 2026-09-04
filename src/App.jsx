@@ -3673,8 +3673,9 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
             <div style={styles.startKicker}>Fastest way in</div>
             <div style={styles.startTitle}>Already have the budget in a spreadsheet?</div>
             <p style={styles.startBody}>
-              Drop your BOQ, quote or budget in — Excel, CSV or a digital PDF. We'll read the line items, work out
-              quantities × rates, sort them into trades, and show you everything before anything is saved.
+              Drag your BOQ, quote or budget onto this box, or choose a file below — Excel, CSV or a digital PDF.
+              We'll read the line items, work out quantities × rates, sort them into trades, and show you
+              everything before anything is saved.
             </p>
             <div style={styles.startActions}>
               <button style={styles.addBtn} onClick={() => importInputRef.current?.click()} disabled={importBusy}>
