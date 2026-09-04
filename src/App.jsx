@@ -1502,6 +1502,13 @@ function GlobalStyles() {
       .sm-pub-footer-social:hover { background: #ECECEF !important; color: #1D1D1F !important; }
       .sm-pub-footer-col a:hover { color: #1D5C8A !important; }
       .sm-pub-footer-bottom a:hover { color: #1D1D1F !important; }
+      /* Import preview modal: kill the native number-input spinner on the
+         budget column — inline style can't reach a pseudo-element, and it's
+         the one control in that row that doesn't match the rest of the
+         app's flat, borderless input style. */
+      .sm-import-num::-webkit-outer-spin-button,
+      .sm-import-num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+      .sm-import-num { -moz-appearance: textfield; }
       /* Always-visible Log in / Sign up pill in the gate screen's header —
          mirrors the marketing site's .nav-app-link pill exactly, so the
          login entry point is immediately visible without opening the
@@ -3076,7 +3083,7 @@ function ImportPreviewModal({ items, onChange, onCancel, onConfirm, busy, name, 
   return (
     <div className="no-print" style={styles.modalOverlay} onClick={busy ? undefined : onCancel}>
       <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-        <div style={styles.modalHeader}>
+        <div style={{ ...styles.modalHeader, flexShrink: 0 }}>
           <div>
             <div style={styles.modalTitle}>
               {items.length} line{items.length === 1 ? "" : "s"} read. Check them before they land.
@@ -3090,7 +3097,7 @@ function ImportPreviewModal({ items, onChange, onCancel, onConfirm, busy, name, 
         </div>
 
         {onNameChange && (
-          <div style={styles.importNameRow}>
+          <div style={{ ...styles.importNameRow, flexShrink: 0 }}>
             <label style={styles.importNameLabel} htmlFor="import-project-name">Project name</label>
             <input
               id="import-project-name"
@@ -3105,9 +3112,9 @@ function ImportPreviewModal({ items, onChange, onCancel, onConfirm, busy, name, 
         <div style={styles.modalBody}>
           <div style={styles.previewHeaderRow}>
             <span style={{ flex: 0.4 }}></span>
-            <span style={{ flex: 2.4 }}>Description</span>
-            <span style={{ flex: 1.2 }}>Category</span>
-            <span style={{ flex: 1.2, textAlign: "right" }}>Budget</span>
+            <span style={{ flex: 2.2 }}>Description</span>
+            <span style={{ flex: 1.5 }}>Category</span>
+            <span style={{ flex: 1.1, textAlign: "right" }}>Budget</span>
           </div>
           {items.map((item, idx) => (
             <div key={idx} style={{ ...styles.previewRow, opacity: item._include ? 1 : 0.4 }}>
@@ -3119,19 +3126,25 @@ function ImportPreviewModal({ items, onChange, onCancel, onConfirm, busy, name, 
                   onChange={(e) => update(idx, { _include: e.target.checked })}
                 />
               </span>
-              <span style={{ flex: 2.4 }}>
+              <span style={{ flex: 2.2 }}>
                 <input style={styles.previewInput} value={item.name} onChange={(e) => update(idx, { name: e.target.value })} />
                 {item.notes && <div style={styles.previewNote}>{item.notes}</div>}
               </span>
-              <span style={{ flex: 1.2 }}>
-                <select style={styles.previewInput} value={item.category} onChange={(e) => update(idx, { category: e.target.value })}>
+              <span style={{ flex: 1.5 }}>
+                <select
+                  style={styles.previewInput}
+                  value={item.category}
+                  title={item.category}
+                  onChange={(e) => update(idx, { category: e.target.value })}
+                >
                   {CATEGORIES.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </span>
-              <span style={{ flex: 1.2 }}>
+              <span style={{ flex: 1.1 }}>
                 <input
+                  className="sm-import-num"
                   style={{ ...styles.previewInput, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}
                   type="number"
                   value={item.budget}
@@ -3142,7 +3155,7 @@ function ImportPreviewModal({ items, onChange, onCancel, onConfirm, busy, name, 
           ))}
         </div>
 
-        <div style={styles.modalFooter}>
+        <div style={{ ...styles.modalFooter, flexShrink: 0 }}>
           <button style={styles.templateLink} onClick={onCancel} disabled={busy}>Cancel</button>
           <button
             style={{ ...styles.addBtn, opacity: busy || included.length === 0 ? 0.55 : 1 }}
