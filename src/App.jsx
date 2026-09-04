@@ -345,10 +345,10 @@ const HEADER_TIER_BADGE = {
    than the pricing page promises, never less.
    --------------------------------------------------------------------------- */
 const PLAN_FEATURES = {
-  free:       { changeorders: false, payments: false, documents: false, export: false, reportSchedule: false },
-  contractor: { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: false },
-  firm:       { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: true  },
-  homeowner:  { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: false },
+  free:       { changeorders: false, payments: false, documents: false, export: false, reportSchedule: false, accounting: false, retention: false },
+  contractor: { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: false, accounting: false, retention: false },
+  firm:       { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: true,  accounting: true,  retention: true  },
+  homeowner:  { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: false, accounting: false, retention: false },
 };
 
 const PAID_FEATURE_COPY = {
@@ -368,11 +368,45 @@ const PAID_FEATURE_COPY = {
     title: "Export is on the paid plans",
     body: "Download a clean PDF or Excel of your budget to send to a client, a bank, or your builder.",
   },
+  accounting: {
+    title: "Accounting sync is on the Company plan",
+    body: "Connect Xero or Sage and SiteMargin pulls your paid supplier bills in every day, matching each one to the line item it belongs to — so actuals keep themselves up to date instead of being retyped.",
+  },
+  retention: {
+    title: "The retention register is on the Company plan",
+    body: "Every Rand held back across every job in one place, and which of it sits on work that is already finished — the money most contractors only remember when the client does.",
+  },
 };
 
 function planAllows(tier, feature) {
   const row = PLAN_FEATURES[tier] || PLAN_FEATURES.free;
   return row[feature] === true;
+}
+
+// Reads the caller's plan once and answers can()/locked() against the matrix
+// above. Both return false while the subscription row is still in flight, so
+// a gated surface renders nothing for that beat instead of flashing either
+// the feature at a free account or the paywall at a paying one.
+function usePlanGate(userEmail) {
+  const [tier, setTier] = useState(null);
+  useEffect(() => {
+    if (!userEmail) { setTier(null); return; }
+    let live = true;
+    supabase
+      .from("subscriptions")
+      .select("tier, status")
+      .eq("email", userEmail)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (live) setTier(data?.status === "active" ? (data.tier || "free") : "free");
+      });
+    return () => { live = false; };
+  }, [userEmail]);
+  return {
+    tier,
+    can: (feature) => tier !== null && planAllows(tier, feature),
+    locked: (feature) => tier !== null && !planAllows(tier, feature),
+  };
 }
 
 // Shown in place of a gated view. Deliberately not a dead end: it names what
@@ -1428,6 +1462,7 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
   const tierBadge = headerTier && HEADER_TIER_BADGE[headerTier];
   const tabs = [
     ["dashboard", "Projects"],
+    ["retention", "Retention"],
     ["subcontractors", "Subcontractors"],
     ["templates", "Templates"],
     ["integrations", "Accounting"],
@@ -1813,6 +1848,9 @@ function AppShell({ userEmail, onSignOut }) {
         logoUrl={companyLogoUrl}
       />
     );
+  }
+  if (route.page === "retention") {
+    return <RetentionView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={companyLogoUrl} />;
   }
   if (route.page === "subcontractors") {
     return <SubcontractorsView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={companyLogoUrl} />;
@@ -3951,7 +3989,187 @@ const ACCOUNTING_PROVIDERS = [
   { key: "sage", label: "Sage", color: "#00DC00" },
 ];
 
+/* ---------------------------------------------------------------------------
+   RETENTION REGISTER (Company plan)
+
+   Retention is the one number a contractor reliably loses track of: 5% of
+   every certified claim, held back per job, released only once the work is
+   signed off. On one job you remember it. Across nine you don't, and the
+   client has no incentive to remind you.
+
+   projects_v2 has no completion date, so "finished" is derived rather than
+   stored: the budget-weighted percent_complete of the project's own line
+   items. A project only counts as due for release once that reaches 100%,
+   which errs on the side of not telling someone their money is ready when
+   it isn't. A real practical-completion date on projects_v2 would sharpen
+   this later; nothing here needs one.
+   --------------------------------------------------------------------------- */
+function RetentionView({ onNavigate, userEmail, onSignOut, logoUrl }) {
+  const { can, locked } = usePlanGate(userEmail);
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!can("retention")) return;
+    let live = true;
+    (async () => {
+      setLoading(true);
+      const [{ data: projs }, { data: items }] = await Promise.all([
+        supabase.from("projects_v2").select("id, name, client_name, retention_pct"),
+        supabase.from("line_items").select("project_id, budget, certified, percent_complete"),
+      ]);
+      if (!live) return;
+      const byProject = {};
+      (items || []).forEach((i) => {
+        if (!i.project_id) return;
+        (byProject[i.project_id] = byProject[i.project_id] || []).push(i);
+      });
+      const built = (projs || []).map((p) => {
+        const its = byProject[p.id] || [];
+        const certified = its.reduce((sum, i) => sum + Number(i.certified || 0), 0);
+        const budget = its.reduce((sum, i) => sum + Number(i.budget || 0), 0);
+        const pct = p.retention_pct ?? 5;
+        // Budget-weighted so a R400k slab counts for more than a R2k tap.
+        const progress = budget
+          ? its.reduce((sum, i) => sum + Number(i.budget || 0) * Number(i.percent_complete || 0), 0) / budget
+          : 0;
+        return {
+          id: p.id,
+          name: p.name || "Untitled project",
+          client: p.client_name || "",
+          certified,
+          pct,
+          held: certified * (pct / 100),
+          progress,
+          complete: its.length > 0 && progress >= 99.5,
+        };
+      })
+        .filter((r) => r.held > 0)
+        .sort((a, b) => (b.complete ? 1 : 0) - (a.complete ? 1 : 0) || b.held - a.held);
+      setRows(built);
+      setLoading(false);
+    })();
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userEmail, can("retention")]);
+
+  if (locked("retention")) {
+    return (
+      <div style={styles.page}>
+        <GlobalStyles />
+        <PageHeader title="Retention register" current="retention" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
+        <PaywallPanel feature="retention" onNavigate={onNavigate} />
+      </div>
+    );
+  }
+
+  const totalHeld = rows.reduce((sum, r) => sum + r.held, 0);
+  const dueRows = rows.filter((r) => r.complete);
+  const dueHeld = dueRows.reduce((sum, r) => sum + r.held, 0);
+
+  return (
+    <div style={styles.page}>
+      <GlobalStyles />
+      <PageHeader title="Retention register" current="retention" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
+
+      <div style={styles.explainer}>
+        Every Rand held back across every job, worked out from what has actually been certified on each
+        one at that project's own retention rate. A job counts as <b>due for release</b> once its line items
+        add up to 100% complete — that is your money, sitting with someone else, and nobody else is going
+        to raise it.
+      </div>
+
+      {dueHeld > 0 && (
+        <div style={{ ...styles.warningBanner, borderLeftColor: "var(--tm-pos)", background: "var(--tm-pos-fill)" }}>
+          <div style={styles.warningBannerRow}>
+            <span>
+              <b>{fmt(dueHeld)}</b> is held on {dueRows.length} job{dueRows.length === 1 ? "" : "s"} that
+              {dueRows.length === 1 ? " is" : " are"} already finished. Worth a call.
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div style={styles.summaryStrip}>
+        <SummaryCard
+          label="Retention held"
+          value={fmt(totalHeld)}
+          sub={`across ${rows.length} job${rows.length === 1 ? "" : "s"}`}
+        />
+        <SummaryCard
+          label="Due for release"
+          value={fmt(dueHeld)}
+          accent={dueHeld > 0 ? "var(--tm-pos)" : undefined}
+          glow={dueHeld > 0 ? "pos" : undefined}
+          sub={dueHeld > 0 ? `${dueRows.length} job${dueRows.length === 1 ? "" : "s"} at 100%` : "nothing ready yet"}
+        />
+        <SummaryCard
+          label="Still holding"
+          value={fmt(totalHeld - dueHeld)}
+          sub={`${rows.length - dueRows.length} job${rows.length - dueRows.length === 1 ? "" : "s"} in progress`}
+        />
+      </div>
+
+      {loading ? (
+        <div style={{ ...styles.footer, textAlign: "center", padding: 40 }}>Working out what's held…</div>
+      ) : rows.length === 0 ? (
+        <div style={{ ...styles.footer, textAlign: "center", padding: 40 }}>
+          Nothing held yet. Retention shows up here once you start certifying claims on a project.
+        </div>
+      ) : (
+        <div style={styles.ledger}>
+          <div style={{ ...styles.ledgerHeaderRow }}>
+            <span style={{ ...styles.thCell, flex: 2.2 }}>Project</span>
+            <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>Certified</span>
+            <span style={{ ...styles.thCell, flex: 0.6, textAlign: "right" }}>Rate</span>
+            <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>Held</span>
+            <span style={{ ...styles.thCell, flex: 1.6 }}>Progress</span>
+            <span style={{ ...styles.thCell, flex: 1, textAlign: "center" }}>Status</span>
+          </div>
+          {rows.map((r) => (
+            <div
+              key={r.id}
+              style={{ ...styles.row, cursor: "pointer" }}
+              onClick={() => onNavigate("dashboard")}
+            >
+              <span style={{ ...styles.tdCell, flex: 2.2 }}>
+                <div style={{ fontWeight: 500 }}>{r.name}</div>
+                {r.client && <div style={{ fontSize: 11.5, color: "var(--text-secondary)" }}>{r.client}</div>}
+              </span>
+              <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)" }}>
+                {fmt(r.certified)}
+              </span>
+              <span style={{ ...styles.tdCell, flex: 0.6, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)" }}>
+                {r.pct}%
+              </span>
+              <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", fontWeight: 600 }}>
+                {fmt(r.held)}
+              </span>
+              <span style={{ ...styles.tdCell, flex: 1.6 }}>
+                <div style={styles.projectBarTrack}>
+                  <div style={{ ...styles.projectBarFill, width: `${Math.min(r.progress, 100)}%`, background: r.complete ? "var(--tm-pos)" : "var(--accent)" }} />
+                </div>
+                <span style={{ fontSize: 11, color: "var(--text-secondary)", fontVariantNumeric: "tabular-nums" }}>
+                  {r.progress.toFixed(0)}% complete
+                </span>
+              </span>
+              <span style={{ ...styles.tdCell, flex: 1, textAlign: "center" }}>
+                <span style={{ ...styles.pillBase, ...(r.complete
+                  ? { color: "var(--tm-pos)", background: "var(--tm-pos-fill)" }
+                  : { color: "var(--text-secondary)", background: "var(--bg-secondary)" }) }}>
+                  {r.complete ? "DUE FOR RELEASE" : "HOLDING"}
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function IntegrationsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
+  const { locked } = usePlanGate(userEmail);
   const [connections, setConnections] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [lineItemOptions, setLineItemOptions] = useState([]);
@@ -4110,6 +4328,16 @@ function IntegrationsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
   }
 
   const byProvider = Object.fromEntries(connections.filter((c) => c.status === "connected").map((c) => [c.provider, c]));
+
+  if (locked("accounting")) {
+    return (
+      <div style={styles.page}>
+        <GlobalStyles />
+        <PageHeader title="Accounting sync" current="integrations" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
+        <PaywallPanel feature="accounting" onNavigate={onNavigate} />
+      </div>
+    );
+  }
 
   return (
     <div style={styles.page}>
@@ -4550,13 +4778,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const [docCategory, setDocCategory] = useState("Drawings");
   const [docLineItemId, setDocLineItemId] = useState("");
   const [overrunDetailOpen, setOverrunDetailOpen] = useState(false);
-  // Plan gating. `null` means the subscription row is still in flight, and
-  // both helpers return false while it is — a gated view renders nothing for
-  // that beat rather than flashing either the feature or the paywall at
-  // someone who turns out to be entitled to the opposite.
-  const [planTier, setPlanTier] = useState(null);
-  const can = (feature) => planTier !== null && planAllows(planTier, feature);
-  const locked = (feature) => planTier !== null && !planAllows(planTier, feature);
+  const { can, locked } = usePlanGate(userEmail);
   const documentsInputRef = useRef(null);
   const DOC_CATEGORIES = ["Drawings", "Contracts", "Specifications", "Photos", "Correspondence", "Other"];
   // Client Reports: a per-project saved configuration (which sections show,
@@ -4670,21 +4892,6 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   }
 
   useEffect(() => { loadAll(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [projectId]);
-
-  // A cancelled or lapsed subscription reads as free here, matching how
-  // Dashboard already decides the project cap.
-  useEffect(() => {
-    let live = true;
-    supabase
-      .from("subscriptions")
-      .select("tier, status")
-      .eq("email", userEmail)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (live) setPlanTier(data?.status === "active" ? (data.tier || "free") : "free");
-      });
-    return () => { live = false; };
-  }, [userEmail]);
 
   useEffect(() => {
     return () => {
@@ -7594,6 +7801,7 @@ const styles = {
   ledger: { maxWidth: 1180, margin: "0 auto", background: "var(--surface)", borderRadius: 18, overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" },
   ledgerHeaderRow: { display: "flex", alignItems: "center", gap: 14, padding: "10px 14px", borderBottom: "1px solid var(--border-color)", background: "var(--bg-secondary)", minWidth: 640 },
   thCell: { fontSize: 11, letterSpacing: "0.08em", color: "var(--text-secondary)", textTransform: "uppercase" },
+  pillBase: { display: "inline-block", fontSize: 10, fontWeight: 600, letterSpacing: "0.05em", padding: "4px 10px", borderRadius: 100, whiteSpace: "nowrap" },
   row: { display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", borderBottom: "1px solid var(--border-color)", minWidth: 640 },
   tdCell: { fontSize: 14, paddingRight: 8 },
   actualButton: { display: "inline-block", boxSizing: "border-box", appearance: "none", WebkitAppearance: "none", margin: 0, textAlign: "right", background: "none", border: "none", color: "var(--text-primary)", fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, lineHeight: "inherit", cursor: "pointer", borderBottom: "1px dashed #6E6E73", padding: 0 },
