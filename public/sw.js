@@ -7,7 +7,7 @@
 // stale build. Static assets (JS/CSS/images/fonts) are cache-first once
 // fetched once, since Vite fingerprints those filenames on every build.
 
-const CACHE_NAME = "sitemargin-shell-v3";
+const CACHE_NAME = "sitemargin-shell-v4";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
