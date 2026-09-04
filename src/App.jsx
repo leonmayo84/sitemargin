@@ -679,6 +679,119 @@ function pdfRowsToItems(rows) {
 }
 
 
+/* ---------- INSTRUMENTATION ----------
+   Fire-and-forget product events into app_events. That table is insert-only
+   by design — there is no SELECT policy, so rows are readable only over a
+   direct database connection. Nothing here records a project name, a client
+   or a figure; only which step of a flow an account reached.
+
+   Instrumentation must never break a user flow, so every failure path here
+   is deliberately silent.                                                  */
+function logEvent(userEmail, event, props = {}) {
+  try {
+    supabase
+      .from("app_events")
+      .insert({ user_email: userEmail || null, event, props })
+      .then(
+        () => {},
+        () => {}
+      );
+  } catch {
+    /* swallowed on purpose — see above */
+  }
+}
+
+/* ---------- SHARED IMPORT ENTRY POINT ----------
+   Every import surface goes through this. Returns the same shape whatever
+   the file type, plus rowsRead so a caller can tell "we read nothing at all"
+   apart from "we read 400 rows and understood none of them" — those are very
+   different problems and used to produce the same message.                 */
+const IMPORT_HELP_EMAIL = "import@sitemargin.co.za";
+
+function parseImportFile(file) {
+  return new Promise((resolve) => {
+    const isExcel = /\.xlsx$/i.test(file.name);
+    const isPdf = /\.pdf$/i.test(file.name);
+    const reader = new FileReader();
+
+    reader.onerror = () =>
+      resolve({ items: [], error: "Couldn't read that file — it may be open in another program.", rowsRead: 0 });
+
+    reader.onload = async (evt) => {
+      try {
+        if (isExcel) {
+          const rows = await xlsxBufferToRows(evt.target.result);
+          resolve({ ...rowsToItems(rows), rowsRead: rows.length });
+        } else if (isPdf) {
+          const rows = await pdfBufferToRows(evt.target.result);
+          const parsed = pdfRowsToItems(rows);
+          resolve({
+            items: parsed.items,
+            error:
+              parsed.error ||
+              (rows.length === 0
+                ? `No readable text in that PDF. If it's a scan or a photo of a printed page this can't read it — email it to ${IMPORT_HELP_EMAIL} and we'll set the project up for you.`
+                : null),
+            rowsRead: rows.length,
+          });
+        } else {
+          const rows = csvTextToRows(evt.target.result);
+          resolve({ ...rowsToItems(rows), rowsRead: rows.length });
+        }
+      } catch (err) {
+        console.error("Import parse failed", err);
+        resolve({
+          items: [],
+          error: "Couldn't read that file — make sure it's a valid CSV, .xlsx, or PDF.",
+          rowsRead: 0,
+        });
+      }
+    };
+
+    if (isExcel || isPdf) reader.readAsArrayBuffer(file);
+    else reader.readAsText(file);
+  });
+}
+
+function importFileExt(name) {
+  const m = /\.([a-z0-9]+)$/i.exec(name || "");
+  return m ? m[1].toLowerCase() : "none";
+}
+
+// Turns a filename into a first-guess project name so nobody has to think of
+// one mid-import: "fernwood-boq-aug26.xlsx" -> "Fernwood". Always editable.
+function projectNameFromFile(fileName) {
+  let base = String(fileName || "").replace(/\.[a-z0-9]+$/i, "");
+  base = base.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  // Drop the trailing document-type and date noise contractors put in filenames.
+  base = base.replace(
+    /\s*\b(boq|bill of quantities|budget|quote|quotation|estimate|costing|final|draft|rev\s*\w*|v\d+|copy)\b\s*/gi,
+    " "
+  );
+  base = base.replace(/\s*\b(\d{1,2}[.\-/]\d{1,2}([.\-/]\d{2,4})?|\d{4}|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\d*\b\s*/gi, " ");
+  base = base.replace(/\s+/g, " ").trim();
+  if (!base) return "";
+  return base.replace(/\b[a-z]/g, (c) => c.toUpperCase()).slice(0, 60);
+}
+
+// A one-sheet workbook whose headers are exactly the aliases rowsToItems
+// looks for, with three filled rows so the shape is obvious at a glance.
+// Answers "what format do you want?" with a file instead of a paragraph.
+async function downloadImportTemplate() {
+  const XLSX = await import("xlsx");
+  const rows = [
+    ["Description", "Category", "Quantity", "Unit", "Rate", "Budget", "Actual", "Percent Complete"],
+    ["Strip footings to engineer's detail", "Concrete & Structural", 42, "m3", 1850, 77700, 0, 0],
+    ["Brickwork — external skin", "Bricklaying & Masonry", 310, "m2", 495, 153450, 0, 0],
+    ["Electrical first fix", "Electrical", "", "", "", 68000, 0, 0],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"] = [{ wch: 42 }, { wch: 24 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 17 }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Budget");
+  XLSX.writeFile(wb, "SiteMargin budget template.xlsx");
+}
+
 const CATEGORY_KEYWORDS = {
   Preliminaries: ["preliminaries", "prelim", "site establishment", "site setup"],
   Demolition: ["demolition", "demolish", "strip out", "strip-out"],
@@ -2362,7 +2475,7 @@ function AuthGate() {
               type="button"
               onClick={handleEnableBiometric}
               disabled={biometricOffer === "saving"}
-              style={{ background: "var(--accent)", color: "#fff", border: "none", borderRadius: 8, padding: "7px 12px", fontWeight: 600, cursor: "pointer" }}
+              style={{ background: "var(--accent)", color: "var(--on-accent)", border: "none", borderRadius: 8, padding: "7px 12px", fontWeight: 600, cursor: "pointer" }}
             >
               {biometricOffer === "saving" ? "Enabling…" : "Enable"}
             </button>
@@ -2949,6 +3062,101 @@ export default function SiteMargin() {
 
 /* ============================== DASHBOARD ============================== */
 
+/* Shared by both import surfaces: the dashboard (where an import creates the
+   project) and the ledger (where it adds to the open one). This modal is the
+   only thing standing between a parsed file and someone's contract figures,
+   so nothing is written until onConfirm — the parse itself is pure. */
+function ImportPreviewModal({ items, onChange, onCancel, onConfirm, busy, name, onNameChange }) {
+  if (!items) return null;
+
+  const included = items.filter((i) => i._include);
+  const total = included.reduce((s, i) => s + Number(i.budget || 0), 0);
+  const update = (idx, patch) => onChange(items.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+
+  return (
+    <div className="no-print" style={styles.modalOverlay} onClick={busy ? undefined : onCancel}>
+      <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+        <div style={styles.modalHeader}>
+          <div>
+            <div style={styles.modalTitle}>
+              {items.length} line{items.length === 1 ? "" : "s"} read. Check them before they land.
+            </div>
+            <div style={styles.modalSub}>
+              {included.length} of {items.length} selected · {fmt(total)} total. Uncheck anything wrong or edit it
+              here. Nothing is saved until you press import.
+            </div>
+          </div>
+          <button style={styles.removeBtn} onClick={onCancel} aria-label="Close">✕</button>
+        </div>
+
+        {onNameChange && (
+          <div style={styles.importNameRow}>
+            <label style={styles.importNameLabel} htmlFor="import-project-name">Project name</label>
+            <input
+              id="import-project-name"
+              style={{ ...styles.addInput, flex: 1 }}
+              value={name}
+              placeholder="Name this project"
+              onChange={(e) => onNameChange(e.target.value)}
+            />
+          </div>
+        )}
+
+        <div style={styles.modalBody}>
+          <div style={styles.previewHeaderRow}>
+            <span style={{ flex: 0.4 }}></span>
+            <span style={{ flex: 2.4 }}>Description</span>
+            <span style={{ flex: 1.2 }}>Category</span>
+            <span style={{ flex: 1.2, textAlign: "right" }}>Budget</span>
+          </div>
+          {items.map((item, idx) => (
+            <div key={idx} style={{ ...styles.previewRow, opacity: item._include ? 1 : 0.4 }}>
+              <span style={{ flex: 0.4 }}>
+                <input
+                  type="checkbox"
+                  checked={item._include}
+                  aria-label={`Include ${item.name}`}
+                  onChange={(e) => update(idx, { _include: e.target.checked })}
+                />
+              </span>
+              <span style={{ flex: 2.4 }}>
+                <input style={styles.previewInput} value={item.name} onChange={(e) => update(idx, { name: e.target.value })} />
+                {item.notes && <div style={styles.previewNote}>{item.notes}</div>}
+              </span>
+              <span style={{ flex: 1.2 }}>
+                <select style={styles.previewInput} value={item.category} onChange={(e) => update(idx, { category: e.target.value })}>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </span>
+              <span style={{ flex: 1.2 }}>
+                <input
+                  style={{ ...styles.previewInput, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}
+                  type="number"
+                  value={item.budget}
+                  onChange={(e) => update(idx, { budget: Number(e.target.value) || 0 })}
+                />
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div style={styles.modalFooter}>
+          <button style={styles.templateLink} onClick={onCancel} disabled={busy}>Cancel</button>
+          <button
+            style={{ ...styles.addBtn, opacity: busy || included.length === 0 ? 0.55 : 1 }}
+            onClick={onConfirm}
+            disabled={busy || included.length === 0}
+          >
+            {busy ? "Importing…" : `Import ${included.length} item${included.length === 1 ? "" : "s"}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const FREE_PROJECT_LIMIT = 1;
 
 function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoChange, displayName, onDisplayNameChange }) {
@@ -2957,6 +3165,18 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [isPaid, setIsPaid] = useState(true); // assume paid until we know otherwise, so the cap never flashes incorrectly
+
+  // Import-from-the-dashboard. This is the path where the file creates the
+  // project, rather than being dropped into one that already exists.
+  const [importItems, setImportItems] = useState(null); // null = no preview open
+  const [importName, setImportName] = useState("");
+  const [importBusy, setImportBusy] = useState(false);
+  const [importNote, setImportNote] = useState(null); // { type, text }
+  const [dragging, setDragging] = useState(false);
+  const importInputRef = useRef(null);
+  const dragDepth = useRef(0);        // dragenter/dragleave fire per child element
+  const importEditedRef = useRef(false);
+  const entryLoggedRef = useRef(false);
 
   // Company logo + account name — edited inline right here on the dashboard
   // (formerly a separate "App Tools" page) since this is the one place both
@@ -3080,7 +3300,104 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
       .select()
       .single();
     setCreating(false);
-    if (!error && data) { setNewName(""); onOpen(data.id); }
+    if (!error && data) {
+      logEvent(userEmail, "project_created_blank", { existing_projects: projects.length });
+      setNewName("");
+      onOpen(data.id);
+    }
+  }
+
+  /* ---------- IMPORT (dashboard) ---------- */
+
+  function noteImport(type, text) {
+    setImportNote({ type, text });
+    setTimeout(() => setImportNote(null), 9000);
+  }
+
+  async function handleImportFiles(fileList) {
+    const file = fileList && fileList[0];
+    if (!file || importBusy) return;
+
+    if (atFreeLimit) {
+      noteImport("error", `You've used your Free plan's ${FREE_PROJECT_LIMIT} project. Upgrade to import another.`);
+      return;
+    }
+
+    logEvent(userEmail, "import_file_chosen", {
+      surface: "dashboard",
+      ext: importFileExt(file.name),
+      bytes: file.size,
+    });
+
+    setImportBusy(true);
+    setImportNote(null);
+    const { items, error, rowsRead } = await parseImportFile(file);
+    setImportBusy(false);
+
+    logEvent(userEmail, "import_parse_result", {
+      surface: "dashboard",
+      ext: importFileExt(file.name),
+      rows_read: rowsRead,
+      items_found: items.length,
+      error: error || null,
+    });
+
+    if (error) { noteImport("error", error); return; }
+
+    importEditedRef.current = false;
+    setImportName(projectNameFromFile(file.name));
+    setImportItems(items.map((i) => ({ ...i, _include: true })));
+  }
+
+  function changeImportItems(next) {
+    if (!importEditedRef.current) {
+      importEditedRef.current = true;
+      logEvent(userEmail, "import_preview_edited", { surface: "dashboard", rows: next.length });
+    }
+    setImportItems(next);
+  }
+
+  // Creates the project and its line items together. If the items fail to
+  // insert the project is removed again — a half-imported project that looks
+  // finished but has no budget in it is worse than no project at all.
+  async function confirmImport() {
+    const chosen = (importItems || []).filter((i) => i._include && i.name?.trim());
+    if (chosen.length === 0 || importBusy) return;
+
+    setImportBusy(true);
+    const { data: project, error: projectErr } = await supabase
+      .from("projects_v2")
+      .insert({ name: importName.trim() || "Imported project", owner_email: userEmail })
+      .select()
+      .single();
+
+    if (projectErr || !project) {
+      setImportBusy(false);
+      noteImport("error", "Couldn't create the project — please try again.");
+      return;
+    }
+
+    const rows = chosen.map(({ _include, ...rest }) => ({ ...rest, project_id: project.id }));
+    const { error: itemsErr } = await supabase.from("line_items").insert(rows);
+    setImportBusy(false);
+
+    if (itemsErr) {
+      await supabase.from("projects_v2").delete().eq("id", project.id);
+      noteImport("error", "Couldn't import those line items — nothing was saved.");
+      return;
+    }
+
+    logEvent(userEmail, "import_committed", {
+      surface: "dashboard",
+      project_id: project.id,
+      items: rows.length,
+      rows_parsed: (importItems || []).length,
+      total_budget: Math.round(rows.reduce((s, r) => s + Number(r.budget || 0), 0)),
+      edited: importEditedRef.current,
+    });
+
+    setImportItems(null);
+    onOpen(project.id);
   }
 
   async function deleteProject(id, name) {
@@ -3107,9 +3424,68 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
     };
   }, [projects]);
 
+  // Fires once per visit, so "did anyone ever see the way in" stays a
+  // separate question from "did anyone use it".
+  useEffect(() => {
+    if (loading || entryLoggedRef.current) return;
+    entryLoggedRef.current = true;
+    logEvent(userEmail, "import_entry_shown", {
+      surface: projects.length === 0 ? "dashboard_empty" : "dashboard_row",
+      projects: projects.length,
+    });
+  }, [loading, projects.length, userEmail]);
+
+  // Whole-screen drop target. Contractors already have the file open in
+  // another window; making them find a button first is the friction.
+  const dropHandlers = {
+    onDragEnter: (e) => {
+      if (!e.dataTransfer?.types?.includes("Files")) return;
+      dragDepth.current += 1;
+      setDragging(true);
+    },
+    onDragOver: (e) => {
+      if (e.dataTransfer?.types?.includes("Files")) e.preventDefault();
+    },
+    onDragLeave: () => {
+      dragDepth.current = Math.max(0, dragDepth.current - 1);
+      if (dragDepth.current === 0) setDragging(false);
+    },
+    onDrop: (e) => {
+      if (!e.dataTransfer?.types?.includes("Files")) return;
+      e.preventDefault();
+      dragDepth.current = 0;
+      setDragging(false);
+      handleImportFiles(e.dataTransfer.files);
+    },
+  };
+
   return (
-    <div style={styles.page}>
+    <div style={styles.page} {...dropHandlers}>
       <GlobalStyles />
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.pdf,application/pdf"
+        style={{ display: "none" }}
+        onChange={(e) => { handleImportFiles(e.target.files); e.target.value = ""; }}
+      />
+      {dragging && (
+        <div className="no-print" style={styles.dropOverlay}>
+          <div style={styles.dropOverlayCard}>
+            <div style={styles.dropOverlayTitle}>Drop it anywhere</div>
+            <div style={styles.dropOverlayBody}>Excel, CSV or a digital PDF bill of quantities.</div>
+          </div>
+        </div>
+      )}
+      <ImportPreviewModal
+        items={importItems}
+        onChange={changeImportItems}
+        onCancel={() => { if (!importBusy) setImportItems(null); }}
+        onConfirm={confirmImport}
+        busy={importBusy}
+        name={importName}
+        onNameChange={setImportName}
+      />
       <PageHeader
         current="dashboard"
         onNavigate={onNavigate}
@@ -3213,13 +3589,64 @@ function Dashboard({ onOpen, onNavigate, userEmail, onSignOut, logoUrl, onLogoCh
           <button style={styles.addBtn} onClick={createProject} disabled={creating}>
             {creating ? "Creating…" : "+ New project"}
           </button>
+          <button
+            style={styles.importBtn}
+            onClick={() => importInputRef.current?.click()}
+            disabled={importBusy}
+            title="Create a project from a budget file you already have"
+          >
+            {importBusy ? "Reading…" : "↑ Import instead"}
+          </button>
+        </div>
+      )}
+
+      {importNote && (
+        <div
+          className="no-print"
+          style={{
+            ...styles.integrationsBanner,
+            ...(importNote.type === "error" ? styles.integrationsBannerError : {}),
+          }}
+        >
+          {importNote.text}
         </div>
       )}
 
       {loading ? (
         <div style={{ ...styles.footer, textAlign: "center", padding: 40 }}>Loading projects…</div>
       ) : projects.length === 0 ? (
-        <div style={{ ...styles.footer, textAlign: "center", padding: 40 }}>No projects yet — create your first one above.</div>
+        <div className="no-print" style={styles.startChoices}>
+          <div style={{ ...styles.startCard, ...(dragging ? styles.startCardActive : {}) }}>
+            <div style={styles.startKicker}>Fastest way in</div>
+            <div style={styles.startTitle}>Already have the budget in a spreadsheet?</div>
+            <p style={styles.startBody}>
+              Drop your BOQ, quote or budget in — Excel, CSV or a digital PDF. We'll read the line items, work out
+              quantities × rates, sort them into trades, and show you everything before anything is saved.
+            </p>
+            <div style={styles.startActions}>
+              <button style={styles.addBtn} onClick={() => importInputRef.current?.click()} disabled={importBusy}>
+                {importBusy ? "Reading…" : "Choose a file"}
+              </button>
+              <button style={styles.templateLink} onClick={downloadImportTemplate}>Download a blank template</button>
+            </div>
+            <div style={styles.startMicro}>Nothing is saved until you say so.</div>
+            <div style={styles.startHelp}>
+              Odd file, or a photo of a printed page?{" "}
+              <a style={styles.startHelpLink} href={`mailto:${IMPORT_HELP_EMAIL}?subject=Set%20up%20my%20project`}>
+                Email it to {IMPORT_HELP_EMAIL}
+              </a>{" "}
+              and we'll set the project up for you.
+            </div>
+          </div>
+
+          <div style={styles.startCardAlt}>
+            <div style={styles.startKicker}>Or</div>
+            <div style={styles.startTitle}>Start a blank project</div>
+            <p style={styles.startBody}>
+              Name it in the box above and add line items by hand. You can import into it later, at any time.
+            </p>
+          </div>
+        </div>
       ) : (
         <div style={styles.projectGrid}>
           {projects.map((p) => {
@@ -4751,6 +5178,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const [noteDraft, setNoteDraft] = useState("");
   const [importMessage, setImportMessage] = useState(null);
   const [importPreviewItems, setImportPreviewItems] = useState(null); // null = no modal open
+  const [importBusy, setImportBusy] = useState(false);
+  const importEditedRef = useRef(false);
+  const activationLoggedRef = useRef(false);
   const [coDesc, setCoDesc] = useState("");
   const [coAmount, setCoAmount] = useState("");
   const [coPriority, setCoPriority] = useState("Normal");
@@ -5063,55 +5493,55 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   }
 
   function saveEdit(id, field, isText) {
-    scheduleSave(id, { [field]: isText ? editValue || null : Number(editValue) || 0 });
+    const value = isText ? editValue || null : Number(editValue) || 0;
+    scheduleSave(id, { [field]: value });
     setEditingCell(null);
-  }
 
-  function handleImportFile(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const isExcel = /\.xlsx$/i.test(file.name);
-    const isPdf = /\.pdf$/i.test(file.name);
-
-    function openPreview(parsed, error) {
-      if (error) {
-        setImportMessage({ type: "error", text: error });
-        setTimeout(() => setImportMessage(null), 6000);
-      } else {
-        setImportPreviewItems(parsed.map((p) => ({ ...p, _include: true })));
+    // The activation event. A budget on its own shows a variance of zero
+    // forever; the product only does anything once a real cost is entered,
+    // so this is the one number worth optimising for. Fired once per mount.
+    if (field === "actual" && value > 0 && !activationLoggedRef.current) {
+      activationLoggedRef.current = true;
+      const alreadyHadActuals = items.some((i) => i.id !== id && Number(i.actual) > 0);
+      if (!alreadyHadActuals) {
+        logEvent(userEmail, "first_actual_entered", {
+          project_id: projectId,
+          project_line_count: items.length,
+        });
       }
     }
+  }
 
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        if (isExcel) {
-          const rows = await xlsxBufferToRows(evt.target.result);
-          const { items: parsed, error } = rowsToItems(rows);
-          openPreview(parsed, error);
-        } else if (isPdf) {
-          const rows = await pdfBufferToRows(evt.target.result);
-          const { items: parsed, error } = pdfRowsToItems(rows);
-          openPreview(
-            parsed,
-            error ||
-              (rows.length === 0
-                ? "No readable text found in that PDF. If it's a scanned or photographed document, this won't work — only digitally created PDFs can be read this way."
-                : null)
-          );
-        } else {
-          const { items: parsed, error } = parseCsvToItems(evt.target.result);
-          openPreview(parsed, error);
-        }
-      } catch (err) {
-        console.error("Import failed", err);
-        setImportMessage({ type: "error", text: "Couldn't read that file — make sure it's a valid CSV, .xlsx, or PDF." });
-        setTimeout(() => setImportMessage(null), 6000);
-      }
-    };
-    if (isExcel || isPdf) reader.readAsArrayBuffer(file);
-    else reader.readAsText(file);
+  async function handleImportFile(e) {
+    const file = e.target.files?.[0];
     e.target.value = "";
+    if (!file || importBusy) return;
+
+    logEvent(userEmail, "import_file_chosen", {
+      surface: "ledger",
+      ext: importFileExt(file.name),
+      bytes: file.size,
+    });
+
+    setImportBusy(true);
+    const { items: parsed, error, rowsRead } = await parseImportFile(file);
+    setImportBusy(false);
+
+    logEvent(userEmail, "import_parse_result", {
+      surface: "ledger",
+      ext: importFileExt(file.name),
+      rows_read: rowsRead,
+      items_found: parsed.length,
+      error: error || null,
+    });
+
+    if (error) {
+      setImportMessage({ type: "error", text: error });
+      setTimeout(() => setImportMessage(null), 9000);
+      return;
+    }
+    importEditedRef.current = false;
+    setImportPreviewItems(parsed.map((p) => ({ ...p, _include: true })));
   }
 
   async function confirmImportPreview() {
@@ -5120,22 +5550,35 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       setImportPreviewItems(null);
       return;
     }
+    setImportBusy(true);
     const rows = toImport.map(({ _include, ...rest }) => ({ ...rest, project_id: projectId }));
     const { data, error } = await supabase.from("line_items").insert(rows).select();
+    setImportBusy(false);
     setImportPreviewItems(null);
     if (error) {
       setImportMessage({ type: "error", text: "Import failed — please try again." });
     } else {
       setItems((prev) => [...prev, ...data]);
+      logEvent(userEmail, "import_committed", {
+        surface: "ledger",
+        project_id: projectId,
+        items: data.length,
+        rows_parsed: importPreviewItems.length,
+        total_budget: Math.round(rows.reduce((s, r) => s + Number(r.budget || 0), 0)),
+        edited: importEditedRef.current,
+      });
       setImportMessage({ type: "success", text: `Imported ${data.length} line item${data.length > 1 ? "s" : ""}.` });
     }
     setTimeout(() => setImportMessage(null), 6000);
   }
 
-  function updatePreviewItem(index, patch) {
-    setImportPreviewItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+  function changePreviewItems(next) {
+    if (!importEditedRef.current) {
+      importEditedRef.current = true;
+      logEvent(userEmail, "import_preview_edited", { surface: "ledger", rows: next.length });
+    }
+    setImportPreviewItems(next);
   }
-
 
   async function applyTemplate(templateId) {
     if (!templateId) return;
@@ -5982,7 +6425,10 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       </div>
 
       <div className="no-print" style={styles.importRow}>
-        <button style={styles.importBtn} onClick={() => fileInputRef.current?.click()}>Import BOQ, CSV, or PDF</button>
+        <button style={styles.importBtn} onClick={() => fileInputRef.current?.click()} disabled={importBusy}>
+          {importBusy ? "Reading…" : "Import a budget"}
+        </button>
+        <button style={styles.templateLink} onClick={downloadImportTemplate}>Blank template</button>
         <select style={{ ...styles.addInput, maxWidth: 220 }} defaultValue="" onChange={(e) => { applyTemplate(e.target.value); e.target.value = ""; }}>
           <option value="">Apply a template…</option>
           {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -7396,76 +7842,13 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
 
       <AppFooter />
 
-      {importPreviewItems && (
-        <div className="no-print" style={styles.modalOverlay} onClick={() => setImportPreviewItems(null)}>
-          <div style={styles.modalCard} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <div>
-                <div style={styles.modalTitle}>Review before importing</div>
-                <div style={styles.modalSub}>
-                  {importPreviewItems.length} row{importPreviewItems.length === 1 ? "" : "s"} found. Check the numbers,
-                  uncheck anything wrong, edit inline if needed, then import.
-                </div>
-              </div>
-              <button style={styles.removeBtn} onClick={() => setImportPreviewItems(null)}>✕</button>
-            </div>
-
-            <div style={styles.modalBody}>
-              <div style={styles.previewHeaderRow}>
-                <span style={{ flex: 0.4 }}></span>
-                <span style={{ flex: 2.4 }}>Description</span>
-                <span style={{ flex: 1.2 }}>Category</span>
-                <span style={{ flex: 1.2, textAlign: "right" }}>Budget</span>
-              </div>
-              {importPreviewItems.map((item, idx) => (
-                <div key={idx} style={{ ...styles.previewRow, opacity: item._include ? 1 : 0.4 }}>
-                  <span style={{ flex: 0.4 }}>
-                    <input
-                      type="checkbox"
-                      checked={item._include}
-                      onChange={(e) => updatePreviewItem(idx, { _include: e.target.checked })}
-                    />
-                  </span>
-                  <span style={{ flex: 2.4 }}>
-                    <input
-                      style={styles.previewInput}
-                      value={item.name}
-                      onChange={(e) => updatePreviewItem(idx, { name: e.target.value })}
-                    />
-                    {item.notes && <div style={styles.previewNote}>{item.notes}</div>}
-                  </span>
-                  <span style={{ flex: 1.2 }}>
-                    <select
-                      style={styles.previewInput}
-                      value={item.category}
-                      onChange={(e) => updatePreviewItem(idx, { category: e.target.value })}
-                    >
-                      {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  </span>
-                  <span style={{ flex: 1.2 }}>
-                    <input
-                      style={{ ...styles.previewInput, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif" }}
-                      type="number"
-                      value={item.budget}
-                      onChange={(e) => updatePreviewItem(idx, { budget: Number(e.target.value) || 0 })}
-                    />
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div style={styles.modalFooter}>
-              <button style={styles.templateLink} onClick={() => setImportPreviewItems(null)}>Cancel</button>
-              <button style={styles.addBtn} onClick={confirmImportPreview}>
-                Import {importPreviewItems.filter((i) => i._include).length} item{importPreviewItems.filter((i) => i._include).length === 1 ? "" : "s"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ImportPreviewModal
+        items={importPreviewItems}
+        onChange={changePreviewItems}
+        onCancel={() => { if (!importBusy) setImportPreviewItems(null); }}
+        onConfirm={confirmImportPreview}
+        busy={importBusy}
+      />
     </div>
   );
 }
@@ -7677,7 +8060,48 @@ const styles = {
   integrationsTxnRow: { display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid var(--border-color)", flexWrap: "wrap" },
   explainerLink: { color: "var(--accent)", fontWeight: 600 },
 
-  newProjectRow: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", gap: 10 },
+  newProjectRow: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", gap: 10, flexWrap: "wrap" },
+
+  /* ---------- IMPORT ENTRY POINTS ----------
+     The whole-screen drop overlay is pointerEvents:"none" on purpose: it is a
+     child of the page div, and letting it swallow the pointer would fight the
+     dragenter/dragleave counter underneath it. */
+  dropOverlay: {
+    position: "fixed", inset: 0, zIndex: 300, pointerEvents: "none",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    background: "rgba(29,92,138,0.14)", backdropFilter: "blur(2px)",
+  },
+  dropOverlayCard: {
+    background: "var(--surface)", border: "2px dashed var(--accent)", borderRadius: 18,
+    padding: "26px 34px", textAlign: "center", boxShadow: "0 20px 50px rgba(0,0,0,0.22)",
+  },
+  dropOverlayTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.01em" },
+  dropOverlayBody: { fontSize: 13, color: "var(--text-secondary)", marginTop: 6 },
+
+  startChoices: {
+    maxWidth: 1180, margin: "0 auto", display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 14, alignItems: "start",
+  },
+  startCard: {
+    background: "var(--surface)", border: "2px dashed var(--border-color)", borderRadius: 18,
+    padding: "24px 26px", transition: "border-color .15s ease, background .15s ease",
+  },
+  startCardActive: { borderColor: "var(--accent)", background: "rgba(29,92,138,0.06)" },
+  startCardAlt: {
+    background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 18,
+    padding: "24px 26px", boxShadow: "0 1px 6px rgba(0,0,0,0.05)",
+  },
+  startKicker: { fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 700, color: "var(--text-secondary)", marginBottom: 9 },
+  startTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: 19, fontWeight: 700, letterSpacing: "-0.015em", color: "var(--text-primary)", lineHeight: 1.25 },
+  startBody: { fontSize: 14, lineHeight: 1.55, color: "var(--text-secondary)", margin: "9px 0 0" },
+  startActions: { display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap", marginTop: 16 },
+  startMicro: { fontSize: 12, color: "var(--text-secondary)", marginTop: 10 },
+  startHelp: { fontSize: 12.5, lineHeight: 1.5, color: "var(--text-secondary)", marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--border-color)" },
+  startHelpLink: { color: "var(--accent)", fontWeight: 600 },
+
+  importNameRow: { display: "flex", alignItems: "center", gap: 12, padding: "12px 24px", borderBottom: "1px solid var(--border-color)" },
+  importNameLabel: { fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" },
+
   freeLimitBanner: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, background: "rgba(29,92,138,0.07)", border: "1px solid #1D5C8A", borderRadius: 14, padding: "14px 16px", fontSize: 13.5, color: "var(--text-secondary)", flexWrap: "wrap" },
   freeLimitLink: { color: "var(--accent)", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" },
   addRowStandalone: { maxWidth: 1180, margin: "0 auto 22px", display: "flex", gap: 10, flexWrap: "wrap" },
@@ -7818,7 +8242,10 @@ const styles = {
   removeBtn: { background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: 13 },
   addRow: { display: "flex", gap: 10, alignItems: "center", padding: "14px", background: "var(--bg-secondary)", flexWrap: "wrap" },
   addInput: { background: "var(--bg-secondary)", border: "1px solid transparent", borderRadius: 10, color: "var(--text-primary)", fontSize: 14, padding: "8px 12px" },
-  addBtn: { background: "var(--accent)", border: "none", borderRadius: 100, color: "#FFFFFF", fontWeight: 600, fontSize: 13, padding: "9px 16px", cursor: "pointer", whiteSpace: "nowrap" },
+  // --on-accent, not a hardcoded white: the dark theme's accent is a pale
+  // blue (#6BA9D4) that white text sits illegibly on top of. The token
+  // resolves to #FFFFFF in light and #0E1A24 in dark.
+  addBtn: { background: "var(--accent)", border: "none", borderRadius: 100, color: "var(--on-accent)", fontWeight: 600, fontSize: 13, padding: "9px 16px", cursor: "pointer", whiteSpace: "nowrap" },
   footer: { maxWidth: 1180, margin: "16px auto 0", fontSize: 12, color: "var(--text-secondary)" },
   // Full marketing-style footer (AppFooter, above) — mirrors sitemargin.co.za's
   // .site-footer/.footer-* rules in styles.css. One deliberate departure: the
