@@ -672,10 +672,50 @@ function findHeaderRowIndex(rows) {
   return 0;
 }
 
+// A wide BOQ (Description, Category, Qty, Unit, Rate, Budget, Actual, %
+// Complete...) printed to a portrait PDF from Excel routinely comes out too
+// wide for one page and splits into two — the first page carrying the left
+// columns, the second carrying the right ones, with the SAME rows repeated
+// under a second header rather than continued sideways. pdfBufferToRows reads
+// pages in sequence, so what should be one table with 8 columns lands as two
+// short tables stacked on top of each other: the first with no Budget/Rate
+// column at all, which rowsToItems then correctly reports as unparseable.
+// That report is accurate but unhelpful, since the real problem is a page
+// break, not a missing column. Detect the tell — a second header-like row
+// further down whose keywords don't overlap the first — and say so.
+function findSecondHeaderRowIndex(rows, excludeIndex) {
+  const keywords = ["description", "amount", "budget", "quantity", "qty", "rate", "item", "particulars", "total"];
+  const firstMatched = new Set(
+    keywords.filter((k) => (rows[excludeIndex] || []).join(" ").toLowerCase().includes(k))
+  );
+  for (let i = 0; i < Math.min(rows.length, 200); i++) {
+    if (i === excludeIndex) continue;
+    const rowText = rows[i].join(" ").toLowerCase();
+    const matched = keywords.filter((k) => rowText.includes(k));
+    // A second, mostly-different set of header keywords is the signature of
+    // a page-width split rather than, say, a repeated header on a later page
+    // of the SAME columns (which would share most of these words).
+    if (matched.length >= 2 && matched.filter((k) => !firstMatched.has(k)).length >= 2) return i;
+  }
+  return -1;
+}
+
 function pdfRowsToItems(rows) {
   const headerIdx = findHeaderRowIndex(rows);
   const trimmed = rows.slice(headerIdx);
-  return rowsToItems(trimmed);
+  const result = rowsToItems(trimmed);
+
+  if (result.items.length === 0 && /Couldn.t find a Description column/.test(result.error || "")) {
+    const secondHeaderIdx = findSecondHeaderRowIndex(rows, headerIdx);
+    if (secondHeaderIdx !== -1) {
+      return {
+        items: [],
+        error:
+          "This PDF's columns look like they're split across two pages — one page has the descriptions, another has the rates and budget. That usually happens when a wide spreadsheet is printed to PDF in portrait. Re-export it as landscape or one page wide, or import the .xlsx directly instead.",
+      };
+    }
+  }
+  return result;
 }
 
 
