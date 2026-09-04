@@ -176,6 +176,12 @@ const MODULE_COLOR = {
   plans: { solid: "#2E8C82", tint: "rgba(46,140,130,0.09)", banner: "#E7F3F2" },        // plans
   changeorders: { solid: "#C6902E", tint: "rgba(198,144,46,0.09)", banner: "#FBF3E5" }, // change orders
   clientreports: { solid: "#20344A", tint: "rgba(32,52,74,0.09)", banner: "#EAEEF2" }, // client reports
+  // Daily Log is new (not one of the original six tiles) — a quiet slate
+  // rather than a marketing-site hue, so it reads as part of the family
+  // without being mistaken for one of the six.
+  dailylog: { solid: "#5B6470", tint: "rgba(91,100,112,0.09)", banner: "#ECEEF0" },
+  punchlist: { solid: "#A6443B", tint: "rgba(166,68,59,0.09)", banner: "#F8EBEA" },
+  contacts: { solid: "#8B6D3F", tint: "rgba(139,109,63,0.09)", banner: "#F6EFE5" },
 };
 
 // Per-module copy + decorative artwork for ModuleBanner — the icon and
@@ -259,6 +265,46 @@ const MODULE_INFO = {
       </>
     ),
   },
+  dailylog: {
+    label: "Daily Log",
+    sub: "What happened on site, the day it happened.",
+    icon: <><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" /></>,
+    chart: (c) => (
+      <>
+        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+          <rect key={i} x={4 + i * 31} y="14" width="22" height="32" rx="5" fill={c} opacity={i % 3 === 0 ? 0.9 : i % 2 === 0 ? 0.5 : 0.22} />
+        ))}
+      </>
+    ),
+  },
+  punchlist: {
+    label: "Punch List",
+    sub: "Snags tracked to closed-out, not lost in a thread.",
+    icon: <><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></>,
+    chart: (c) => (
+      <>
+        <circle cx="20" cy="30" r="9" fill={c} opacity="0.9" />
+        <circle cx="60" cy="30" r="9" fill="none" stroke={c} strokeWidth="3" opacity="0.5" />
+        <circle cx="100" cy="30" r="9" fill="none" stroke={c} strokeWidth="3" opacity="0.5" />
+        <circle cx="140" cy="30" r="9" fill={c} opacity="0.9" />
+        <circle cx="180" cy="30" r="9" fill="none" stroke={c} strokeWidth="3" opacity="0.5" />
+      </>
+    ),
+  },
+  contacts: {
+    label: "Contacts",
+    sub: "Client, architect, suppliers and subs for this job.",
+    icon: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></>,
+    chart: (c) => (
+      <>
+        <circle cx="30" cy="20" r="12" fill={c} opacity="0.85" />
+        <circle cx="72" cy="26" r="12" fill={c} opacity="0.55" />
+        <circle cx="114" cy="18" r="12" fill={c} opacity="0.75" />
+        <circle cx="156" cy="28" r="12" fill={c} opacity="0.4" />
+        <circle cx="198" cy="20" r="12" fill={c} opacity="0.65" />
+      </>
+    ),
+  },
 };
 
 // Small colour-coded header shown at the top of each of the six modules
@@ -309,6 +355,7 @@ function ModuleBanner({ moduleKey, stat, statLabel, chartArg }) {
 const TIER_LABEL = {
   free: "Free",
   contractor: "Contractor",
+  contractor_plus: "Contractor+",
   firm: "Company",
   homeowner: "Home Owner",
 };
@@ -324,6 +371,7 @@ const TIER_LABEL = {
 const HEADER_TIER_BADGE = {
   free: { label: "Trial", tint: "rgba(160,160,166,0.14)", color: "#83838A" },
   contractor: { label: "Contractor", tint: "rgba(29,92,138,0.09)", color: "var(--accent)" },
+  contractor_plus: { label: "Contractor+", tint: "rgba(184,134,47,0.11)", color: "var(--warning)" },
   firm: { label: "Company", tint: "rgba(184,134,47,0.11)", color: "var(--warning)" },
   homeowner: { label: "Home Owner", tint: "rgba(76,122,92,0.10)", color: "var(--success)" },
 };
@@ -345,10 +393,16 @@ const HEADER_TIER_BADGE = {
    than the pricing page promises, never less.
    --------------------------------------------------------------------------- */
 const PLAN_FEATURES = {
-  free:       { changeorders: false, payments: false, documents: false, export: false, reportSchedule: false, accounting: false, retention: false },
-  contractor: { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: false, accounting: false, retention: false },
-  firm:       { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: true,  accounting: true,  retention: true  },
-  homeowner:  { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: false, accounting: false, retention: false },
+  free:            { changeorders: false, payments: false, documents: false, export: false, reportSchedule: false, accounting: false, retention: false, dailylog: false, punchlist: false, contacts: false, cashflow: false },
+  contractor:      { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: false, accounting: false, retention: false, dailylog: true,  punchlist: true,  contacts: true,  cashflow: false },
+  // Contractor+ is a +R49/mo add-on toggled from Plans & Storage, not a
+  // separate signup tier on the pricing page — see STORAGE_TIER_LABELS for
+  // the sibling pattern this follows. It bridges Contractor and Company with
+  // just retention + cash-flow forecasting, both of which run off data the
+  // Contractor tier already has (no external integration required).
+  contractor_plus: { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: false, accounting: false, retention: true,  dailylog: true,  punchlist: true,  contacts: true,  cashflow: true  },
+  firm:             { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: true,  accounting: true,  retention: true,  dailylog: true,  punchlist: true,  contacts: true,  cashflow: true  },
+  homeowner:  { changeorders: true,  payments: true,  documents: true,  export: true,  reportSchedule: false, accounting: false, retention: false, dailylog: true,  punchlist: true,  contacts: true,  cashflow: false },
 };
 
 const PAID_FEATURE_COPY = {
@@ -375,6 +429,22 @@ const PAID_FEATURE_COPY = {
   retention: {
     title: "The retention register is on the Company plan",
     body: "Every Rand held back across every job in one place, and which of it sits on work that is already finished — the money most contractors only remember when the client does.",
+  },
+  dailylog: {
+    title: "The daily log is on the paid plans",
+    body: "What happened on site, the day it happened — weather, crew, progress, delays. A dated record you can point to when a client or a QS asks what was going on that week.",
+  },
+  punchlist: {
+    title: "The punch list is on the paid plans",
+    body: "Snags tracked to closed-out, not lost in a WhatsApp thread — description, location and status on every item until it's actually fixed.",
+  },
+  contacts: {
+    title: "The contacts directory is on the paid plans",
+    body: "Client, architect, suppliers and subs for this job, in one place, instead of scattered across your phone.",
+  },
+  cashflow: {
+    title: "Cash-flow forecasting is a Contractor+ feature",
+    body: "What's certified but unpaid, what retention is due for release, and what's coming — projected from data already in your projects. Add it for R49/month from Plans & Storage, or it's included on Company.",
   },
 };
 
@@ -672,50 +742,10 @@ function findHeaderRowIndex(rows) {
   return 0;
 }
 
-// A wide BOQ (Description, Category, Qty, Unit, Rate, Budget, Actual, %
-// Complete...) printed to a portrait PDF from Excel routinely comes out too
-// wide for one page and splits into two — the first page carrying the left
-// columns, the second carrying the right ones, with the SAME rows repeated
-// under a second header rather than continued sideways. pdfBufferToRows reads
-// pages in sequence, so what should be one table with 8 columns lands as two
-// short tables stacked on top of each other: the first with no Budget/Rate
-// column at all, which rowsToItems then correctly reports as unparseable.
-// That report is accurate but unhelpful, since the real problem is a page
-// break, not a missing column. Detect the tell — a second header-like row
-// further down whose keywords don't overlap the first — and say so.
-function findSecondHeaderRowIndex(rows, excludeIndex) {
-  const keywords = ["description", "amount", "budget", "quantity", "qty", "rate", "item", "particulars", "total"];
-  const firstMatched = new Set(
-    keywords.filter((k) => (rows[excludeIndex] || []).join(" ").toLowerCase().includes(k))
-  );
-  for (let i = 0; i < Math.min(rows.length, 200); i++) {
-    if (i === excludeIndex) continue;
-    const rowText = rows[i].join(" ").toLowerCase();
-    const matched = keywords.filter((k) => rowText.includes(k));
-    // A second, mostly-different set of header keywords is the signature of
-    // a page-width split rather than, say, a repeated header on a later page
-    // of the SAME columns (which would share most of these words).
-    if (matched.length >= 2 && matched.filter((k) => !firstMatched.has(k)).length >= 2) return i;
-  }
-  return -1;
-}
-
 function pdfRowsToItems(rows) {
   const headerIdx = findHeaderRowIndex(rows);
   const trimmed = rows.slice(headerIdx);
-  const result = rowsToItems(trimmed);
-
-  if (result.items.length === 0 && /Couldn.t find a Description column/.test(result.error || "")) {
-    const secondHeaderIdx = findSecondHeaderRowIndex(rows, headerIdx);
-    if (secondHeaderIdx !== -1) {
-      return {
-        items: [],
-        error:
-          "This PDF's columns look like they're split across two pages — one page has the descriptions, another has the rates and budget. That usually happens when a wide spreadsheet is printed to PDF in portrait. Re-export it as landscape or one page wide, or import the .xlsx directly instead.",
-      };
-    }
-  }
-  return result;
+  return rowsToItems(trimmed);
 }
 
 
@@ -1623,8 +1653,10 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
   const tabs = [
     ["dashboard", "Projects"],
     ["retention", "Retention"],
+    ["cashflow", "Cash Flow"],
     ["subcontractors", "Subcontractors"],
     ["templates", "Templates"],
+    ["resources", "Resources"],
     ["integrations", "Accounting"],
     ["storage", "Plan and Storage"],
   ];
@@ -1706,7 +1738,6 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                   { label: "Pricing", href: "https://sitemargin.co.za/pricing.html" },
                   { label: "About", href: "https://sitemargin.co.za/about.html" },
                   { label: "Contact", href: "https://sitemargin.co.za/contact.html" },
-                  { label: "Construction Library", href: "https://sitemargin.co.za/construction-library.html" },
                 ].map((item) => (
                   <a
                     key={item.label}
@@ -2011,6 +2042,12 @@ function AppShell({ userEmail, onSignOut }) {
   }
   if (route.page === "retention") {
     return <RetentionView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={companyLogoUrl} />;
+  }
+  if (route.page === "cashflow") {
+    return <CashflowView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={companyLogoUrl} />;
+  }
+  if (route.page === "resources") {
+    return <ResourcesView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={companyLogoUrl} />;
   }
   if (route.page === "subcontractors") {
     return <SubcontractorsView onNavigate={navigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={companyLogoUrl} />;
@@ -4649,6 +4686,263 @@ function RetentionView({ onNavigate, userEmail, onSignOut, logoUrl }) {
   );
 }
 
+/* ---------------------------------------------------------------------------
+   CASH-FLOW FORECASTING (Contractor+ add-on / Company)
+
+   No external integration — everything here is computed from data the app
+   already has. Three numbers a contractor actually wants to see in one
+   place: what's been claimed but not yet certified (near-term expected
+   income, pending the client/QS sign-off), what retention is sitting ready
+   for release (the same "complete" derivation RetentionView uses), and what
+   purchase orders are still outstanding to suppliers (near-term expected
+   spend). Net expected is the three combined — a rough but honest forward
+   look, not a promise.
+   --------------------------------------------------------------------------- */
+function CashflowView({ onNavigate, userEmail, onSignOut, logoUrl }) {
+  const { can, locked } = usePlanGate(userEmail);
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!can("cashflow")) return;
+    let live = true;
+    (async () => {
+      setLoading(true);
+      const [{ data: projs }, { data: items }, { data: pos }] = await Promise.all([
+        supabase.from("projects_v2").select("id, name, client_name, retention_pct"),
+        supabase.from("line_items").select("project_id, budget, claimed, certified, percent_complete"),
+        supabase.from("purchase_orders").select("project_id, amount, status"),
+      ]);
+      if (!live) return;
+      const itemsByProject = {};
+      (items || []).forEach((i) => {
+        if (!i.project_id) return;
+        (itemsByProject[i.project_id] = itemsByProject[i.project_id] || []).push(i);
+      });
+      const poByProject = {};
+      (pos || []).forEach((po) => {
+        if (!po.project_id || po.status === "received" || po.status === "cancelled") return;
+        poByProject[po.project_id] = (poByProject[po.project_id] || 0) + Number(po.amount || 0);
+      });
+      const built = (projs || []).map((p) => {
+        const its = itemsByProject[p.id] || [];
+        const claimed = its.reduce((s, i) => s + Number(i.claimed || 0), 0);
+        const certified = its.reduce((s, i) => s + Number(i.certified || 0), 0);
+        const budget = its.reduce((s, i) => s + Number(i.budget || 0), 0);
+        const pct = p.retention_pct ?? 5;
+        const progress = budget
+          ? its.reduce((s, i) => s + Number(i.budget || 0) * Number(i.percent_complete || 0), 0) / budget
+          : 0;
+        const complete = its.length > 0 && progress >= 99.5;
+        const retentionHeld = certified * (pct / 100);
+        return {
+          id: p.id,
+          name: p.name || "Untitled project",
+          client: p.client_name || "",
+          uncertified: Math.max(claimed - certified, 0),
+          retentionDue: complete ? retentionHeld : 0,
+          retentionHeld: complete ? 0 : retentionHeld,
+          poOutstanding: poByProject[p.id] || 0,
+        };
+      })
+        .filter((r) => r.uncertified > 0 || r.retentionDue > 0 || r.retentionHeld > 0 || r.poOutstanding > 0)
+        .sort((a, b) => (b.uncertified + b.retentionDue) - (a.uncertified + a.retentionDue));
+      setRows(built);
+      setLoading(false);
+    })();
+    return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userEmail, can("cashflow")]);
+
+  if (locked("cashflow")) {
+    return (
+      <div style={styles.page}>
+        <GlobalStyles />
+        <PageHeader title="Cash-flow forecast" current="cashflow" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
+        <PaywallPanel feature="cashflow" onNavigate={onNavigate} />
+      </div>
+    );
+  }
+
+  const totalUncertified = rows.reduce((s, r) => s + r.uncertified, 0);
+  const totalRetentionDue = rows.reduce((s, r) => s + r.retentionDue, 0);
+  const totalRetentionHeld = rows.reduce((s, r) => s + r.retentionHeld, 0);
+  const totalPoOutstanding = rows.reduce((s, r) => s + r.poOutstanding, 0);
+  const netExpected = totalUncertified + totalRetentionDue - totalPoOutstanding;
+
+  return (
+    <div style={styles.page}>
+      <GlobalStyles />
+      <PageHeader title="Cash-flow forecast" current="cashflow" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
+
+      <div style={styles.explainer}>
+        What's coming, worked out from data already on your projects — nothing synced from a bank
+        or accounting package. Claimed-but-not-certified is near-term income waiting on sign-off;
+        retention due is money already earned and ready to invoice for; purchase orders outstanding
+        is near-term spend committed to suppliers but not yet paid.
+      </div>
+
+      <div style={styles.summaryStrip}>
+        <SummaryCard
+          label="Awaiting certification"
+          value={fmt(totalUncertified)}
+          sub="claimed, not yet signed off"
+        />
+        <SummaryCard
+          label="Retention due"
+          value={fmt(totalRetentionDue)}
+          accent={totalRetentionDue > 0 ? "var(--tm-pos)" : undefined}
+          glow={totalRetentionDue > 0 ? "pos" : undefined}
+          sub="ready to invoice for"
+        />
+        <SummaryCard
+          label="Retention still held"
+          value={fmt(totalRetentionHeld)}
+          sub="jobs still in progress"
+        />
+        <SummaryCard
+          label="POs outstanding"
+          value={fmt(totalPoOutstanding)}
+          sub="committed spend, not yet paid"
+        />
+        <SummaryCard
+          label="Net expected"
+          value={fmt(netExpected)}
+          accent={netExpected < 0 ? "var(--danger)" : undefined}
+          sub="in minus out, this snapshot"
+        />
+      </div>
+
+      {loading ? (
+        <div style={{ ...styles.footer, textAlign: "center", padding: 40 }}>Working out the forecast…</div>
+      ) : rows.length === 0 ? (
+        <div style={{ ...styles.footer, textAlign: "center", padding: 40 }}>
+          Nothing to forecast yet. This fills in once claims, certifications or purchase orders are logged on a project.
+        </div>
+      ) : (
+        <div style={styles.ledger}>
+          <div style={{ ...styles.ledgerHeaderRow }}>
+            <span style={{ ...styles.thCell, flex: 2.2 }}>Project</span>
+            <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>Awaiting cert.</span>
+            <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>Retention due</span>
+            <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>Retention held</span>
+            <span style={{ ...styles.thCell, flex: 1.2, textAlign: "right" }}>POs outstanding</span>
+          </div>
+          {rows.map((r) => (
+            <div key={r.id} style={{ ...styles.row, cursor: "pointer" }} onClick={() => onNavigate("dashboard")}>
+              <span style={{ ...styles.tdCell, flex: 2.2 }}>
+                <div style={{ fontWeight: 500 }}>{r.name}</div>
+                {r.client && <div style={{ fontSize: 11.5, color: "var(--text-secondary)" }}>{r.client}</div>}
+              </span>
+              <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums" }}>{fmt(r.uncertified)}</span>
+              <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", color: r.retentionDue > 0 ? "var(--tm-pos)" : "var(--text-secondary)", fontWeight: r.retentionDue > 0 ? 600 : 400 }}>{fmt(r.retentionDue)}</span>
+              <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", color: "var(--text-secondary)" }}>{fmt(r.retentionHeld)}</span>
+              <span style={{ ...styles.tdCell, flex: 1.2, textAlign: "right", fontFamily: "'Space Grotesk', sans-serif", fontVariantNumeric: "tabular-nums", color: r.poOutstanding > 0 ? "var(--danger)" : "var(--text-secondary)" }}>{fmt(r.poOutstanding)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   RESOURCES (free on every tier, including Trial)
+
+   Replaces the marketing site's outbound "Construction Library" link, which
+   was never more than a "coming soon" placeholder — nothing there to pull
+   in. Written from scratch instead, grounded in the app's own modules
+   rather than generic advice, so a Free-tier account gets something real
+   before they've paid for anything. No login-gated content here on
+   purpose: gating the thing meant to demonstrate value defeats the point.
+   --------------------------------------------------------------------------- */
+const RESOURCE_GUIDES = [
+  {
+    id: "reading-variance",
+    title: "Reading a variance without a QS",
+    summary: "What \"spending ahead of progress\" actually means, and the one number worth checking every Friday.",
+    body: "Budget and actual on their own don't tell you much — a line item can be 80% spent and still be fine if it's 90% complete. What matters is the gap between the two: percent spent minus percent complete. A positive gap means money is going out faster than work is landing, and it only gets worse from there, because the remaining budget has to cover a bigger share of the remaining work. Check it weekly, not monthly — by the time a monthly report flags it, you're usually two or three site visits past where you could still have done something about it.",
+  },
+  {
+    id: "change-orders",
+    title: "Getting a change order signed before the work starts",
+    summary: "The one habit that keeps variations from turning into arguments about who agreed to what.",
+    body: "A change order that gets written up after the extra work is already done is a negotiation, not a record — the client remembers the conversation differently to how you do, and there's nothing to point to. Log it the moment scope changes, even before the price is final: description and a provisional amount is enough to start. Update the amount once you've priced it properly, but the date it was raised should always be before the date the work happened, not after. That single habit is worth more than any clause in the contract.",
+  },
+  {
+    id: "retention",
+    title: "Why retention is the money contractors actually lose",
+    summary: "It's not that clients don't pay it — it's that nobody's tracking is set up to remind anyone it's due.",
+    body: "Retention held back at 5% doesn't feel like much on any single claim, so it's easy to let it slide — but across nine live jobs it adds up to real money sitting with someone else, earning nothing, with no natural trigger to ask for it back. The trigger has to be practical completion, not memory. The moment a job's line items are effectively 100% complete, that retention is due — write the date down, or better, use something that flags it for you, because the client has no incentive to remind you and every incentive not to.",
+  },
+  {
+    id: "daily-log",
+    title: "What actually belongs in a daily log",
+    summary: "Weather and crew numbers matter less than you'd think — the delays and deliveries are what earn their keep.",
+    body: "A daily log that just says \"normal day, work continued\" is worse than no log at all — it takes the time without leaving anything useful behind. What earns its place: anything that caused a delay (a late delivery, a design query still open, a sub who didn't pitch), anything that will matter in a dispute later (an instruction given verbally on site, a client visit and what was discussed), and anything you'd want a record of if a QS or a client asked \"what was happening that week\" three months from now. Weather and crew count are worth a line each, but they're context, not the point.",
+  },
+  {
+    id: "punch-list",
+    title: "Running a punch list that actually closes out",
+    summary: "The gap between \"snagged\" and \"verified\" is where most defects lists quietly die.",
+    body: "Most snagging lists get to \"fixed\" and stop there — nobody goes back to confirm the fix actually holds, so the same defect resurfaces at final inspection and the list has to be rebuilt from memory. Three states, not two: open, fixed, verified. Fixed means the sub says it's done. Verified means someone who isn't the sub who did the work has looked at it and agreed. The list isn't finished until every item is verified, not fixed — and a list with everything sitting at \"fixed\" for weeks is worth a site visit before handover, not after.",
+  },
+  {
+    id: "cashflow",
+    title: "Forecasting cash flow without an accountant",
+    summary: "Three numbers, not a spreadsheet: what's claimed but not certified, what retention is due, what you owe suppliers.",
+    body: "A full cash-flow forecast needs a finance team. A useful one doesn't — it needs three numbers you already have. What's been claimed but not yet certified is near-term income waiting on sign-off, so it tells you what's coming if nothing goes wrong. What retention is due for release is money you've already earned that just needs asking for. What purchase orders are still outstanding to suppliers is near-term spend you're committed to whether or not the client pays on time. Net those three against each other and you have a rough but honest read on the weeks ahead — not a forecast an accountant would sign off on, but one that's right often enough to be worth five minutes on a Monday.",
+  },
+];
+
+function ResourcesView({ onNavigate, userEmail, onSignOut, logoUrl }) {
+  const [openId, setOpenId] = useState(null);
+
+  return (
+    <div style={styles.page}>
+      <GlobalStyles />
+      <PageHeader title="Resources" current="resources" onNavigate={onNavigate} userEmail={userEmail} onSignOut={onSignOut} logoUrl={logoUrl} />
+
+      <div style={styles.explainer}>
+        Short, practical guides on running the cost side of a job — free on every plan, including Trial.
+        Written around the same things this app tracks, not generic advice.
+      </div>
+
+      <div style={{ maxWidth: 860, margin: "0 auto" }}>
+        <div style={styles.ledger}>
+          {RESOURCE_GUIDES.map((g) => {
+            const open = openId === g.id;
+            return (
+              <div key={g.id} style={{ borderBottom: "1px solid var(--border-color)" }}>
+                <button
+                  onClick={() => setOpenId(open ? null : g.id)}
+                  style={{
+                    width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12,
+                    padding: "16px 18px", background: "none", border: "none", cursor: "pointer", textAlign: "left",
+                  }}
+                >
+                  <span>
+                    <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 3 }}>{g.title}</span>
+                    <span style={{ display: "block", fontSize: 13, color: "var(--text-secondary)" }}>{g.summary}</span>
+                  </span>
+                  <span style={{ flexShrink: 0, fontSize: 18, color: "var(--text-secondary)", transform: open ? "rotate(45deg)" : "none", transition: "transform 0.15s ease" }}>+</span>
+                </button>
+                {open && (
+                  <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "var(--text-primary)", padding: "0 18px 18px", margin: 0 }}>
+                    {g.body}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <AppFooter />
+    </div>
+  );
+}
+
 function IntegrationsView({ onNavigate, userEmail, onSignOut, logoUrl }) {
   const { locked } = usePlanGate(userEmail);
   const [connections, setConnections] = useState([]);
@@ -4976,6 +5270,7 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
   // billing" card and decide whether a Cancel button should show.
   const [plan, setPlan] = useState(null);
   const [cancelling, setCancelling] = useState(false);
+  const [addonUpgrading, setAddonUpgrading] = useState(false);
 
   async function loadStatus() {
     setLoading(true);
@@ -5087,6 +5382,30 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
     }
   }
 
+  async function upgradeToContractorPlus() {
+    setAddonUpgrading(true);
+    setBanner(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/create-checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session?.access_token || ""}` },
+        body: JSON.stringify({ email: userEmail, tier: "contractor_plus" }),
+      });
+      const json = await res.json();
+      if (json.redirectUrl) {
+        await openExternalRedirect(json.redirectUrl);
+      } else {
+        setBanner({ type: "error", text: json.error || "Couldn't start checkout — please try again." });
+        setAddonUpgrading(false);
+      }
+    } catch (err) {
+      console.error("contractor+ upgrade failed", err);
+      setBanner({ type: "error", text: "Couldn't start checkout — please try again." });
+      setAddonUpgrading(false);
+    }
+  }
+
   async function cancelSubscription() {
     if (!window.confirm(
       "Cancel your subscription? Your recurring billing will stop and your account will drop back to the Free plan immediately — you'll lose access to any paid-tier features and storage above the free allowance."
@@ -5140,7 +5459,7 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
         </div>
       )}
 
-      {plan && (plan.tier === "contractor" || plan.tier === "firm") && (
+      {plan && (plan.tier === "contractor" || plan.tier === "contractor_plus" || plan.tier === "firm") && (
         <div style={{ ...styles.integrationsCard, maxWidth: 1180, margin: "0 auto 16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
             <div>
@@ -5162,6 +5481,34 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                 onClick={cancelSubscription}
               >
                 {cancelling ? "Cancelling…" : "Cancel subscription"}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {plan && plan.status === "active" && (plan.tier === "contractor" || plan.tier === "contractor_plus") && (
+        <div style={{ ...styles.integrationsCard, maxWidth: 1180, margin: "0 auto 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: 4 }}>
+                Contractor+
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>
+                Retention register &amp; cash-flow forecasting — +R49/month
+              </div>
+              <p style={{ fontSize: 12.5, color: "var(--text-secondary)", margin: 0, maxWidth: 520 }}>
+                Adds the retention register and cash-flow forecasting to your Contractor plan — R248/month total,
+                billed the same way as the rest of your subscription.
+              </p>
+            </div>
+            {plan.tier === "contractor_plus" ? (
+              <span style={{ ...styles.tierBadge, background: "rgba(184,134,47,0.11)" }}>
+                <span style={{ ...styles.tierBadgeLabel, color: "var(--warning)" }}>Active</span>
+              </span>
+            ) : (
+              <button style={styles.addBtn} disabled={addonUpgrading} onClick={upgradeToContractorPlus}>
+                {addonUpgrading ? "Starting…" : "Add Contractor+ — R49/mo"}
               </button>
             )}
           </div>
@@ -5218,6 +5565,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const [project, setProject] = useState(null);
   const [items, setItems] = useState([]);
   const [changeOrders, setChangeOrders] = useState([]);
+  const [dailyLogs, setDailyLogs] = useState([]);
+  const [punchItems, setPunchItems] = useState([]);
+  const [contacts, setContacts] = useState([]);
   const [snapshots, setSnapshots] = useState([]);
   const [subs, setSubs] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -5261,6 +5611,19 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const [documents, setDocuments] = useState([]);
   const [docCategory, setDocCategory] = useState("Drawings");
   const [docLineItemId, setDocLineItemId] = useState("");
+  const [logDate, setLogDate] = useState(new Date().toISOString().slice(0, 10));
+  const [logWeather, setLogWeather] = useState("");
+  const [logCrew, setLogCrew] = useState("");
+  const [logBody, setLogBody] = useState("");
+  const [logPhotos, setLogPhotos] = useState([]);
+  const [logSaving, setLogSaving] = useState(false);
+  const logPhotosInputRef = useRef(null);
+  const [punchDesc, setPunchDesc] = useState("");
+  const [punchLocation, setPunchLocation] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [contactRole, setContactRole] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [overrunDetailOpen, setOverrunDetailOpen] = useState(false);
   const { can, locked } = usePlanGate(userEmail);
   const documentsInputRef = useRef(null);
@@ -5342,7 +5705,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
   const quoteDownloadMenuRef = useRef(null);
 
   async function loadAll() {
-    const [{ data: proj }, { data: lineItems }, { data: cos }, { data: snaps }, { data: subsData }, { data: temps }, { data: pos }, { data: tends }, { data: tasks }, { data: docs }] =
+    const [{ data: proj }, { data: lineItems }, { data: cos }, { data: snaps }, { data: subsData }, { data: temps }, { data: pos }, { data: tends }, { data: tasks }, { data: docs }, { data: logs }, { data: punches }, { data: cts }] =
       await Promise.all([
         supabase.from("projects_v2").select("*").eq("id", projectId).single(),
         supabase.from("line_items").select("*").eq("project_id", projectId).order("created_at", { ascending: true }),
@@ -5354,6 +5717,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         supabase.from("tenders").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
         supabase.from("schedule_tasks").select("*").eq("project_id", projectId).order("start_date", { ascending: true }),
         supabase.from("document_files").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
+        supabase.from("daily_logs").select("*").eq("project_id", projectId).order("log_date", { ascending: false }).order("created_at", { ascending: false }),
+        supabase.from("punch_list_items").select("*").eq("project_id", projectId).order("created_at", { ascending: false }),
+        supabase.from("project_contacts").select("*").eq("project_id", projectId).order("created_at", { ascending: true }),
       ]);
     setProject(proj);
     setItems(lineItems || []);
@@ -5365,6 +5731,9 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     setTenders(tends || []);
     setScheduleTasks(tasks || []);
     setDocuments(docs || []);
+    setDailyLogs(logs || []);
+    setPunchItems(punches || []);
+    setContacts(cts || []);
     const tenderIds = (tends || []).map((t) => t.id);
     if (tenderIds.length) {
       const { data: bids } = await supabase.from("tender_bids").select("*").in("tender_id", tenderIds).order("amount", { ascending: true });
@@ -5844,6 +6213,107 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
     if (!window.confirm("Delete this change order? This can't be undone.")) return;
     setChangeOrders((prev) => prev.filter((c) => c.id !== id));
     await supabase.from("change_orders").delete().eq("id", id);
+  }
+
+  async function addDailyLog() {
+    if (!logBody.trim() || logSaving) return;
+    setLogSaving(true);
+    try {
+      const attachments = [];
+      for (const file of logPhotos) {
+        const path = `${projectId}/dailylog/${Date.now()}-${file.name}`;
+        const { error: upErr } = await supabase.storage.from("documents").upload(path, file);
+        if (upErr) continue;
+        attachments.push({ name: file.name, path, size: file.size });
+      }
+      const { data, error } = await supabase
+        .from("daily_logs")
+        .insert({
+          project_id: projectId,
+          log_date: logDate || new Date().toISOString().slice(0, 10),
+          weather: logWeather.trim(),
+          crew_note: logCrew.trim(),
+          body: logBody.trim(),
+          attachments,
+        })
+        .select().single();
+      if (!error && data) {
+        setDailyLogs((prev) => [data, ...prev].sort((a, b) => (a.log_date < b.log_date ? 1 : a.log_date > b.log_date ? -1 : new Date(b.created_at) - new Date(a.created_at))));
+        setLogDate(new Date().toISOString().slice(0, 10));
+        setLogWeather(""); setLogCrew(""); setLogBody(""); setLogPhotos([]);
+        if (logPhotosInputRef.current) logPhotosInputRef.current.value = "";
+      }
+    } finally {
+      setLogSaving(false);
+    }
+  }
+
+  async function removeDailyLog(id) {
+    if (!window.confirm("Delete this daily log entry? This can't be undone.")) return;
+    setDailyLogs((prev) => prev.filter((l) => l.id !== id));
+    await supabase.from("daily_logs").delete().eq("id", id);
+  }
+
+  async function openDailyLogPhoto(attachment) {
+    const { data, error } = await supabase.storage.from("documents").createSignedUrl(attachment.path, 60);
+    if (error || !data?.signedUrl) {
+      setImportMessage({ type: "error", text: "Couldn't open that photo — please try again." });
+      setTimeout(() => setImportMessage(null), 6000);
+      return;
+    }
+    openExternalLink(data.signedUrl);
+  }
+
+  async function addPunchItem() {
+    if (!punchDesc.trim()) return;
+    const { data, error } = await supabase
+      .from("punch_list_items")
+      .insert({
+        project_id: projectId,
+        description: punchDesc.trim(),
+        location: punchLocation.trim(),
+        status: "open",
+      })
+      .select().single();
+    if (!error && data) {
+      setPunchItems((prev) => [data, ...prev]);
+      setPunchDesc(""); setPunchLocation("");
+    }
+  }
+
+  async function setPunchStatus(id, status) {
+    setPunchItems((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
+    await supabase.from("punch_list_items").update({ status }).eq("id", id);
+  }
+
+  async function removePunchItem(id) {
+    if (!window.confirm("Delete this punch list item? This can't be undone.")) return;
+    setPunchItems((prev) => prev.filter((p) => p.id !== id));
+    await supabase.from("punch_list_items").delete().eq("id", id);
+  }
+
+  async function addContact() {
+    if (!contactName.trim()) return;
+    const { data, error } = await supabase
+      .from("project_contacts")
+      .insert({
+        project_id: projectId,
+        name: contactName.trim(),
+        role: contactRole.trim(),
+        phone: contactPhone.trim(),
+        email: contactEmail.trim(),
+      })
+      .select().single();
+    if (!error && data) {
+      setContacts((prev) => [...prev, data]);
+      setContactName(""); setContactRole(""); setContactPhone(""); setContactEmail("");
+    }
+  }
+
+  async function removeContact(id) {
+    if (!window.confirm("Remove this contact? This can't be undone.")) return;
+    setContacts((prev) => prev.filter((c) => c.id !== id));
+    await supabase.from("project_contacts").delete().eq("id", id);
   }
 
   async function addPurchaseOrder() {
@@ -6516,8 +6986,11 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
             ["purchaseorders", `Purchase Orders${purchaseOrders.length ? ` (${purchaseOrders.length})` : ""}`],
             ["tenders", `Tenders${tenders.length ? ` (${tenders.length})` : ""}`],
             ["schedule", `Schedule${scheduleTasks.length ? ` (${scheduleTasks.length})` : ""}`],
+            ["dailylog", `Daily Log${dailyLogs.length ? ` (${dailyLogs.length})` : ""}`],
             ["documents", `Documents${documents.length ? ` (${documents.length})` : ""}`],
+            ["contacts", `Contacts${contacts.length ? ` (${contacts.length})` : ""}`],
             ["plans", `Plans${(project?.plans || []).length ? ` (${(project.plans || []).length})` : ""}`],
+            ["punchlist", `Punch List${punchItems.length ? ` (${punchItems.length})` : ""}`],
             ["changeorders", `Change Orders${changeOrders.length ? ` (${changeOrders.length})` : ""}`],
           ].map(([key, label]) => {
             const mc = MODULE_COLOR[key];
@@ -6572,6 +7045,7 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
       {view === "payments" && locked("payments") && <PaywallPanel feature="payments" onNavigate={onNavigate} />}
       {view === "changeorders" && locked("changeorders") && <PaywallPanel feature="changeorders" onNavigate={onNavigate} />}
       {view === "documents" && locked("documents") && <PaywallPanel feature="documents" onNavigate={onNavigate} />}
+      {view === "punchlist" && locked("punchlist") && <PaywallPanel feature="punchlist" onNavigate={onNavigate} />}
 
       {view === "ledger" && (
         <>
@@ -7086,6 +7560,48 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         </>
       )}
 
+      {view === "punchlist" && can("punchlist") && (() => {
+        const openCount = punchItems.filter((p) => p.status !== "verified").length;
+        const statusColor = (s) => (s === "verified" ? "var(--success)" : s === "fixed" ? "var(--warning)" : "var(--danger)");
+        return (
+          <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+            <ModuleBanner moduleKey="punchlist" stat={String(openCount)} statLabel={openCount === 1 ? "open snag" : "open snags"} />
+            <div className="no-print" style={{ ...styles.addRow, borderRadius: 18, marginBottom: 16 }}>
+              <input style={{ ...styles.addInput, flex: "2 1 200px" }} placeholder="e.g. Skirting not painted, guest bathroom" value={punchDesc} onChange={(e) => setPunchDesc(e.target.value)} />
+              <input style={{ ...styles.addInput, flex: "1.2 1 150px" }} placeholder="Location (optional)" value={punchLocation} onChange={(e) => setPunchLocation(e.target.value)} />
+              <button style={{ ...styles.addBtn, flex: "1.2 0 auto" }} onClick={addPunchItem}>+ Add snag</button>
+            </div>
+
+            {punchItems.length === 0 ? (
+              <div style={{ ...styles.ledger, padding: 20, fontSize: 13, color: "var(--text-secondary)" }}>
+                No snags logged yet. Add one above — description and location — and track it through to verified.
+              </div>
+            ) : (
+              <div style={styles.ledger}>
+                {punchItems.map((p) => (
+                  <div key={p.id} style={{ ...styles.row }}>
+                    <span style={{ ...styles.tdCell, flex: 2 }}>{p.description}</span>
+                    <span style={{ ...styles.tdCell, flex: 1.2, color: "var(--text-secondary)" }}>{p.location || "—"}</span>
+                    <span style={{ ...styles.tdCell, flex: 1, textAlign: "center" }} className="no-print">
+                      <select value={p.status} onChange={(e) => setPunchStatus(p.id, e.target.value)}
+                        style={{ ...styles.addInput, padding: "4px 8px", fontSize: 12, color: statusColor(p.status) }}>
+                        <option value="open">Open</option>
+                        <option value="fixed">Fixed</option>
+                        <option value="verified">Verified</option>
+                      </select>
+                    </span>
+                    <span style={{ ...styles.tdCell, flex: 1, textAlign: "center", color: statusColor(p.status) }} className="print-only-status">{p.status}</span>
+                    <span style={{ ...styles.tdCell, flex: 0.5, textAlign: "right" }} className="no-print">
+                      <button style={styles.removeBtn} onClick={() => removePunchItem(p.id)}>✕</button>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {view === "purchaseorders" && (
         <div style={{ ...styles.ledger, overflowX: "auto" }}>
           <div style={{ padding: "12px 16px", fontSize: 13, color: "var(--text-secondary)", borderBottom: "1px solid var(--border-color)" }}>
@@ -7318,6 +7834,99 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
         );
       })()}
 
+      {view === "dailylog" && (() => {
+        const isLocked = locked("dailylog");
+        const visibleLogs = isLocked ? dailyLogs.slice(0, 3) : dailyLogs;
+        const hiddenLogs = isLocked ? dailyLogs.slice(3) : [];
+        const dfmt = (d) => new Date(d + "T00:00:00").toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" });
+        return (
+          <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+            <ModuleBanner moduleKey="dailylog" stat={String(dailyLogs.length)} statLabel={dailyLogs.length === 1 ? "entry" : "entries"} />
+
+            {can("dailylog") && (
+              <div className="no-print" style={{ ...styles.ledger, borderRadius: 18, marginBottom: 16, padding: 16 }}>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+                  <input style={{ ...styles.addInput, flex: "1 1 150px" }} type="date" value={logDate} onChange={(e) => setLogDate(e.target.value)} />
+                  <input style={{ ...styles.addInput, flex: "1.2 1 160px" }} placeholder="Weather (e.g. Clear, light wind)" value={logWeather} onChange={(e) => setLogWeather(e.target.value)} />
+                  <input style={{ ...styles.addInput, flex: "1.2 1 160px" }} placeholder="Crew on site (e.g. 6 — 2 bricklayers, 4 labour)" value={logCrew} onChange={(e) => setLogCrew(e.target.value)} />
+                </div>
+                <textarea
+                  style={{ ...styles.addInput, width: "100%", minHeight: 80, marginBottom: 10, resize: "vertical", fontFamily: "inherit" }}
+                  placeholder="What happened on site today — progress, delays, deliveries, anything worth a record."
+                  value={logBody}
+                  onChange={(e) => setLogBody(e.target.value)}
+                />
+                <input ref={logPhotosInputRef} type="file" multiple accept="image/*" style={{ display: "none" }} onChange={(e) => setLogPhotos(Array.from(e.target.files || []))} />
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <button style={styles.addBtn} onClick={() => logPhotosInputRef.current?.click()}>
+                    {logPhotos.length ? `${logPhotos.length} photo${logPhotos.length === 1 ? "" : "s"} selected` : "+ Attach photos"}
+                  </button>
+                  <button style={styles.addBtn} onClick={addDailyLog} disabled={logSaving || !logBody.trim()}>
+                    {logSaving ? "Saving…" : "+ Add entry"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {dailyLogs.length === 0 ? (
+              <div style={{ ...styles.ledger, padding: 20, fontSize: 13, color: "var(--text-secondary)" }}>
+                {isLocked
+                  ? "The daily log is on the paid plans — a dated record of weather, crew and progress you can point to when a client or a QS asks what was going on that week."
+                  : "No entries yet. Log today's weather, crew, and progress above — it only takes a minute, and it's the record you'll want the day a client or a QS asks what was going on that week."}
+              </div>
+            ) : (
+              <div style={styles.ledger}>
+                {visibleLogs.map((log) => (
+                  <div key={log.id} style={{ padding: "14px 16px", borderBottom: "1px solid var(--border-color)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{dfmt(log.log_date)}</span>
+                        {log.weather && <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>· {log.weather}</span>}
+                        {log.crew_note && <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>· {log.crew_note}</span>}
+                      </div>
+                      <button className="no-print" style={styles.removeBtn} onClick={() => removeDailyLog(log.id)}>✕</button>
+                    </div>
+                    <p style={{ fontSize: 13.5, lineHeight: 1.5, margin: "0 0 8px", whiteSpace: "pre-wrap", color: "var(--text-primary)" }}>{log.body}</p>
+                    {(log.attachments || []).length > 0 && (
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {log.attachments.map((att, i) => (
+                          <button
+                            key={i}
+                            onClick={() => openDailyLogPhoto(att)}
+                            style={{ background: "none", border: "1px solid var(--border-color)", borderRadius: 8, padding: "4px 10px", fontSize: 12, color: "var(--accent)", cursor: "pointer" }}
+                          >
+                            {att.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {isLocked && hiddenLogs.length > 0 && (
+                  <div style={{ position: "relative", padding: "18px 16px 22px" }}>
+                    <div aria-hidden="true" style={{ filter: "blur(4px)", opacity: 0.55, pointerEvents: "none", userSelect: "none" }}>
+                      {hiddenLogs.slice(0, 2).map((log) => (
+                        <div key={log.id} style={{ padding: "10px 0", borderBottom: "1px solid var(--border-color)" }}>
+                          <span style={{ fontSize: 14, fontWeight: 700 }}>{dfmt(log.log_date)}</span>
+                          <p style={{ fontSize: 13.5, margin: "4px 0 0" }}>{log.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, textAlign: "center", padding: 16 }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, margin: 0, color: "var(--text-primary)" }}>
+                        {hiddenLogs.length} more {hiddenLogs.length === 1 ? "entry" : "entries"} on the paid plans
+                      </p>
+                      <button style={styles.addBtn} onClick={() => onNavigate("storage")}>See plans</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {view === "documents" && can("documents") && (
         <div style={{ maxWidth: 1180, margin: "0 auto" }}>
           <ModuleBanner moduleKey="documents" stat={String(documents.length)} statLabel={documents.length === 1 ? "file" : "files"} />
@@ -7372,6 +7981,83 @@ function ProjectView({ projectId, onBack, onNavigate, userEmail, onSignOut, logo
           )}
         </div>
       )}
+
+      {view === "contacts" && (() => {
+        const isLocked = locked("contacts");
+        const visibleContacts = isLocked ? contacts.slice(0, 3) : contacts;
+        const hiddenContacts = isLocked ? contacts.slice(3) : [];
+        return (
+          <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+            <ModuleBanner moduleKey="contacts" stat={String(contacts.length)} statLabel={contacts.length === 1 ? "contact" : "contacts"} />
+
+            {can("contacts") && (
+              <div className="no-print" style={{ ...styles.addRow, borderRadius: 18, marginBottom: 16 }}>
+                <input style={{ ...styles.addInput, flex: "1.3 1 150px" }} placeholder="Name" value={contactName} onChange={(e) => setContactName(e.target.value)} />
+                <input style={{ ...styles.addInput, flex: "1.1 1 130px" }} placeholder="Role (e.g. Architect, Client)" value={contactRole} onChange={(e) => setContactRole(e.target.value)} />
+                <input style={{ ...styles.addInput, flex: "1.1 1 130px" }} placeholder="Phone" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
+                <input style={{ ...styles.addInput, flex: "1.3 1 150px" }} placeholder="Email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
+                <button style={{ ...styles.addBtn, flex: "1.2 0 auto" }} onClick={addContact}>+ Add contact</button>
+              </div>
+            )}
+
+            {contacts.length === 0 ? (
+              <div style={{ ...styles.ledger, padding: 20, fontSize: 13, color: "var(--text-secondary)" }}>
+                {isLocked
+                  ? "The contacts directory is on the paid plans — client, architect, suppliers and subs for this job, in one place."
+                  : "No contacts yet. Add the client, architect, or a supplier above — subs you've added to Subcontractors show up below automatically."}
+              </div>
+            ) : (
+              <div style={styles.ledger}>
+                {visibleContacts.map((c) => (
+                  <div key={c.id} style={{ ...styles.row }}>
+                    <span style={{ ...styles.tdCell, flex: 1.3, fontWeight: 600 }}>{c.name}</span>
+                    <span style={{ ...styles.tdCell, flex: 1.1, color: "var(--text-secondary)" }}>{c.role || "—"}</span>
+                    <span style={{ ...styles.tdCell, flex: 1.1 }}>{c.phone || "—"}</span>
+                    <span style={{ ...styles.tdCell, flex: 1.3 }}>{c.email || "—"}</span>
+                    <span style={{ ...styles.tdCell, flex: 0.5, textAlign: "right" }} className="no-print">
+                      <button style={styles.removeBtn} onClick={() => removeContact(c.id)}>✕</button>
+                    </span>
+                  </div>
+                ))}
+
+                {isLocked && hiddenContacts.length > 0 && (
+                  <div style={{ position: "relative", padding: "18px 16px 22px" }}>
+                    <div aria-hidden="true" style={{ filter: "blur(4px)", opacity: 0.55, pointerEvents: "none", userSelect: "none" }}>
+                      {hiddenContacts.slice(0, 2).map((c) => (
+                        <div key={c.id} style={{ padding: "10px 0", borderBottom: "1px solid var(--border-color)", fontSize: 13.5 }}>
+                          {c.name} · {c.role}
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, textAlign: "center", padding: 16 }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, margin: 0, color: "var(--text-primary)" }}>
+                        {hiddenContacts.length} more {hiddenContacts.length === 1 ? "contact" : "contacts"} on the paid plans
+                      </p>
+                      <button style={styles.addBtn} onClick={() => onNavigate("storage")}>See plans</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {subs.length > 0 && (
+              <div style={{ marginTop: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: 8 }}>
+                  Subcontractors on this job
+                </div>
+                <div style={styles.ledger}>
+                  {subs.map((s) => (
+                    <div key={s.id} style={{ ...styles.row }}>
+                      <span style={{ ...styles.tdCell, flex: 1.3, fontWeight: 600 }}>{s.name}</span>
+                      <span style={{ ...styles.tdCell, flex: 1.1, color: "var(--text-secondary)" }}>{s.trade || "—"}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {view === "plans" && (
         <>
