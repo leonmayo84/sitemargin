@@ -784,7 +784,7 @@ function ProjectInspector({ totals, itemsCount, approvedCoTotal, approvedChangeO
         <div className="sm-kv">
           <span className="k">Retention rate</span>
           <span className="v" style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
-            <input type="number" value={retentionPct} onChange={(e) => onRetentionChange(Number(e.target.value) || 0)} style={styles.retentionInput} aria-label="Retention percentage" />%
+            <input type="number" value={retentionPct} onFocus={(e) => e.target.select()} onChange={(e) => onRetentionChange(Number(e.target.value) || 0)} style={styles.retentionInput} aria-label="Retention percentage" />%
           </span>
         </div>
         <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 6, lineHeight: 1.4 }}>Held back from certified claims, released on the practical completion certificate — a timing difference, not a cost.</div>
@@ -912,7 +912,7 @@ const TIER_LABEL = {
    a live page beats a store URL that 404s while the listing is in review.
    --------------------------------------------------------------------------- */
 const APP_SHARE_URL = "https://sitemargin.co.za";
-const APP_SHARE_BLURB = "siteMargin - cost variance tracking built for contractors. Budget, payments and progress in one sheet, updated on site.";
+const APP_SHARE_BLURB = "siteMargin - cost variance tracking for contractors, developers and homeowners. Budget, payments and progress in one sheet, updated on site.";
 
 // Returns what actually happened so the caller can say so: "shared" (the OS
 // sheet took it), "copied" (clipboard fallback), "cancelled" (they dismissed
@@ -1076,6 +1076,7 @@ function PaywallPanel({ feature, onNavigate }) {
       </p>
       <div style={styles.paywallActions}>
         <button style={styles.addBtn} onClick={() => onNavigate("storage")}>See plans</button>
+        <button style={styles.removeBtn} onClick={() => onNavigate("dashboard")}>Back to Projects</button>
       </div>
     </div>
   );
@@ -2266,6 +2267,19 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
               <span style={{ ...styles.tierBadgeLabel, color: tierBadge.color }}>{tierBadge.label}</span>
             </span>
           )}
+          {onNavigate && current !== "dashboard" && (
+            <button
+              type="button"
+              onClick={() => onNavigate("dashboard")}
+              style={styles.backToDashBtn}
+              aria-label="Back to Projects dashboard"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M11 18l-6-6 6-6" />
+              </svg>
+              Projects
+            </button>
+          )}
         </div>
         <div className="no-print" style={styles.dashNavRight}>
           {/* Mirrors the marketing site's always-visible "Go to App" button,
@@ -2473,7 +2487,7 @@ function ReferralQr({ size = 112 }) {
 
 function ReferralRow() {
   const [copied, setCopied] = useState(false);
-  const referralText = "Check out SiteMargin — cost variance tracking built for contractors: https://www.sitemargin.co.za";
+  const referralText = "Check out SiteMargin — cost variance tracking for contractors, developers and homeowners: https://www.sitemargin.co.za";
   async function copyLink() {
     try {
       await navigator.clipboard.writeText("https://www.sitemargin.co.za");
@@ -3420,6 +3434,18 @@ function AuthGate() {
               </div>
             </div>
             </div>
+          </div>
+        )}
+
+        {Capacitor.isNativePlatform() && isLoginIntent && status === "signedout" && (
+          <div className="no-print" style={styles.nativeSignupPitch}>
+            <div style={styles.nativeSignupPitchTitle}>New to siteMargin?</div>
+            <p style={styles.nativeSignupPitchBody}>
+              Track budget, payments and progress on every job — for contractors, developers and homeowners. Start free, no card needed.
+            </p>
+            <button type="button" style={styles.nativeSignupPitchBtn} onClick={() => setIsLoginIntent(false)}>
+              Sign up free
+            </button>
           </div>
         )}
 
@@ -6015,6 +6041,30 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
     }
   }
 
+  async function reinstateSubscription() {
+    setCancelling(true);
+    setBanner(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/create-checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionData.session?.access_token || ""}` },
+        body: JSON.stringify({ email: userEmail, tier: plan.tier }),
+      });
+      const json = await res.json();
+      if (json.redirectUrl) {
+        await openExternalRedirect(json.redirectUrl);
+      } else {
+        setBanner({ type: "error", text: json.error || "Couldn't start checkout — please try again." });
+        setCancelling(false);
+      }
+    } catch (err) {
+      console.error("reinstate subscription failed", err);
+      setBanner({ type: "error", text: "Couldn't start checkout — please try again." });
+      setCancelling(false);
+    }
+  }
+
   async function cancelSubscription() {
     if (!window.confirm(
       "Cancel your subscription? Your recurring billing will stop and your account will drop back to the Free plan immediately — you'll lose access to any paid-tier features and storage above the free allowance."
@@ -6090,6 +6140,15 @@ function StorageView({ onNavigate, userEmail, onSignOut, logoUrl }) {
                 onClick={cancelSubscription}
               >
                 {cancelling ? "Cancelling…" : "Cancel subscription"}
+              </button>
+            )}
+            {plan.status === "cancelled" && (
+              <button
+                style={styles.addBtn}
+                disabled={cancelling}
+                onClick={reinstateSubscription}
+              >
+                {cancelling ? "Starting…" : "Reinstate plan"}
               </button>
             )}
           </div>
@@ -6253,6 +6312,7 @@ function ProjectView({ projectId, onBack, onNavigate, onOpenProject, userEmail, 
   // to email it now or put it on a schedule. See report_profiles/report_sends
   // — at most one saved profile per project for now (the most recently
   // updated one loads below), rather than letting a project accumulate many.
+  const [reportPanelOpen, setReportPanelOpen] = useState(true);
   const [reportProfile, setReportProfile] = useState(null);
   const [reportSections, setReportSections] = useState({
     cost_summary: true,
@@ -8899,20 +8959,32 @@ function ProjectView({ projectId, onBack, onNavigate, onOpenProject, userEmail, 
           </div>
 
           {/* Panel — sections, note, save/send/schedule */}
+          {reportPanelOpen ? (
           <div className="no-print" style={{ width: 340, flexShrink: 0, background: "var(--surface)", borderRadius: 18, boxShadow: "0 4px 20px rgba(0,0,0,0.06)", padding: 22, position: "sticky", top: 20 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
               <div style={{ fontSize: 14, fontWeight: 700 }}>Report sections</div>
-              <button
-                onClick={() => window.print()}
-                style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "1px solid var(--border-color)", borderRadius: 100, padding: "5px 11px", fontSize: 12, fontWeight: 600, color: "var(--text-primary)", cursor: "pointer" }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 6 2 18 2 18 9" />
-                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                  <rect x="6" y="14" width="12" height="8" />
-                </svg>
-                Print
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button
+                  onClick={() => window.print()}
+                  style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "1px solid var(--border-color)", borderRadius: 100, padding: "5px 11px", fontSize: 12, fontWeight: 600, color: "var(--text-primary)", cursor: "pointer" }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 6 2 18 2 18 9" />
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                    <rect x="6" y="14" width="12" height="8" />
+                  </svg>
+                  Print
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReportPanelOpen(false)}
+                  aria-label="Hide report settings"
+                  title="Hide report settings — show the full report"
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, background: "none", border: "1px solid var(--border-color)", borderRadius: 100, color: "var(--text-primary)", cursor: "pointer", fontSize: 13, lineHeight: 1, padding: 0 }}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
             <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>Always included</div>
@@ -9070,6 +9142,19 @@ function ProjectView({ projectId, onBack, onNavigate, onOpenProject, userEmail, 
               </div>
             )}
           </div>
+          ) : (
+          <button
+            type="button"
+            className="no-print"
+            onClick={() => setReportPanelOpen(true)}
+            style={{ position: "sticky", top: 20, flexShrink: 0, display: "flex", alignItems: "center", gap: 8, background: "var(--surface)", border: "1px solid var(--border-color)", borderRadius: 100, padding: "10px 16px", fontSize: 13, fontWeight: 600, color: "var(--text-primary)", cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.06)" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            Report settings
+          </button>
+          )}
 
         </div>
         );
@@ -9131,6 +9216,7 @@ function ProjectView({ projectId, onBack, onNavigate, onOpenProject, userEmail, 
             <span style={styles.tbLabel}>RETENTION</span>
             <span style={styles.tbValue}>
               <input type="number" value={totals.retentionPct}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => {
                   const v = Number(e.target.value) || 0;
                   setProject((p) => ({ ...p, retention_pct: v }));
@@ -9734,7 +9820,7 @@ const styles = {
   importNameRow: { display: "flex", alignItems: "center", gap: 12, padding: "12px 24px", borderBottom: "1px solid var(--border-color)" },
   importNameLabel: { fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap" },
 
-  freeLimitBanner: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, background: "rgba(29,92,138,0.07)", border: "1px solid #1D5C8A", borderRadius: 14, padding: "14px 16px", fontSize: 13.5, color: "var(--text-secondary)", flexWrap: "wrap" },
+  freeLimitBanner: { maxWidth: 1180, margin: "0 auto 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, background: "rgba(29,92,138,0.07)", border: "1px solid #1D5C8A", borderRadius: 14, padding: "14px 16px", fontSize: 13.5, fontWeight: 500, color: "var(--text-primary)", flexWrap: "wrap" },
   freeLimitLink: { color: "var(--accent)", fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" },
   addRowStandalone: { maxWidth: 1180, margin: "0 auto 22px", display: "flex", gap: 10, flexWrap: "wrap" },
   projectGrid: { maxWidth: 1180, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 },
@@ -9969,4 +10055,10 @@ const styles = {
   previewRow: { display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 0", borderBottom: "1px solid var(--border-color)" },
   previewInput: { width: "100%", background: "var(--bg-secondary)", border: "1px solid transparent", borderRadius: 8, color: "var(--text-primary)", fontSize: 13, padding: "6px 8px" },
   previewNote: { fontSize: 10.5, color: "var(--text-secondary)", marginTop: 3 },
+
+  backToDashBtn: { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600, color: "var(--text-primary)", textDecoration: "none", whiteSpace: "nowrap", background: "var(--bg-secondary)", border: "1px solid var(--border-color)", padding: "6px 13px", borderRadius: 100, cursor: "pointer" },
+  nativeSignupPitch: { maxWidth: 420, margin: "0 auto 22px", textAlign: "center", background: "rgba(29,92,138,0.07)", border: "1px solid #1D5C8A", borderRadius: 14, padding: "16px 18px" },
+  nativeSignupPitchTitle: { fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 },
+  nativeSignupPitchBody: { fontSize: 12.5, color: "var(--text-secondary)", lineHeight: 1.5, margin: "0 0 12px" },
+  nativeSignupPitchBtn: { background: "var(--accent)", border: "none", borderRadius: 100, color: "var(--on-accent)", fontWeight: 600, fontSize: 13, padding: "9px 20px", cursor: "pointer" },
 };
