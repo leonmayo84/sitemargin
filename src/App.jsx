@@ -902,6 +902,46 @@ const TIER_LABEL = {
 // accounts read "Trial" here specifically (not "Free" as TIER_LABEL says
 // elsewhere) per the ask: distinguishable per tier, but quiet — the grey
 // trial tint is deliberately the least saturated of the four.
+/* ---------------------------------------------------------------------------
+   SHARE THE APP
+
+   One link, one place to change: point APP_SHARE_URL at the Play Store
+   listing (https://play.google.com/store/apps/details?id=za.co.sitemargin.app)
+   the day it goes public and every share below follows, no other edit. Until
+   then it points at the marketing site, which carries the store link itself --
+   a live page beats a store URL that 404s while the listing is in review.
+   --------------------------------------------------------------------------- */
+const APP_SHARE_URL = "https://sitemargin.co.za";
+const APP_SHARE_BLURB = "siteMargin - cost variance tracking built for contractors. Budget, payments and progress in one sheet, updated on site.";
+
+// Returns what actually happened so the caller can say so: "shared" (the OS
+// sheet took it), "copied" (clipboard fallback), "cancelled" (they dismissed
+// the sheet -- a decision, not a failure, so we must not then copy behind
+// their back), or "failed".
+//
+// navigator.share is the real share sheet wherever it exists, which on this
+// app's phones means the browser build. Android's stock WebView -- what
+// Capacitor runs -- still doesn't implement it, so the clipboard is not an
+// edge case here, it is the path the installed app takes. Both endings leave
+// the user holding the link, which is the whole point.
+async function shareApp() {
+  try {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      await navigator.share({ title: "siteMargin", text: APP_SHARE_BLURB, url: APP_SHARE_URL });
+      return "shared";
+    }
+  } catch (err) {
+    if (err && (err.name === "AbortError" || err.name === "NotAllowedError")) return "cancelled";
+    // Anything else (no share target, WebView quirk) falls through to copy.
+  }
+  try {
+    await navigator.clipboard.writeText(APP_SHARE_BLURB + " " + APP_SHARE_URL);
+    return "copied";
+  } catch {
+    return "failed";
+  }
+}
+
 const HEADER_TIER_BADGE = {
   free: { label: "Trial", tint: "rgba(160,160,166,0.14)", color: "#83838A" },
   contractor: { label: "Contractor", tint: "rgba(29,92,138,0.09)", color: "var(--accent)" },
@@ -2198,6 +2238,10 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
     ["storage", "Plan and Storage"],
   ];
   const closeAnd = (fn) => () => { setMenuOpen(false); if (fn) fn(); };
+  // Held just long enough to confirm the copy landed -- on the clipboard path
+  // nothing else on screen changes, so without this the tap looks like a
+  // no-op and people tap it again.
+  const [shareState, setShareState] = useState("idle"); // idle | copied | failed
 
   // Closes the drawer on an outside click/tap — same pattern used for the
   // logo and download popovers elsewhere in this file. Only needed for the
@@ -2269,6 +2313,25 @@ function PageHeader({ title, current, onNavigate, userEmail, onSignOut, logoUrl,
                     these route through openExternalLink (an in-app Custom
                     Tab overlay) instead of a plain href, which would hijack
                     the app's own webview out to a separate browser app. */}
+                <button
+                  className="sm-menu-item"
+                  style={styles.menuPanelLink}
+                  onClick={async () => {
+                    const result = await shareApp();
+                    // Only close on the OS sheet -- the clipboard path has to
+                    // stay open long enough to show the confirmation.
+                    if (result === "shared") { setMenuOpen(false); return; }
+                    if (result === "cancelled") return;
+                    setShareState(result === "copied" ? "copied" : "failed");
+                    setTimeout(() => setShareState("idle"), 2200);
+                  }}
+                >
+                  {shareState === "copied"
+                    ? "Link copied"
+                    : shareState === "failed"
+                    ? "Couldn't copy - " + APP_SHARE_URL
+                    : "Share the app"}
+                </button>
                 <div style={styles.menuSectionLabel}>More from SiteMargin</div>
                 {[
                   { label: "What's inside", href: "https://sitemargin.co.za/whats-inside.html" },
@@ -2656,6 +2719,14 @@ function AuthGate() {
   // returning users land on a plain sign-in screen instead of the full
   // marketing pitch + pricing grid meant for new sign-ups.
   const [isLoginIntent, setIsLoginIntent] = useState(() => {
+    // The installed app opens straight into the product. Someone who went to
+    // the Play Store, installed this and tapped the icon has already been
+    // sold -- showing them the marketing hero and the pricing grid first is
+    // a sales pitch aimed at a stranger, delivered to a customer, and it
+    // pushes the sign-in form they actually opened the app for below the
+    // fold. "Sign up" in the nav and the drawer still flip this back for
+    // anyone creating a new account from the app.
+    if (Capacitor.isNativePlatform()) return true;
     try { return new URLSearchParams(window.location.search).get("login") === "1"; } catch { return false; }
   });
   // Password is an alternative to the magic link, not a replacement — most
@@ -3238,7 +3309,7 @@ function AuthGate() {
       </div>
       <div style={{ ...styles.gateWrap, maxWidth: 1024 }}>
         {status === "signedout" && sendState !== "sent" && !isLoginIntent && (
-          <div style={styles.heroWrap}>
+          <div style={styles.heroWrap} className="sm-hero">
             <svg style={styles.heroBacksplash} viewBox="0 0 1600 600" preserveAspectRatio="xMidYMid slice" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <defs>
                 <pattern id="heroGrain" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">

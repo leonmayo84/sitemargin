@@ -397,3 +397,27 @@ body { background: var(--bg-primary); color: var(--text-primary); }
 .sm-modbanner { background: var(--sm-banner); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sm-modbanner { background: var(--sm-banner-tint); } }
 :root[data-theme="dark"] .sm-modbanner { background: var(--sm-banner-tint); }
+
+/* ---------------------------------------------------------------------------
+   SIGNED-OUT HERO — keep its ink dark in both themes
+
+   The hero's backsplash is a fixed light "concrete" panel: the SVG behind it
+   is built entirely from light greys (#F5F5F7 ground, #DFDFE5 gradient,
+   #8B95A5 linework), and it stays light whatever the device theme is. The
+   text sitting on top of it, though, read the normal theme tokens -- so on a
+   phone set to dark mode --text-primary resolved to #F3F4F6 and the headline
+   and the proof count rendered near-white on a near-white panel and simply
+   vanished. Only the accent-coloured words survived, which is exactly how it
+   looked on Android.
+
+   Re-point the three tokens the hero's text uses, scoped to the hero itself,
+   so its ink stays dark against its own light panel. Everything outside
+   .sm-hero keeps theming normally. Same fix as .sm-modbanner above, and the
+   same rule behind it: a component that paints a fixed background has to pin
+   its foreground too.
+   --------------------------------------------------------------------------- */
+.sm-hero {
+  --text-primary: #1D1D1F;
+  --text-secondary: #6E6E73;
+  --accent: #1D5C8A;
+}
